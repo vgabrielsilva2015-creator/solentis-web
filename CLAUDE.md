@@ -9,8 +9,8 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Item (c) — Contradições, ambiguidades e riscos resolvidos
 ✅ Item (d) — Decisões antes do código tomadas (ver seção 17 do BRIEFING.md)
 ✅ Adição pós-d — Preparo para sensores (sem implementação no MVP)
-⏳ Item (e) — PRÓXIMO: propor PLANO em fases pequenas (1-4h cada)
-⏸️ Item (f) — Modelo de dados
+✅ Item (e) — PLANO em 12 fases aprovado (29–44h) — ver /docs/PLANO.md
+⏳ Item (f) — PRÓXIMO: propor modelo de dados (tabelas, campos, relações)
 ⏸️ Item (g) — Finalizar CLAUDE.md e iniciar código
 
 ## Decisões-chave (resumo)
@@ -26,7 +26,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 Próxima sessão: usuário dirá "vamos continuar". Você deve:
 1. Ler BRIEFING.md e este CLAUDE.md COMPLETOS antes de qualquer coisa
 2. Confirmar com o usuário que entendeu o contexto
-3. Seguir para o item (e) — proposta de PLANO em fases pequenas
+3. Seguir para o item pendente (ver Status Atual acima)
 4. ESPERAR OK do usuário entre cada letra (e, f, g) — regra do briefing
 5. Trabalhar em incrementos pequenos: explica → faz → mostra → espera OK
 
@@ -35,3 +35,8 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - Esperar aprovação entre fases
 - Atualizar CLAUDE.md ao fim de cada fase concluída
 - Manter um /docs/RUNBOOK.md com comandos úteis (criar a partir da fase 1)
+
+## Princípios de qualidade (adicionados durante o planejamento)
+- "Backup não testado não é backup" — toda fase de backup exige teste explícito de restore
+- Auto-save em localStorage obrigatório em TODO formulário longo (Leituras, Análises, Ocorrências)
+- Queries de dashboard sempre por agregação (`count`/`groupBy`), nunca `findMany` sem `take`
