@@ -10,8 +10,8 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Item (d) — Decisões antes do código tomadas (ver seção 17 do BRIEFING.md)
 ✅ Adição pós-d — Preparo para sensores (sem implementação no MVP)
 ✅ Item (e) — PLANO em 12 fases aprovado (29–44h) — ver /docs/PLANO.md
-⏳ Item (f) — PRÓXIMO: propor modelo de dados (tabelas, campos, relações)
-⏸️ Item (g) — Finalizar CLAUDE.md e iniciar código
+✅ Item (f) — Modelo de dados aprovado (21 tabelas, 9 enums, multi-tenant) — ver /docs/MODELO_DE_DADOS.md
+⏳ Item (g) — PRÓXIMO: scaffold do projeto (Fase 1) — aguardando OK para iniciar código
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -21,6 +21,17 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
 - Credencial inicial seed: admin@solentis.local / Admin@123 (sistema obriga troca no 1º login)
+- Multi-tenant desde o MVP via tenant_id + middleware Prisma (seed: id="default")
+
+### Tabelas (21)
+tenants, users, sessions, login_attempts, quality_parameters, analysis_methods,
+equipment_categories, collection_points, shifts, occurrence_severity_defaults,
+readings, analyses, equipment, preventive_maintenances, corrective_maintenances,
+occurrences, occurrence_photos, shift_instances, shift_handovers, audit_logs, parameter_history
+
+### Enums (9)
+Role, DataOrigin, OccurrenceSeverity, OccurrenceStatus, MaintenanceStatus,
+Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 
 ## Como retomar
 Próxima sessão: usuário dirá "vamos continuar". Você deve:
@@ -40,3 +51,5 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - "Backup não testado não é backup" — toda fase de backup exige teste explícito de restore
 - Auto-save em localStorage obrigatório em TODO formulário longo (Leituras, Análises, Ocorrências)
 - Queries de dashboard sempre por agregação (`count`/`groupBy`), nunca `findMany` sem `take`
+- "Nada com histórico operacional é hard-deletado — apenas desativado (soft-delete) ou anonimizado (LGPD)"
+- "Dinheiro nunca em Float — sempre Decimal"
