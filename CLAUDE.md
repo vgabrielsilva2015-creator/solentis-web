@@ -11,7 +11,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Adição pós-d — Preparo para sensores (sem implementação no MVP)
 ✅ Item (e) — PLANO em 12 fases aprovado (29–44h) — ver /docs/PLANO.md
 ✅ Item (f) — Modelo de dados aprovado (21 tabelas, 9 enums, multi-tenant) — ver /docs/MODELO_DE_DADOS.md
-⏳ Item (g) — PRÓXIMO: scaffold do projeto (Fase 1) — aguardando OK para iniciar código
+⏳ Item (g) — EM ANDAMENTO: Fase 1 (scaffold) ~70% concluída — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -22,6 +22,8 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
 - Credencial inicial seed: admin@solentis.local / Admin@123 (sistema obriga troca no 1º login)
 - Multi-tenant desde o MVP via tenant_id + middleware Prisma (seed: id="default")
+- Servidor Next.js validado em :3000 — Fase 1 ~70% concluída
+- Tailwind v4 instalado (config no CSS, não em tailwind.config.ts)
 
 ### Tabelas (21)
 tenants, users, sessions, login_attempts, quality_parameters, analysis_methods,
@@ -32,6 +34,34 @@ occurrences, occurrence_photos, shift_instances, shift_handovers, audit_logs, pa
 ### Enums (9)
 Role, DataOrigin, OccurrenceSeverity, OccurrenceStatus, MaintenanceStatus,
 Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
+
+## Status da Fase 1 (Scaffold) — marco parcial 2026-05-12
+
+### ✅ Concluído e validado
+- create-next-app com TypeScript, Tailwind v4, App Router, ESLint
+- Paths `@/*` configurados via tsconfig.json
+- `.gitignore` mesclado (entradas críticas: *.db, uploads/, backups/)
+- Estrutura `src/app/`, `public/` criada; `docs/` preservado
+- Commit intermediário: `4869337` — ponto de retorno seguro
+- **Critério de aceite #1:** `npm run dev` sobe em :3000 sem erros ✅ validado
+
+### ⏳ Pendente para fechar a Fase 1
+- shadcn/ui instalado e configurado
+- Prisma + SQLite inicializado (banco vazio, conexão testada)
+- Página inicial exibindo "Solentis" (limpar boilerplate)
+- `/docs/RUNBOOK.md` criado com comandos úteis
+- `.env.example` com variáveis documentadas
+- Desativar telemetria do Next.js (`NEXT_TELEMETRY_DISABLED=1` no .env.example)
+- **Critério de aceite #2:** página exibe "Solentis"
+- **Critério de aceite #3:** `npx prisma studio` abre sem erro
+
+### 📍 Próximo passo na retomada
+Instalar shadcn/ui (comando: `npx shadcn@latest init`). Antes de rodar, resolver:
+
+### Decisões pendentes para próxima sessão
+- Paleta de cores definitiva do shadcn: azul-petróleo? slate? qual hex?
+- Conteúdo da página inicial customizada "Solentis" (só texto? logo? card de login?)
+- Estrutura do RUNBOOK.md (seções: rodar dev, resetar banco, backup, restore, LGPD anonymize)
 
 ## Como retomar
 Próxima sessão: usuário dirá "vamos continuar". Você deve:
