@@ -43,22 +43,31 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - Paths `@/*` configurados via tsconfig.json
 - `.gitignore` mesclado (entradas críticas: *.db, uploads/, backups/)
 - Estrutura `src/app/`, `public/` criada; `docs/` preservado
-- Commit intermediário: `4869337` — ponto de retorno seguro
-- **Critério de aceite #1:** `npm run dev` sobe em :3000 sem erros ✅ validado
-- shadcn/ui v4.7 instalado (preset Nova, Radix, base neutral) ✅
-  - Arquivos criados: `components.json`, `src/lib/utils.ts`, `src/components/ui/button.tsx`
-  - `src/app/globals.css` atualizado com CSS variables (formato oklch, Tailwind v4)
+- Commit `4869337` — ponto de retorno seguro
+- **Critério de aceite #1:** `npm run dev` sobe em :3000 sem erros ✅
+- shadcn/ui v4.7 instalado (preset Nova, Radix, base neutral) ✅ — commit `8d781b4`
+  - Arquivos: `components.json`, `src/lib/utils.ts`, `src/components/ui/button.tsx`
+  - `src/app/globals.css` com CSS variables oklch + dark mode (Tailwind v4)
+- Prisma deps instaladas ✅ — `prisma` como devDep, `@prisma/client` como dep runtime
 
 ### ⏳ Pendente para fechar a Fase 1
-- Prisma + SQLite inicializado (banco vazio, conexão testada)
-- Página inicial exibindo "Solentis" (limpar boilerplate)
-- `/docs/RUNBOOK.md` criado com comandos úteis
-- `.env.example` com variáveis documentadas + `NEXT_TELEMETRY_DISABLED=1`
-- **Critério de aceite #2:** página exibe "Solentis" ⏳
-- **Critério de aceite #3:** `npx prisma studio` abre sem erro ⏳
+**Sub-passos do Prisma (parados no 3.3):**
+- 3.3 — `npx prisma init --datasource-provider sqlite` ← PRÓXIMO COMANDO
+- 3.4 — Verificar `prisma/schema.prisma` + `.env` + cobertura do `.gitignore`
+- 3.5 — `npx prisma generate` + `npx prisma migrate dev --name init` + validar `prisma studio`
+- 3.6 — commit "chore: prisma inicializado com sqlite + primeira migration vazia"
 
-### 📍 Próximo passo
-Passo 2 do roteiro aprovado: teste intermediário shadcn → Passo 3: `npm install prisma @prisma/client`
+**Demais pendências da Fase 1:**
+- Substituir `src/app/page.tsx` com página "Em construção" → **Critério de aceite #2** ⏳
+- Criar `docs/RUNBOOK.md` (5 seções aprovadas)
+- Criar `.env.example` com `NEXT_TELEMETRY_DISABLED=1` e variáveis documentadas
+- **Critério de aceite #3:** `npx prisma studio` abre sem erro ⏳
+- Atualizar CLAUDE.md com Fase 1 100% + commit marco final
+
+### 📍 Próximo comando ao retomar
+```
+npx prisma init --datasource-provider sqlite
+```
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
