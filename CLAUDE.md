@@ -24,6 +24,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 - Multi-tenant desde o MVP via tenant_id + middleware Prisma (seed: id="default")
 - Servidor Next.js validado em :3000 — Fase 1 ~70% concluída
 - Tailwind v4 instalado (config no CSS, não em tailwind.config.ts)
+- shadcn/ui v4.7 preset Nova + Radix + base neutral (ver seção "Descobertas" abaixo)
 
 ### Tabelas (21)
 tenants, users, sessions, login_attempts, quality_parameters, analysis_methods,
@@ -35,7 +36,7 @@ occurrences, occurrence_photos, shift_instances, shift_handovers, audit_logs, pa
 Role, DataOrigin, OccurrenceSeverity, OccurrenceStatus, MaintenanceStatus,
 Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 
-## Status da Fase 1 (Scaffold) — marco parcial 2026-05-12
+## Status da Fase 1 (Scaffold) — em finalização 2026-05-13
 
 ### ✅ Concluído e validado
 - create-next-app com TypeScript, Tailwind v4, App Router, ESLint
@@ -44,24 +45,39 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - Estrutura `src/app/`, `public/` criada; `docs/` preservado
 - Commit intermediário: `4869337` — ponto de retorno seguro
 - **Critério de aceite #1:** `npm run dev` sobe em :3000 sem erros ✅ validado
+- shadcn/ui v4.7 instalado (preset Nova, Radix, base neutral) ✅
+  - Arquivos criados: `components.json`, `src/lib/utils.ts`, `src/components/ui/button.tsx`
+  - `src/app/globals.css` atualizado com CSS variables (formato oklch, Tailwind v4)
 
 ### ⏳ Pendente para fechar a Fase 1
-- shadcn/ui instalado e configurado
 - Prisma + SQLite inicializado (banco vazio, conexão testada)
 - Página inicial exibindo "Solentis" (limpar boilerplate)
 - `/docs/RUNBOOK.md` criado com comandos úteis
-- `.env.example` com variáveis documentadas
-- Desativar telemetria do Next.js (`NEXT_TELEMETRY_DISABLED=1` no .env.example)
-- **Critério de aceite #2:** página exibe "Solentis"
-- **Critério de aceite #3:** `npx prisma studio` abre sem erro
+- `.env.example` com variáveis documentadas + `NEXT_TELEMETRY_DISABLED=1`
+- **Critério de aceite #2:** página exibe "Solentis" ⏳
+- **Critério de aceite #3:** `npx prisma studio` abre sem erro ⏳
 
-### 📍 Próximo passo na retomada
-Instalar shadcn/ui (comando: `npx shadcn@latest init`). Antes de rodar, resolver:
+### 📍 Próximo passo
+Passo 2 do roteiro aprovado: teste intermediário shadcn → Passo 3: `npm install prisma @prisma/client`
 
-### Decisões pendentes para próxima sessão
-- Paleta de cores definitiva do shadcn: azul-petróleo? slate? qual hex?
-- Conteúdo da página inicial customizada "Solentis" (só texto? logo? card de login?)
-- Estrutura do RUNBOOK.md (seções: rodar dev, resetar banco, backup, restore, LGPD anonymize)
+## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
+
+### shadcn/ui v4.7 — sistema de presets (novo em Dez/2025)
+- A versão 4.7 introduziu presets que agrupam style + fonte + ícones + radius em conjunto
+- **Preset escolhido: Nova** — compacto, Lucide icons embutidos, fonte Geist, ideal para dashboards técnicos
+- O preset Nova força `baseColor: "neutral"` — não pergunta essa escolha ao usuário
+- **Paleta neutral aceita** (em vez de slate original): ambas são cinza-neutro; a customização definitiva para azul-petróleo será via CSS variables nas Fases 4–5, quando houver mais telas para calibrar o tom
+- **Component library: Radix** — anos de maturidade, padrão histórico, primitivos acessíveis (WCAG)
+- shadcn inclui `Button` automaticamente no preset Nova (não precisa de `npx shadcn add button` depois)
+- Tailwind v4 detectado automaticamente; config aplicada em `globals.css` (sem `tailwind.config.ts`)
+- CSS variables em formato `oklch()` — mais preciso que hex/hsl para dark mode
+
+### Padrão do componente Button (para reuso nas próximas fases)
+- Usa `cva` (class-variance-authority) para variantes
+- Usa `Slot` do Radix para polimorfismo (`asChild`)
+- Usa `cn()` de `src/lib/utils.ts` para merge de classes
+- Variantes disponíveis: `default`, `outline`, `secondary`, `ghost`, `destructive`, `link`
+- Tamanhos: `xs`, `sm`, `default`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
 
 ## Como retomar
 Próxima sessão: usuário dirá "vamos continuar". Você deve:
