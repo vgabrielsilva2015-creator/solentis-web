@@ -51,22 +51,25 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - Prisma deps instaladas ✅ — `prisma` como devDep, `@prisma/client` como dep runtime
 
 ### ⏳ Pendente para fechar a Fase 1
-**Sub-passos do Prisma (parados no 3.3):**
-- 3.3 — `npx prisma init --datasource-provider sqlite` ← PRÓXIMO COMANDO
-- 3.4 — Verificar `prisma/schema.prisma` + `.env` + cobertura do `.gitignore`
-- 3.5 — `npx prisma generate` + `npx prisma migrate dev --name init` + validar `prisma studio`
-- 3.6 — commit "chore: prisma inicializado com sqlite + primeira migration vazia"
+**Sub-passos do Prisma (parados no 3.5.0):**
+- ✅ 3.3 — `npx prisma init --datasource-provider sqlite` (feito, não commitado)
+- ✅ 3.4 — Verificações: schema.prisma, .env, .gitignore, prisma.config.ts (feito)
+- 3.5.0 — `npm install --save-dev dotenv` ← PRÓXIMO COMANDO
+- 3.5.1 — `npx prisma generate`
+- 3.5.2 — `npx prisma migrate dev --name init` (⚠️ pode ser interativo — rodar fora se pedir input)
+- 3.5.3 — `npx prisma studio` em background → validar :5555
+- 3.6 — commit "chore: prisma inicializado com sqlite + dotenv + primeira migration vazia"
 
 **Demais pendências da Fase 1:**
 - Substituir `src/app/page.tsx` com página "Em construção" → **Critério de aceite #2** ⏳
 - Criar `docs/RUNBOOK.md` (5 seções aprovadas)
-- Criar `.env.example` com `NEXT_TELEMETRY_DISABLED=1` e variáveis documentadas
+- Criar `.env.example` com `NEXT_TELEMETRY_DISABLED=1` + corrigir armadilha `.env*` no `.gitignore`
 - **Critério de aceite #3:** `npx prisma studio` abre sem erro ⏳
 - Atualizar CLAUDE.md com Fase 1 100% + commit marco final
 
 ### 📍 Próximo comando ao retomar
 ```
-npx prisma init --datasource-provider sqlite
+npm install --save-dev dotenv
 ```
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
@@ -87,6 +90,26 @@ npx prisma init --datasource-provider sqlite
 - Usa `cn()` de `src/lib/utils.ts` para merge de classes
 - Variantes disponíveis: `default`, `outline`, `secondary`, `ghost`, `destructive`, `link`
 - Tamanhos: `xs`, `sm`, `default`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
+
+## Padrões para próximas fases
+
+### Prisma v6 — mudanças críticas (aceitas em 2026-05-14)
+- **Prisma v6 adotado** — padrão atual, não regredir para v5
+- **`prisma.config.ts`** na raiz do projeto — arquivo de configuração TypeScript do Prisma v6; não contém segredos, entra no Git normalmente
+- **Import do cliente Prisma — SEMPRE assim em todo o código futuro:**
+  ```ts
+  // ✅ CORRETO (Prisma v6 — cliente gerado em src/generated/prisma)
+  import { PrismaClient } from '@/generated/prisma'
+  // ❌ ERRADO (formato Prisma v5 — não usar)
+  import { PrismaClient } from '@prisma/client'
+  ```
+- `src/generated/prisma/` está no `.gitignore` (linha 61) — rodar `npx prisma generate` após cada clone ou alteração de schema
+- `dotenv` instalado como devDependency — usado pelo `prisma.config.ts` para carregar `.env`; em produção, variáveis vêm do provedor (Vercel/Railway/etc)
+
+### Armadilha conhecida — `.env*` no `.gitignore`
+- O `.gitignore` usa o wildcard `.env*` (linha 22), que cobre **também** o `.env.example`
+- Quando o `.env.example` for criado (ainda na Fase 1), adicionar imediatamente: `!.env.example` ao `.gitignore`
+- Sem isso, o `.env.example` não entra no Git e fica invisível para outros devs
 
 ## Como retomar
 Próxima sessão: usuário dirá "vamos continuar". Você deve:
