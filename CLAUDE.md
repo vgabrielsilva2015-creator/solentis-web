@@ -11,7 +11,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Adição pós-d — Preparo para sensores (sem implementação no MVP)
 ✅ Item (e) — PLANO em 12 fases aprovado (29–44h) — ver /docs/PLANO.md
 ✅ Item (f) — Modelo de dados aprovado (21 tabelas, 9 enums, multi-tenant) — ver /docs/MODELO_DE_DADOS.md
-⏳ Item (g) — EM ANDAMENTO: Fase 1 (scaffold) ~70% concluída — ver seção abaixo
+✅ Item (g) — Fase 1 (scaffold) 100% CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -22,7 +22,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
 - Credencial inicial seed: admin@solentis.local / Admin@123 (sistema obriga troca no 1º login)
 - Multi-tenant desde o MVP via tenant_id + middleware Prisma (seed: id="default")
-- Servidor Next.js validado em :3000 — Fase 1 ~70% concluída
+- Servidor Next.js validado em :3000 — Fase 1 100% concluída
 - Tailwind v4 instalado (config no CSS, não em tailwind.config.ts)
 - shadcn/ui v4.7 preset Nova + Radix + base neutral (ver seção "Descobertas" abaixo)
 
@@ -36,41 +36,42 @@ occurrences, occurrence_photos, shift_instances, shift_handovers, audit_logs, pa
 Role, DataOrigin, OccurrenceSeverity, OccurrenceStatus, MaintenanceStatus,
 Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 
-## Status da Fase 1 (Scaffold) — em finalização 2026-05-13
+## Status da Fase 1 (Scaffold) — CONCLUÍDA em 2026-05-14
 
-### ✅ Concluído e validado
+### ✅ Tudo concluído e validado
+
 - create-next-app com TypeScript, Tailwind v4, App Router, ESLint
 - Paths `@/*` configurados via tsconfig.json
-- `.gitignore` mesclado (entradas críticas: *.db, uploads/, backups/)
-- Estrutura `src/app/`, `public/` criada; `docs/` preservado
-- Commit `4869337` — ponto de retorno seguro
-- **Critério de aceite #1:** `npm run dev` sobe em :3000 sem erros ✅
-- shadcn/ui v4.7 instalado (preset Nova, Radix, base neutral) ✅ — commit `8d781b4`
+- `.gitignore` mesclado (entradas críticas: *.db, uploads/, backups/, !.env.example)
+- Estrutura `src/app/`, `public/`, `docs/` criadas
+- shadcn/ui v4.7 instalado (preset Nova, Radix, base neutral) — commit `8d781b4`
   - Arquivos: `components.json`, `src/lib/utils.ts`, `src/components/ui/button.tsx`
   - `src/app/globals.css` com CSS variables oklch + dark mode (Tailwind v4)
-- Prisma deps instaladas ✅ — `prisma` como devDep, `@prisma/client` como dep runtime
+- Prisma v7 inicializado (SQLite, prisma.config.ts, dotenv) — commit `a15628d`
+  - Schema em `prisma/schema.prisma`; cliente gerado em `src/generated/prisma/`
+  - Banco `dev.db` criado localmente (no Git — coberto por `*.db`)
+- Página inicial "Solentis" com layout dark, centralizado (`src/app/page.tsx`)
+- `docs/RUNBOOK.md` criado com 5 seções
+- `.env.example` criado com variáveis documentadas
+- **Critério de aceite #1:** `npm run dev` sobe em :3000 ✅
+- **Critério de aceite #2:** página exibe "Solentis" ✅
+- **Critério de aceite #3:** `npx prisma studio` abre sem erro ✅
 
-### ⏳ Pendente para fechar a Fase 1
-**Sub-passos do Prisma (parados no 3.5.0):**
-- ✅ 3.3 — `npx prisma init --datasource-provider sqlite` (feito, não commitado)
-- ✅ 3.4 — Verificações: schema.prisma, .env, .gitignore, prisma.config.ts (feito)
-- 3.5.0 — `npm install --save-dev dotenv` ← PRÓXIMO COMANDO
-- 3.5.1 — `npx prisma generate`
-- 3.5.2 — `npx prisma migrate dev --name init` (⚠️ pode ser interativo — rodar fora se pedir input)
-- 3.5.3 — `npx prisma studio` em background → validar :5555
-- 3.6 — commit "chore: prisma inicializado com sqlite + dotenv + primeira migration vazia"
+## ⏳ Próxima fase: Fase 2 — Autenticação e gestão de usuários
 
-**Demais pendências da Fase 1:**
-- Substituir `src/app/page.tsx` com página "Em construção" → **Critério de aceite #2** ⏳
-- Criar `docs/RUNBOOK.md` (5 seções aprovadas)
-- Criar `.env.example` com `NEXT_TELEMETRY_DISABLED=1` + corrigir armadilha `.env*` no `.gitignore`
-- **Critério de aceite #3:** `npx prisma studio` abre sem erro ⏳
-- Atualizar CLAUDE.md com Fase 1 100% + commit marco final
+### O que a Fase 2 entrega
+- Model `User` no Prisma + seed `admin@solentis.local / Admin@123`
+- NextAuth com credenciais + roles (OPERATOR / TECHNICIAN / MANAGER)
+- Página de login mobile-first
+- Tela de troca de senha obrigatória no 1º login
+- Middleware de rota por perfil (`/gestor/*`, `/tecnico/*`, `/operador/*`)
+- Sessão com timeout: 30min (Operador) / 60min (Técnico e Gestor)
+- Rate limiting no login: 5 tentativas → bloqueio 15min
+- CRUD de usuários (só Gestor)
+- Testes das regras críticas de acesso
 
-### 📍 Próximo comando ao retomar
-```
-npm install --save-dev dotenv
-```
+### 📍 Próximo passo ao retomar
+Iniciar Fase 2 — instalar NextAuth e criar o model User no Prisma.
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
@@ -106,10 +107,10 @@ npm install --save-dev dotenv
 - `src/generated/prisma/` está no `.gitignore` (linha 61) — rodar `npx prisma generate` após cada clone ou alteração de schema
 - `dotenv` instalado como devDependency — usado pelo `prisma.config.ts` para carregar `.env`; em produção, variáveis vêm do provedor (Vercel/Railway/etc)
 
-### Armadilha conhecida — `.env*` no `.gitignore`
-- O `.gitignore` usa o wildcard `.env*` (linha 22), que cobre **também** o `.env.example`
-- Quando o `.env.example` for criado (ainda na Fase 1), adicionar imediatamente: `!.env.example` ao `.gitignore`
-- Sem isso, o `.env.example` não entra no Git e fica invisível para outros devs
+### Armadilha resolvida — `.env*` no `.gitignore`
+- O `.gitignore` usava o wildcard `.env*` que cobria também o `.env.example`
+- **Corrigido em 2026-05-14:** adicionado `!.env.example` logo abaixo de `.env*`
+- `.env.example` agora entra no Git normalmente ✅
 
 ## Como retomar
 Próxima sessão: usuário dirá "vamos continuar". Você deve:

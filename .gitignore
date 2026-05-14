@@ -20,6 +20,7 @@
 
 # Variáveis de ambiente
 .env*
+!.env.example
 
 # Banco de dados
 *.db
