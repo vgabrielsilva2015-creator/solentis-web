@@ -36,7 +36,7 @@ export default async function TecnicoDashboard() {
       {/* Conteúdo */}
       <main className="mx-auto max-w-6xl px-4 py-10 space-y-8">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]} 👋</h1>
+          <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
           <p className="text-slate-400 text-sm">Painel do Técnico — funcionalidades em desenvolvimento.</p>
         </div>
 

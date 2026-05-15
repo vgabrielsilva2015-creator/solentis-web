@@ -141,3 +141,6 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - Queries de dashboard sempre por agregação (`count`/`groupBy`), nunca `findMany` sem `take`
 - "Nada com histórico operacional é hard-deletado — apenas desativado (soft-delete) ou anonimizado (LGPD)"
 - "Dinheiro nunca em Float — sempre Decimal"
+
+## Pendências futuras (fora do MVP)
+- **Fase 12 — Logo/imagem Solentis:** Adicionar logo nas telas de autenticação (/login, /trocar-senha) e nos headers dos dashboards. Atualmente exibe apenas o texto "Solentis".
