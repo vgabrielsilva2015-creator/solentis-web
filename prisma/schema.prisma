@@ -1,13 +1,67 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// a) Identidade & Autenticação — Fase 2
+//    (Session adicionada na Fase 3 junto ao schema completo)
+// ─────────────────────────────────────────────
+
+model Tenant {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  users          User[]
+  login_attempts LoginAttempt[]
+
+  @@map("tenants")
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  tenant_id            String
+  email                String
+  password_hash        String
+  name                 String
+  role                 String
+  must_change_password Boolean   @default(true)
+  is_active            Boolean   @default(true)
+  last_login_at        DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  created_by           String?
+
+  tenant        Tenant @relation(fields: [tenant_id], references: [id])
+  creator       User?  @relation("CreatedBy", fields: [created_by], references: [id])
+  created_users User[] @relation("CreatedBy")
+
+  @@unique([tenant_id, email])
+  @@index([tenant_id, role, is_active])
+  @@index([created_at])
+  @@map("users")
+}
+
+model LoginAttempt {
+  id           String   @id @default(cuid())
+  tenant_id    String
+  email        String
+  ip_address   String?
+  success      Boolean
+  attempted_at DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id, email, attempted_at])
+  @@map("login_attempts")
 }

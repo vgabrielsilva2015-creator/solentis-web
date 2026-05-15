@@ -94,18 +94,27 @@ Iniciar Fase 2 — instalar NextAuth e criar o model User no Prisma.
 
 ## Padrões para próximas fases
 
-### Prisma v6 — mudanças críticas (aceitas em 2026-05-14)
-- **Prisma v6 adotado** — padrão atual, não regredir para v5
-- **`prisma.config.ts`** na raiz do projeto — arquivo de configuração TypeScript do Prisma v6; não contém segredos, entra no Git normalmente
+### Prisma v5 — versão adotada (downgrade deliberado em 2026-05-15)
+- **Prisma v5.22.0 adotado** — downgrade do v7 feito porque v7 exige Driver Adapter obrigatório para SQLite, incompatível com a simplicidade do MVP
+- Upgrade para v6/v7 será reavaliado quando migrarmos para PostgreSQL (pós-MVP)
+- **Sem `prisma.config.ts`** — não existe no v5; URL do banco fica em `url = env("DATABASE_URL")` no `schema.prisma`
 - **Import do cliente Prisma — SEMPRE assim em todo o código futuro:**
   ```ts
-  // ✅ CORRETO (Prisma v6 — cliente gerado em src/generated/prisma)
-  import { PrismaClient } from '@/generated/prisma'
-  // ❌ ERRADO (formato Prisma v5 — não usar)
+  // ✅ CORRETO (Prisma v5 — cliente em node_modules/@prisma/client)
   import { PrismaClient } from '@prisma/client'
   ```
-- `src/generated/prisma/` está no `.gitignore` (linha 61) — rodar `npx prisma generate` após cada clone ou alteração de schema
-- `dotenv` instalado como devDependency — usado pelo `prisma.config.ts` para carregar `.env`; em produção, variáveis vêm do provedor (Vercel/Railway/etc)
+- Rodar `npx prisma generate` após cada clone ou alteração de schema
+
+### Enums no Prisma v5 + SQLite
+- **Prisma v5 + SQLite não suporta enums nativos** — todos os enums são `String` no schema
+- Segurança de tipos garantida via `src/types/index.ts` (TypeScript types/const objects)
+- Padrão de uso:
+  ```ts
+  import type { Role } from '@/types'
+  import { ROLES } from '@/types'
+  // ROLES.OPERATOR, ROLES.TECHNICIAN, ROLES.MANAGER
+  ```
+- Quando migrar para PostgreSQL (pós-MVP): converter os campos `String` de volta para enums Prisma nativos
 
 ### Armadilha resolvida — `.env*` no `.gitignore`
 - O `.gitignore` usava o wildcard `.env*` que cobria também o `.env.example`
