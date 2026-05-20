@@ -19,30 +19,27 @@ export default function NovoUsuarioPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // ── Sucesso: mostra a senha provisória ──────────────────────────────────
+  // ── Sucesso: exibe senha provisória ─────────────────────────────────────
   if (state.tempPassword) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm space-y-6">
+      <div className="px-4 py-8 flex items-start justify-center">
+        <div className="w-full max-w-sm space-y-4">
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4">
             <div className="space-y-1">
               <h2 className="text-lg font-semibold text-slate-100">Usuário criado</h2>
               <p className="text-xs text-slate-400">
-                Anote a senha provisória abaixo e envie ao usuário.
-                Ele deverá alterá-la no primeiro acesso.
+                Anote a senha provisória e envie ao usuário. Ele deverá alterá-la no primeiro acesso.
               </p>
             </div>
 
-            <div className="rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 flex items-center justify-between gap-3">
-              <code className="text-base font-mono text-amber-300 tracking-widest">
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-800 px-4 py-3">
+              <code className="font-mono text-base tracking-widest text-amber-300">
                 {state.tempPassword}
               </code>
               <Button
-                type="button"
-                variant="ghost"
-                size="sm"
+                type="button" variant="ghost" size="sm"
                 onClick={handleCopy}
-                className="text-slate-400 hover:text-slate-100 shrink-0"
+                className="shrink-0 text-slate-400 hover:text-slate-100"
               >
                 {copied ? 'Copiado!' : 'Copiar'}
               </Button>
@@ -66,15 +63,13 @@ export default function NovoUsuarioPage() {
     )
   }
 
-  // ── Formulário ──────────────────────────────────────────────────────────
+  // ── Formulário ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+    <div className="px-4 py-8 flex items-start justify-center">
       <div className="w-full max-w-sm space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/gestor/usuarios" className="text-slate-400 hover:text-slate-200 text-sm">
-            ← Voltar
-          </Link>
-        </div>
+        <Link href="/gestor/usuarios" className="text-sm text-slate-400 hover:text-slate-200">
+          ← Voltar para usuários
+        </Link>
 
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
           <div className="space-y-1">
@@ -83,35 +78,32 @@ export default function NovoUsuarioPage() {
           </div>
 
           <form action={formAction} className="space-y-4">
-            {/* Nome */}
             <div className="space-y-1.5">
               <label htmlFor="name" className="text-sm font-medium text-slate-300">Nome</label>
               <Input
                 id="name" name="name" type="text"
                 placeholder="Nome completo"
                 required disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
               />
               {state.fieldErrors?.name && (
                 <p className="text-xs text-red-400">{state.fieldErrors.name[0]}</p>
               )}
             </div>
 
-            {/* E-mail */}
             <div className="space-y-1.5">
               <label htmlFor="email" className="text-sm font-medium text-slate-300">E-mail</label>
               <Input
                 id="email" name="email" type="email"
                 placeholder="usuario@email.com"
                 required disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
               />
               {state.fieldErrors?.email && (
                 <p className="text-xs text-red-400">{state.fieldErrors.email[0]}</p>
               )}
             </div>
 
-            {/* Perfil */}
             <div className="space-y-1.5">
               <label htmlFor="role" className="text-sm font-medium text-slate-300">Perfil</label>
               <select
@@ -131,7 +123,7 @@ export default function NovoUsuarioPage() {
             </div>
 
             {state.error && (
-              <p className="text-sm text-red-400 bg-red-950/40 border border-red-800/50 rounded-md px-3 py-2">
+              <p className="rounded-md border border-red-800/50 bg-red-950/40 px-3 py-2 text-sm text-red-400">
                 {state.error}
               </p>
             )}
