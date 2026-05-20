@@ -57,21 +57,49 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Critério de aceite #2:** página exibe "Solentis" ✅
 - **Critério de aceite #3:** `npx prisma studio` abre sem erro ✅
 
-## ⏳ Próxima fase: Fase 2 — Autenticação e gestão de usuários
+## ✅ Fase 2 — Autenticação e gestão de usuários — CONCLUÍDA em 2026-05-20
 
-### O que a Fase 2 entrega
-- Model `User` no Prisma + seed `admin@solentis.local / Admin@123`
-- NextAuth com credenciais + roles (OPERATOR / TECHNICIAN / MANAGER)
-- Página de login mobile-first
-- Tela de troca de senha obrigatória no 1º login
-- Middleware de rota por perfil (`/gestor/*`, `/tecnico/*`, `/operador/*`)
-- Sessão com timeout: 30min (Operador) / 60min (Técnico e Gestor)
-- Rate limiting no login: 5 tentativas → bloqueio 15min
-- CRUD de usuários (só Gestor)
-- Testes das regras críticas de acesso
+### Critérios de aceite — todos validados ✅
+1. Login com credenciais corretas autentica e redireciona ao dashboard do perfil ✅
+2. Login com credenciais erradas exibe mensagem de erro ✅
+3. Usuário com `must_change_password=true` é forçado à tela de troca antes de qualquer rota ✅
+4. Rate limit: 5 tentativas falhas → bloqueio 15min ✅ (testado via Vitest)
+5. Perfil errado tentando acessar rota protegida → redirecionado a `/acesso-negado` ✅
+
+### Commits da Fase 2 (9 commits)
+- `5555725` fix: downgrade Prisma v7→v5 + infra auth — NextAuth, bcrypt, Zod, types (A–C)
+- `979f12c` feat: seed com tenant default + admin@solentis.local (D)
+- `634faf4` feat: middleware de rotas por perfil (E)
+- `23fbbd4` feat: página de login mobile-first + Server Action (F)
+- `f25443b` feat: tela de troca de senha obrigatória com checklist visual (G)
+- `112a854` feat: dashboards placeholder por perfil + botão de logout (H)
+- `46d8c27` fix: remover emoji dos dashboards + pendência de logo anotada
+- `9c9676e` feat: CRUD de usuários para Gestor — busca, badges, reset de senha (I)
+- `f044d54` test: 4 cenários críticos de auth — 10 testes Vitest passando (J)
+
+### Arquivos principais criados na Fase 2
+- `src/lib/auth.ts` — configuração NextAuth v5 com JWT + rate limit + roles
+- `src/lib/auth-utils.ts` — funções puras de auth (testáveis sem Prisma)
+- `src/lib/password.ts` — hashPassword / verifyPassword (bcryptjs, SALT=12)
+- `src/lib/prisma.ts` — singleton PrismaClient
+- `src/middleware.ts` — proteção de rotas por prefixo de perfil
+- `src/app/(auth)/login/` — página + Server Action de login
+- `src/app/(auth)/trocar-senha/` — troca de senha obrigatória com re-autenticação
+- `src/app/gestor/dashboard/`, `tecnico/dashboard/`, `operador/dashboard/` — placeholders
+- `src/app/gestor/usuarios/` — CRUD completo com busca, badges, último login, reset de senha
+- `src/lib/__tests__/auth.test.ts` — 10 asserções, 0 falhas
+- `vitest.config.ts` — configuração Vitest com alias `@/*`
+
+## ⏳ Próxima fase: Fase 3 — Schema completo + seed de dados operacionais
+
+### O que a Fase 3 entrega
+- Schema Prisma completo (21 tabelas conforme MODELO_DE_DADOS.md)
+- Migrations incrementais sobre o schema atual (Tenant + User + LoginAttempt)
+- Seed de dados operacionais para desenvolvimento (pontos de coleta, parâmetros, equipamentos, turnos)
+- Validação via Prisma Studio de todas as tabelas
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 2 — instalar NextAuth e criar o model User no Prisma.
+Iniciar Fase 3 — expandir o schema Prisma com as 18 tabelas restantes.
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
@@ -144,3 +172,5 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 
 ## Pendências futuras (fora do MVP)
 - **Fase 12 — Logo/imagem Solentis:** Adicionar logo nas telas de autenticação (/login, /trocar-senha) e nos headers dos dashboards. Atualmente exibe apenas o texto "Solentis".
+- **Pós-MVP — OCR/IA para laudos laboratoriais:** Leitura automática de laudos em PDF/imagem via OCR ou IA (Caminho B). Fora do escopo do MVP; avaliar na v1.0.
+- **Migração de middleware para proxy:** Next.js 16 deprecou o arquivo `middleware.ts`; migrar para a convenção de proxy quando houver documentação estável.
