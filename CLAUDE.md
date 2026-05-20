@@ -90,16 +90,28 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - `src/lib/__tests__/auth.test.ts` — 10 asserções, 0 falhas
 - `vitest.config.ts` — configuração Vitest com alias `@/*`
 
-## ⏳ Próxima fase: Fase 3 — Schema completo + seed de dados operacionais
+## ✅ Fase 3 — Schema completo + seed de dados operacionais — CONCLUÍDA em 2026-05-20
 
-### O que a Fase 3 entrega
-- Schema Prisma completo (21 tabelas conforme MODELO_DE_DADOS.md)
-- Migrations incrementais sobre o schema atual (Tenant + User + LoginAttempt)
-- Seed de dados operacionais para desenvolvimento (pontos de coleta, parâmetros, equipamentos, turnos)
-- Validação via Prisma Studio de todas as tabelas
+### Critérios de aceite — todos validados ✅
+1. Schema Prisma com 21 tabelas aplicado via migration ✅ (`20260520130427_add_full_schema`)
+2. `npx prisma validate` sem erros ✅
+3. Seed operacional executado e validado no Prisma Studio ✅
+
+### Commits da Fase 3 (2 commits)
+- `<bloco-a>` feat: schema Prisma completo (21 tabelas) + enums TypeScript + migration
+- `<bloco-b>` feat: seed operacional completo (8 params CONAMA, 3 pontos, 3 turnos, 6 categorias)
+
+### Dados de seed disponíveis para desenvolvimento
+- **Usuários:** admin@solentis.local (MANAGER, must_change_password=true), tecnico@solentis.local (TECHNICIAN), operador@solentis.local (OPERATOR)
+- **Parâmetros CONAMA (8):** pH, DBO5, DQO, Nitrogênio Amoniacal, Fósforo Total, Sólidos Suspensos, Coliformes Termotolerantes, Turbidez
+- **Métodos de análise (3):** Colorimetria, Gravimetria, Titulação
+- **Categorias de equipamento (6):** Bombas, Aeradores, Filtros, Medidores, Dosadores, Estruturas Civis
+- **Pontos de coleta (3):** Entrada ETE, Reator Biológico, Saída Final
+- **Turnos (3):** Manhã (06-14h), Tarde (14-22h), Noite (22-06h, crosses_midnight=true)
+- **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 3 — expandir o schema Prisma com as 18 tabelas restantes.
+Iniciar Fase 4 — interface de leituras operacionais (formulário de registro + listagem).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
