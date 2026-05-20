@@ -90,6 +90,36 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - `src/lib/__tests__/auth.test.ts` — 10 asserções, 0 falhas
 - `vitest.config.ts` — configuração Vitest com alias `@/*`
 
+## ✅ Fase 4 — Listas gerenciadas pelo Gestor — CONCLUÍDA em 2026-05-20
+
+### Critérios de aceite — todos validados ✅
+1. Gestor cria/edita/desativa um parâmetro; histórico de versões gravado em `ParameterHistory` ✅
+2. Tentativa de acesso por Operador/Técnico → redirecionado a `/acesso-negado` (middleware) ✅
+3. Seed pré-carregado aparece em todas as listagens ✅
+
+### Commits da Fase 4 (3 commits)
+- `31191c1` feat: sidebar lateral fixa + refactor paginas gestor
+- `c05fa59` feat: CRUDs de parametros, metodos, categorias, pontos, turnos e prazos
+- `<final>` feat: fase 4 completa — CLAUDE.md atualizado
+
+### Arquivos principais criados na Fase 4
+- `src/app/gestor/layout.tsx` — layout compartilhado com sidebar (autenticação centralizada)
+- `src/components/gestor/sidebar.tsx` — sidebar com active state via `usePathname`
+- `src/app/gestor/parametros/` — CRUD completo + `ParameterHistory` ao editar limites
+- `src/app/gestor/metodos/` — CRUD de métodos de análise
+- `src/app/gestor/categorias/` — CRUD de categorias de equipamento
+- `src/app/gestor/pontos-de-coleta/` — CRUD de pontos de coleta
+- `src/app/gestor/turnos/` — CRUD de turnos (com `crosses_midnight` e timeout de passagem)
+- `src/app/gestor/prazos-ocorrencia/` — edição dos 4 prazos fixos por severidade
+
+### Padrões estabelecidos na Fase 4
+- Layout compartilhado `src/app/gestor/layout.tsx` — pages individuais não precisam de header/auth
+- Páginas de listagem: Server Component com `searchParams` para busca
+- Páginas de edição: Server Component (`[id]/page.tsx`) + Client Component (`[id]/edit-form.tsx`)
+- Formulários de criação: Client Component com `useActionState`
+- `crosses_midnight` (checkbox): `z.preprocess((v) => v === 'on', z.boolean())`
+- Campos JSON-like opcionais: `z.preprocess((v) => v === '' ? null : String(v), z.string().nullable())`
+
 ## ✅ Fase 3 — Schema completo + seed de dados operacionais — CONCLUÍDA em 2026-05-20
 
 ### Critérios de aceite — todos validados ✅
@@ -111,7 +141,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 4 — interface de leituras operacionais (formulário de registro + listagem).
+Iniciar Fase 5 — Leituras de campo (formulário mobile-first + localStorage + listagem paginada).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
