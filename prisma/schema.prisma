@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,10 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────────────
-// a) Identidade & Autenticação — Fase 2
-//    (Session adicionada na Fase 3 junto ao schema completo)
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// a) Identidade & Autenticação
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Tenant {
   id         String   @id @default(cuid())
@@ -22,8 +18,23 @@ model Tenant {
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
 
-  users          User[]
-  login_attempts LoginAttempt[]
+  users                   User[]
+  sessions                Session[]
+  login_attempts          LoginAttempt[]
+  quality_parameters      QualityParameter[]
+  analysis_methods        AnalysisMethod[]
+  equipment_categories    EquipmentCategory[]
+  collection_points       CollectionPoint[]
+  shifts                  Shift[]
+  equipment               Equipment[]
+  readings                Reading[]
+  analyses                Analysis[]
+  preventive_maintenances PreventiveMaintenance[]
+  corrective_maintenances CorrectiveMaintenance[]
+  occurrences             Occurrence[]
+  occurrence_photos       OccurrencePhoto[]
+  shift_instances         ShiftInstance[]
+  shift_handovers         ShiftHandover[]
 
   @@map("tenants")
 }
@@ -42,9 +53,34 @@ model User {
   updated_at           DateTime  @updatedAt
   created_by           String?
 
-  tenant        Tenant @relation(fields: [tenant_id], references: [id])
-  creator       User?  @relation("CreatedBy", fields: [created_by], references: [id])
-  created_users User[] @relation("CreatedBy")
+  // — identidade
+  tenant        Tenant  @relation(fields: [tenant_id], references: [id])
+  creator       User?   @relation("CreatedBy", fields: [created_by], references: [id])
+  created_users User[]  @relation("CreatedBy")
+  sessions      Session[]
+
+  // — configuração (1 FK por model → sem nome de relação)
+  quality_parameters        QualityParameter[]
+  severity_defaults_updated OccurrenceSeverityDefault[]
+  parameter_histories       ParameterHistory[]
+
+  // — operação (1 FK por model → sem nome de relação)
+  equipment              Equipment[]
+  readings               Reading[]
+  preventive_completions PreventiveMaintenance[]
+  corrective_assignments CorrectiveMaintenance[]
+  occurrence_photos      OccurrencePhoto[]
+  shift_instances        ShiftInstance[]
+  audit_logs             AuditLog[]
+
+  // — relações nomeadas (múltiplas FKs do mesmo model apontando para User)
+  analyses_recorded       Analysis[]      @relation("AnalysisRecorder")
+  analyses_approved       Analysis[]      @relation("AnalysisApprover")
+  occurrences_reported    Occurrence[]    @relation("OccurrenceReporter")
+  occurrences_responsible Occurrence[]    @relation("OccurrenceResponsible")
+  occurrences_resolved    Occurrence[]    @relation("OccurrenceResolver")
+  handovers_outgoing      ShiftHandover[] @relation("HandoverOutgoing")
+  handovers_incoming      ShiftHandover[] @relation("HandoverIncoming")
 
   @@unique([tenant_id, email])
   @@index([tenant_id, role, is_active])
@@ -64,4 +100,404 @@ model LoginAttempt {
 
   @@index([tenant_id, email, attempted_at])
   @@map("login_attempts")
+}
+
+// Incluída no schema conforme modelo de dados; não utilizada pelo NextAuth JWT (strategy = "jwt")
+model Session {
+  id            String   @id
+  tenant_id     String
+  session_token String   @unique
+  user_id       String
+  expires       DateTime
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// b) Configuração
+// ─────────────────────────────────────────────────────────────────────────────
+
+model QualityParameter {
+  id              String   @id @default(cuid())
+  tenant_id       String
+  name            String
+  unit            String
+  min_limit       Float?
+  max_limit       Float?
+  legal_reference String?
+  effective_date  DateTime
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      String
+
+  tenant  Tenant @relation(fields: [tenant_id], references: [id])
+  creator User   @relation(fields: [created_by], references: [id])
+
+  readings Reading[]
+  analyses Analysis[]
+  history  ParameterHistory[]
+
+  @@index([tenant_id, is_active])
+  @@index([created_at])
+  @@map("quality_parameters")
+}
+
+model ParameterHistory {
+  id                    String    @id @default(cuid())
+  parameter_id          String
+  min_limit_before      Float?
+  max_limit_before      Float?
+  min_limit_after       Float?
+  max_limit_after       Float?
+  effective_date_before DateTime?
+  effective_date_after  DateTime
+  changed_by            String
+  changed_at            DateTime  @default(now())
+  reason                String?
+
+  parameter QualityParameter @relation(fields: [parameter_id], references: [id])
+  changer   User             @relation(fields: [changed_by], references: [id])
+
+  @@index([parameter_id, changed_at])
+  @@map("parameter_history")
+}
+
+model AnalysisMethod {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  tenant   Tenant     @relation(fields: [tenant_id], references: [id])
+  analyses Analysis[]
+
+  @@unique([tenant_id, name])
+  @@map("analysis_methods")
+}
+
+model EquipmentCategory {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  tenant    Tenant      @relation(fields: [tenant_id], references: [id])
+  equipment Equipment[]
+
+  @@unique([tenant_id, name])
+  @@map("equipment_categories")
+}
+
+model CollectionPoint {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  location    String?
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  tenant   Tenant     @relation(fields: [tenant_id], references: [id])
+  readings Reading[]
+  analyses Analysis[]
+
+  @@index([tenant_id])
+  @@map("collection_points")
+}
+
+model Shift {
+  id                       String   @id @default(cuid())
+  tenant_id                String
+  name                     String
+  start_time               String
+  end_time                 String
+  crosses_midnight         Boolean  @default(false)
+  handover_timeout_minutes Int      @default(120)
+  is_active                Boolean  @default(true)
+  created_at               DateTime @default(now())
+
+  tenant          Tenant          @relation(fields: [tenant_id], references: [id])
+  shift_instances ShiftInstance[]
+
+  @@index([tenant_id])
+  @@map("shifts")
+}
+
+// 4 linhas fixas (uma por severidade) — PK é o próprio severity; sem tenant_id (global)
+model OccurrenceSeverityDefault {
+  severity       String   @id
+  deadline_hours Int
+  updated_at     DateTime @updatedAt
+  updated_by     String
+
+  updater User @relation(fields: [updated_by], references: [id])
+
+  @@map("occurrence_severity_defaults")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// c) Operação
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Equipment {
+  id                        String    @id @default(cuid())
+  tenant_id                 String
+  name                      String
+  category_id               String
+  serial_number             String?
+  location                  String?
+  installation_date         DateTime?
+  preventive_frequency_days Int
+  is_active                 Boolean   @default(true)
+  created_at                DateTime  @default(now())
+  created_by                String
+
+  tenant                  Tenant                  @relation(fields: [tenant_id], references: [id])
+  category                EquipmentCategory       @relation(fields: [category_id], references: [id])
+  creator                 User                    @relation(fields: [created_by], references: [id])
+  preventive_maintenances PreventiveMaintenance[]
+  corrective_maintenances CorrectiveMaintenance[]
+
+  @@index([tenant_id, category_id])
+  @@map("equipment")
+}
+
+model ShiftInstance {
+  id         String    @id @default(cuid())
+  tenant_id  String
+  shift_id   String
+  date       DateTime
+  opened_by  String
+  opened_at  DateTime  @default(now())
+  closed_at  DateTime?
+  status     String    @default("OPEN")
+  created_at DateTime  @default(now())
+
+  tenant   Tenant         @relation(fields: [tenant_id], references: [id])
+  shift    Shift          @relation(fields: [shift_id], references: [id])
+  opener   User           @relation(fields: [opened_by], references: [id])
+  readings Reading[]
+  handover ShiftHandover?
+
+  @@index([tenant_id, shift_id, date])
+  @@index([opened_by])
+  @@map("shift_instances")
+}
+
+model Reading {
+  id                  String    @id @default(cuid())
+  tenant_id           String
+  collection_point_id String
+  parameter_id        String?
+  shift_instance_id   String?
+  value               Float?
+  unit                String?
+  notes               String?
+  is_non_conformant   Boolean?
+  origin              String    @default("MANUAL")
+  metadata_origin     String?   // JSON serializado: {device_id, topic, qos} — reservado para sensores (v2.0)
+  recorded_by         String
+  recorded_at         DateTime
+  created_at          DateTime  @default(now())
+
+  tenant           Tenant            @relation(fields: [tenant_id], references: [id])
+  collection_point CollectionPoint   @relation(fields: [collection_point_id], references: [id])
+  parameter        QualityParameter? @relation(fields: [parameter_id], references: [id])
+  shift_instance   ShiftInstance?    @relation(fields: [shift_instance_id], references: [id])
+  recorder         User              @relation(fields: [recorded_by], references: [id])
+
+  @@index([tenant_id, recorded_at])
+  @@index([collection_point_id])
+  @@index([parameter_id])
+  @@index([shift_instance_id])
+  @@index([tenant_id, is_non_conformant, created_at])
+  @@map("readings")
+}
+
+model Analysis {
+  id                  String    @id @default(cuid())
+  tenant_id           String
+  collection_point_id String
+  parameter_id        String
+  method_id           String
+  value               Float
+  unit                String
+  min_limit_applied   Float?
+  max_limit_applied   Float?
+  report_text         String?
+  is_non_conformant   Boolean
+  approved_by         String?
+  approved_at         DateTime?
+  origin              String    @default("MANUAL")
+  metadata_origin     String?   // JSON serializado — reservado para sensores (v2.0)
+  collected_at        DateTime
+  recorded_by         String
+  created_at          DateTime  @default(now())
+
+  tenant           Tenant           @relation(fields: [tenant_id], references: [id])
+  collection_point CollectionPoint  @relation(fields: [collection_point_id], references: [id])
+  parameter        QualityParameter @relation(fields: [parameter_id], references: [id])
+  method           AnalysisMethod   @relation(fields: [method_id], references: [id])
+  recorder         User             @relation("AnalysisRecorder", fields: [recorded_by], references: [id])
+  approver         User?            @relation("AnalysisApprover", fields: [approved_by], references: [id])
+
+  @@index([tenant_id, parameter_id, collected_at])
+  @@index([tenant_id, is_non_conformant, approved_by])
+  @@index([collection_point_id])
+  @@index([recorded_by])
+  @@index([collected_at])
+  @@map("analyses")
+}
+
+model PreventiveMaintenance {
+  id             String    @id @default(cuid())
+  tenant_id      String
+  equipment_id   String
+  scheduled_date DateTime
+  completed_date DateTime?
+  completed_by   String?
+  notes          String?
+  status         String    @default("SCHEDULED")
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenant_id], references: [id])
+  equipment Equipment @relation(fields: [equipment_id], references: [id])
+  completer User?     @relation(fields: [completed_by], references: [id])
+
+  @@index([equipment_id, scheduled_date, status])
+  @@index([tenant_id, status])
+  @@map("preventive_maintenances")
+}
+
+model CorrectiveMaintenance {
+  id             String    @id @default(cuid())
+  tenant_id      String
+  equipment_id   String
+  description    String
+  responsible_id String
+  priority       String?   @default("MEDIUM")
+  start_date     DateTime
+  end_date       DateTime?
+  status         String    @default("IN_PROGRESS")
+  estimated_cost Decimal?
+  actual_cost    Decimal?
+  notes          String?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenant_id], references: [id])
+  equipment   Equipment @relation(fields: [equipment_id], references: [id])
+  responsible User      @relation(fields: [responsible_id], references: [id])
+
+  @@index([equipment_id, status])
+  @@index([tenant_id, priority, status])
+  @@map("corrective_maintenances")
+}
+
+model Occurrence {
+  id             String    @id @default(cuid())
+  tenant_id      String
+  description    String
+  severity       String
+  status         String    @default("OPEN")
+  deadline       DateTime
+  resolved_at    DateTime?
+  resolved_by    String?
+  responsible_id String?
+  reported_by    String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  tenant      Tenant          @relation(fields: [tenant_id], references: [id])
+  reporter    User            @relation("OccurrenceReporter",    fields: [reported_by],    references: [id])
+  responsible User?           @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
+  resolver    User?           @relation("OccurrenceResolver",    fields: [resolved_by],    references: [id])
+  photos      OccurrencePhoto[]
+
+  @@index([tenant_id, severity, status])
+  @@index([deadline])
+  @@index([reported_by])
+  @@map("occurrences")
+}
+
+model OccurrencePhoto {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  occurrence_id String
+  filename      String
+  original_name String
+  mime_type     String
+  size_bytes    Int
+  uploaded_by   String
+  uploaded_at   DateTime @default(now())
+
+  tenant     Tenant     @relation(fields: [tenant_id], references: [id])
+  occurrence Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
+  uploader   User       @relation(fields: [uploaded_by], references: [id])
+
+  @@index([occurrence_id])
+  @@map("occurrence_photos")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// d) Fluxo de Turno
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ShiftHandover {
+  id                    String    @id @default(cuid())
+  tenant_id             String
+  shift_instance_id     String    @unique
+  outgoing_user_id      String
+  incoming_user_id      String?
+  checklist_data        String    // JSON serializado: {readings_done, open_occurrences, pending_items}
+  outgoing_observations String?
+  handover_at           DateTime
+  timeout_at            DateTime
+  incoming_observations String?
+  confirmed_at          DateTime?
+  status                String    @default("PENDING")
+  created_at            DateTime  @default(now())
+
+  tenant         Tenant        @relation(fields: [tenant_id], references: [id])
+  shift_instance ShiftInstance @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
+  outgoing_user  User          @relation("HandoverOutgoing", fields: [outgoing_user_id], references: [id])
+  incoming_user  User?         @relation("HandoverIncoming", fields: [incoming_user_id], references: [id])
+
+  @@index([status, timeout_at])
+  @@map("shift_handovers")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// e) Rastreabilidade
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Sem tenant_id — contexto recuperado via record_id + table_name
+model AuditLog {
+  id            String   @id @default(cuid())
+  user_id       String?
+  table_name    String
+  record_id     String
+  action        String
+  before        String?   // JSON serializado — estado anterior do registro (null em CREATE)
+  after         String?   // JSON serializado — estado posterior do registro (null em DELETE)
+  ip_address    String?
+  justification String?
+  timestamp     DateTime @default(now())
+
+  user User? @relation(fields: [user_id], references: [id])
+
+  @@index([table_name, record_id])
+  @@index([user_id, timestamp])
+  @@index([timestamp])
+  @@map("audit_logs")
 }

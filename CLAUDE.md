@@ -144,6 +144,12 @@ Iniciar Fase 3 — expandir o schema Prisma com as 18 tabelas restantes.
   ```
 - Quando migrar para PostgreSQL (pós-MVP): converter os campos `String` de volta para enums Prisma nativos
 
+### Json no Prisma v5 + SQLite
+- **Prisma v5.22.0 + SQLite não suporta o tipo `Json`** — descoberto na Fase 3
+- Todos os campos JSON são armazenados como `String` no schema e serializados com `JSON.stringify()` / `JSON.parse()` na aplicação
+- Campos afetados: `Reading.metadata_origin`, `Analysis.metadata_origin`, `ShiftHandover.checklist_data`, `AuditLog.before`, `AuditLog.after`
+- Quando migrar para PostgreSQL (pós-MVP): converter para tipo `Json` nativo do Prisma
+
 ### Armadilha resolvida — `.env*` no `.gitignore`
 - O `.gitignore` usava o wildcard `.env*` que cobria também o `.env.example`
 - **Corrigido em 2026-05-14:** adicionado `!.env.example` logo abaixo de `.env*`
