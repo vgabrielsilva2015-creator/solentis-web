@@ -1,11 +1,6 @@
 import { auth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-
-const ROLE_PREFIXES: Record<string, string> = {
-  '/gestor':   'MANAGER',
-  '/tecnico':  'TECHNICIAN',
-  '/operador': 'OPERATOR',
-}
+import { ROLE_PREFIXES, getDashboardRoute } from '@/lib/auth-utils'
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
@@ -17,7 +12,7 @@ export default auth((req) => {
     if (session) {
       const dest = session.user.mustChangePassword
         ? '/trocar-senha'
-        : getDashboard(session.user.role)
+        : getDashboardRoute(session.user.role)
       return NextResponse.redirect(new URL(dest, req.url))
     }
     return NextResponse.next()
@@ -54,15 +49,6 @@ function redirectToLogin(req: NextRequest) {
   const loginUrl = new URL('/login', req.url)
   loginUrl.searchParams.set('callbackUrl', req.nextUrl.pathname)
   return NextResponse.redirect(loginUrl)
-}
-
-function getDashboard(role: string): string {
-  switch (role) {
-    case 'MANAGER':    return '/gestor/dashboard'
-    case 'TECHNICIAN': return '/tecnico/dashboard'
-    case 'OPERATOR':   return '/operador/dashboard'
-    default:           return '/login'
-  }
 }
 
 // Aplica o middleware a todas as rotas exceto assets estáticos e API do NextAuth

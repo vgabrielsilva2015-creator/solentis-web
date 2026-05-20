@@ -3,6 +3,13 @@ import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
+import {
+  RATE_LIMIT_WINDOW_MS,
+  RATE_LIMIT_MAX_ATTEMPTS,
+  SESSION_MAX_AGE_DEFAULT,
+  isRateLimited,
+  getSessionMaxAge,
+} from '@/lib/auth-utils'
 
 // ─── Augmentação de tipos do NextAuth ────────────────────────────────────────
 declare module 'next-auth' {
@@ -30,10 +37,6 @@ declare module '@auth/core/jwt' {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const TENANT_ID = 'default'
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutos
-const RATE_LIMIT_MAX_ATTEMPTS = 5
-const SESSION_MAX_AGE_OPERATOR = 30 * 60  // 30 min em segundos
-const SESSION_MAX_AGE_DEFAULT  = 60 * 60  // 60 min em segundos
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -66,7 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         })
 
-        if (recentFailures >= RATE_LIMIT_MAX_ATTEMPTS) {
+        if (isRateLimited(recentFailures)) {
           throw new Error('RATE_LIMITED')
         }
 
@@ -116,10 +119,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.tenantId           = user.tenantId
 
         // Timeout de sessão diferente por perfil
-        const maxAge = user.role === 'OPERATOR'
-          ? SESSION_MAX_AGE_OPERATOR
-          : SESSION_MAX_AGE_DEFAULT
-        token.exp = Math.floor(Date.now() / 1000) + maxAge
+        token.exp = Math.floor(Date.now() / 1000) + getSessionMaxAge(user.role)
       }
       return token
     },
