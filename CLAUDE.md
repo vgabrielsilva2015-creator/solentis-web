@@ -12,6 +12,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Item (e) — PLANO em 12 fases aprovado (29–44h) — ver /docs/PLANO.md
 ✅ Item (f) — Modelo de dados aprovado (21 tabelas, 9 enums, multi-tenant) — ver /docs/MODELO_DE_DADOS.md
 ✅ Item (g) — Fase 1 (scaffold) 100% CONCLUÍDA — ver seção abaixo
+✅ Fase 5 — Leituras de campo CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -120,6 +121,35 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - `crosses_midnight` (checkbox): `z.preprocess((v) => v === 'on', z.boolean())`
 - Campos JSON-like opcionais: `z.preprocess((v) => v === '' ? null : String(v), z.string().nullable())`
 
+## ✅ Fase 5 — Leituras de campo — CONCLUÍDA em 2026-05-21
+
+### Critérios de aceite — todos validados ✅
+1. Formulário funciona no Chrome DevTools modo celular (375px) ✅
+2. Fecha aba no meio do formulário → reabre → dados estão lá (localStorage) ✅
+3. Valor fora do limite → campo fica vermelho antes de submeter (Nível 1) ✅
+4. Lista pagina corretamente (take/skip + count) ✅
+
+### Commits da Fase 5
+- `<fase-5>` feat: fase 5 completa — leituras de campo, localStorage, paginação, testes
+
+### Arquivos principais criados na Fase 5
+- `src/lib/readings-utils.ts` — `calcularNaoConformidade()` pura e testável
+- `src/app/operador/leituras/actions.ts` — Server Action `registrarLeitura` (Zod + is_non_conformant + MANUAL origin)
+- `src/app/operador/leituras/nova/page.tsx` — Server Component: busca pontos e parâmetros, renderiza form
+- `src/app/operador/leituras/nova/reading-form.tsx` — Client Component: localStorage draft, highlight vermelho real-time
+- `src/app/operador/leituras/page.tsx` — Listagem paginada (20/pág, badge "Fora do limite")
+- `src/lib/__tests__/readings.test.ts` — 9 testes Vitest, 19 total passando
+
+### Padrões estabelecidos na Fase 5
+- **localStorage draft:** chave `reading_draft`; `useState mounted` impede salvar estado vazio antes de hidratar
+- **Redirect pós-submit:** Server Action retorna `{ success: true }`; Client Component limpa draft e chama `router.push()`
+- **Não-conformidade Nível 1:** borda vermelha + texto "Fora do limite CONAMA: X – Y unidade" em tempo real no cliente
+- **Não-conformidade Nível 2 (badge no dashboard):** pendência → Fase 10
+- **Listagem mobile:** cards em vez de tabela (melhor leitura a 375px); borda vermelha no card quando `is_non_conformant = true`
+- **Parâmetro opcional:** quando `parameter_id = null`, campos valor/unidade somem; `is_non_conformant = null`
+- **`shift_instance_id = null`:** associação ao turno ativo implementada na Fase 9
+- **`recorded_at` editável:** `datetime-local` pré-preenchido com now(), operador pode ajustar
+
 ## ✅ Fase 3 — Schema completo + seed de dados operacionais — CONCLUÍDA em 2026-05-20
 
 ### Critérios de aceite — todos validados ✅
@@ -141,7 +171,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 5 — Leituras de campo (formulário mobile-first + localStorage + listagem paginada).
+Iniciar Fase 6 — Análises laboratoriais (formulário Técnico + detecção de não-conformidade + gráfico Recharts).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
@@ -222,3 +252,4 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - **Fase 12 — Logo/imagem Solentis:** Adicionar logo nas telas de autenticação (/login, /trocar-senha) e nos headers dos dashboards. Atualmente exibe apenas o texto "Solentis".
 - **Pós-MVP — OCR/IA para laudos laboratoriais:** Leitura automática de laudos em PDF/imagem via OCR ou IA (Caminho B). Fora do escopo do MVP; avaliar na v1.0.
 - **Migração de middleware para proxy:** Next.js 16 deprecou o arquivo `middleware.ts`; migrar para a convenção de proxy quando houver documentação estável.
+- **Pós-MVP — Notificação Nível 3 (push/email de não-conformidade):** Envio automático de push notification ou e-mail quando uma leitura não-conforme é registrada. Requer integração com serviço externo (ex: Resend, FCM). Avaliar na v1.0.
