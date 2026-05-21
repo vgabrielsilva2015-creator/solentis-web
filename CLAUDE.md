@@ -13,6 +13,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Item (f) — Modelo de dados aprovado (21 tabelas, 9 enums, multi-tenant) — ver /docs/MODELO_DE_DADOS.md
 ✅ Item (g) — Fase 1 (scaffold) 100% CONCLUÍDA — ver seção abaixo
 ✅ Fase 5 — Leituras de campo CONCLUÍDA — ver seção abaixo
+✅ Fase 6 — Análises laboratoriais CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -121,6 +122,36 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - `crosses_midnight` (checkbox): `z.preprocess((v) => v === 'on', z.boolean())`
 - Campos JSON-like opcionais: `z.preprocess((v) => v === '' ? null : String(v), z.string().nullable())`
 
+## ✅ Fase 6 — Análises laboratoriais — CONCLUÍDA em 2026-05-21
+
+### Critérios de aceite — todos validados ✅
+1. pH=11 (acima do limite) → análise destacada em vermelho ✅
+2. Preencher metade do formulário → fechar aba → reabrir → campos recuperados (localStorage) ✅
+3. Gráfico exibe últimos 30 dias (expansível para 90) ✅
+4. Aprovar análise → `approved_by` + `approved_at` preenchidos ✅
+
+### Commits da Fase 6
+- `<fase-6>` feat: fase 6 completa — análises laboratoriais, aprovação, gráfico Recharts
+
+### Arquivos principais criados na Fase 6
+- `src/app/tecnico/analises/actions.ts` — `registrarAnalise` (snapshots imutáveis + is_non_conformant) + `aprovarAnalise`
+- `src/app/tecnico/analises/nova/page.tsx` — Server Component com dados para o formulário
+- `src/app/tecnico/analises/nova/analysis-form.tsx` — Client Component: localStorage, highlight vermelho real-time
+- `src/app/tecnico/analises/page.tsx` — Listagem paginada: badges não-conformidade + status aprovação
+- `src/app/tecnico/analises/approve-button.tsx` — Client Component: `useTransition` + `aprovarAnalise`
+- `src/app/tecnico/analises/historico/page.tsx` — Server Component: filtros por parâmetro e período
+- `src/app/tecnico/analises/historico/analysis-chart.tsx` — Client Component Recharts: gráfico de linha com `ReferenceLine` para limites
+- `src/lib/__tests__/analises.test.ts` — 7 testes Vitest (26 total passando)
+
+### Padrões estabelecidos na Fase 6
+- **Snapshots imutáveis:** `min_limit_applied` / `max_limit_applied` capturados no save — limites não retroagem (rastreabilidade CONAMA 430/2011)
+- **`is_non_conformant` sempre boolean em análises** (nunca null — parâmetro e valor obrigatórios); usa `?? false` sobre `calcularNaoConformidade`
+- **Aprovação:** `requireTechnicianOrManager()` guard; qualquer TECHNICIAN ou MANAGER aprova; `ApproveButton` com `useTransition` + `router.refresh()`
+- **Gráfico Recharts:** Client Component isolado (`'use client'`); `ReferenceLine` amarela para limites; pontos vermelhos quando `isNonConformant`; página Server Component com filtros GET
+- **Badge Gestor (não-conformidades):** pendência → Fase 10
+- **Zod v4:** usar `error: 'mensagem'` em vez de `required_error`/`invalid_type_error` (mudança de API do Zod v4)
+- **Recharts v3.8.1** instalado
+
 ## ✅ Fase 5 — Leituras de campo — CONCLUÍDA em 2026-05-21
 
 ### Critérios de aceite — todos validados ✅
@@ -171,7 +202,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 6 — Análises laboratoriais (formulário Técnico + detecção de não-conformidade + gráfico Recharts).
+Iniciar Fase 7 — Equipamentos e manutenções (CRUD de equipamentos + agendamento automático de preventivas).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 

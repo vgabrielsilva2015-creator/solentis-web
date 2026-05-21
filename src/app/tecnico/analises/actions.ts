@@ -1,0 +1,144 @@
+'use server'
+
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
+import { calcularNaoConformidade } from '@/lib/readings-utils'
+
+const TENANT_ID = 'default'
+
+async function requireTechnician() {
+  const session = await auth()
+  if (!session || session.user.role !== 'TECHNICIAN') {
+    throw new Error('Acesso não autorizado')
+  }
+  return session
+}
+
+async function requireTechnicianOrManager() {
+  const session = await auth()
+  if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
+    throw new Error('Acesso não autorizado')
+  }
+  return session
+}
+
+async function resolveUserId(email: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    select: { id: true },
+  })
+  return user?.id ?? null
+}
+
+const AnaliseSchema = z.object({
+  collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
+  parameter_id:        z.string().min(1, 'Selecione o parâmetro'),
+  method_id:           z.string().min(1, 'Selecione o método de análise'),
+  value: z.preprocess(
+    (v) => {
+      if (v === '' || v == null) return null
+      const n = Number(v)
+      return isNaN(n) ? null : n
+    },
+    z.number({ error: 'Informe o valor medido' }),
+  ),
+  report_text: z.preprocess(
+    (v) => (v === '' || v == null ? null : String(v)),
+    z.string().max(5000, 'Laudo deve ter no máximo 5000 caracteres').nullable(),
+  ),
+  collected_at: z.string().min(1, 'Informe a data/hora da coleta'),
+})
+
+export type AnaliseFormState = {
+  error?: string
+  fieldErrors?: Record<string, string[]>
+  success?: boolean
+}
+
+// ─── Registrar análise ────────────────────────────────────────────────────────
+
+export async function registrarAnalise(
+  _prev: AnaliseFormState,
+  formData: FormData,
+): Promise<AnaliseFormState> {
+  const session = await requireTechnician()
+
+  const parsed = AnaliseSchema.safeParse({
+    collection_point_id: formData.get('collection_point_id'),
+    parameter_id:        formData.get('parameter_id'),
+    method_id:           formData.get('method_id'),
+    value:               formData.get('value'),
+    report_text:         formData.get('report_text'),
+    collected_at:        formData.get('collected_at'),
+  })
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
+
+  // Busca os limites vigentes do parâmetro no momento da coleta.
+  // Esses limites são capturados como snapshot imutável — rastreabilidade legal (CONAMA 430/2011).
+  const param = await prisma.qualityParameter.findUnique({
+    where:  { id: parsed.data.parameter_id },
+    select: { min_limit: true, max_limit: true, unit: true },
+  })
+  if (!param) return { error: 'Parâmetro não encontrado.' }
+
+  const isNonConformant =
+    calcularNaoConformidade(parsed.data.value, param.min_limit, param.max_limit) ?? false
+
+  await prisma.analysis.create({
+    data: {
+      tenant_id:           TENANT_ID,
+      collection_point_id: parsed.data.collection_point_id,
+      parameter_id:        parsed.data.parameter_id,
+      method_id:           parsed.data.method_id,
+      value:               parsed.data.value,
+      unit:                param.unit,
+      min_limit_applied:   param.min_limit,   // snapshot imutável
+      max_limit_applied:   param.max_limit,   // snapshot imutável
+      report_text:         parsed.data.report_text,
+      is_non_conformant:   isNonConformant,
+      approved_by:         null,
+      approved_at:         null,
+      origin:              'MANUAL',
+      metadata_origin:     null,
+      collected_at:        new Date(parsed.data.collected_at),
+      recorded_by:         userId,
+    },
+  })
+
+  revalidatePath('/tecnico/analises')
+  return { success: true }
+}
+
+// ─── Aprovar análise ──────────────────────────────────────────────────────────
+// Qualquer TECHNICIAN ou MANAGER pode aprovar qualquer análise pendente.
+
+export async function aprovarAnalise(
+  analysisId: string,
+): Promise<{ error?: string }> {
+  const session = await requireTechnicianOrManager()
+
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
+
+  const analysis = await prisma.analysis.findUnique({
+    where:  { id: analysisId },
+    select: { approved_by: true },
+  })
+  if (!analysis)              return { error: 'Análise não encontrada.' }
+  if (analysis.approved_by)   return { error: 'Análise já aprovada.' }
+
+  await prisma.analysis.update({
+    where: { id: analysisId },
+    data:  { approved_by: userId, approved_at: new Date() },
+  })
+
+  revalidatePath('/tecnico/analises')
+  return {}
+}
