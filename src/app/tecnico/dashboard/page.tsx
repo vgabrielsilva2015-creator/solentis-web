@@ -1,25 +1,55 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 
-const FEATURES = [
-  { title: 'Análises',          desc: 'Registro e histórico de análises laboratoriais' },
-  { title: 'Parâmetros',        desc: 'Consulta de limites e métodos analíticos' },
-  { title: 'Equipamentos',      desc: 'Visão geral e manutenções programadas' },
-  { title: 'Ocorrências',       desc: 'Abertura e acompanhamento de incidentes' },
-  { title: 'Pontos de Coleta',  desc: 'Mapa e histórico por ponto' },
-  { title: 'Relatórios',        desc: 'Exportação de dados técnicos' },
-]
+const TENANT_ID = 'default'
 
 export default async function TecnicoDashboard() {
   const session = await auth()
   if (!session) redirect('/login')
 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const [overdueCount, pendingAnalysesCount, openCorrectivesCount] = await Promise.all([
+    // Preventivas vencidas: agendadas com data passada
+    prisma.preventiveMaintenance.count({
+      where: {
+        tenant_id:      TENANT_ID,
+        status:         'SCHEDULED',
+        scheduled_date: { lt: today },
+        equipment:      { is_active: true },
+      },
+    }),
+    // Análises pendentes de aprovação
+    prisma.analysis.count({
+      where: { tenant_id: TENANT_ID, approved_by: null },
+    }),
+    // Corretivas em andamento
+    prisma.correctiveMaintenance.count({
+      where: { tenant_id: TENANT_ID, status: 'IN_PROGRESS' },
+    }),
+  ])
+
+  const SHORTCUTS = [
+    {
+      title: 'Análises',
+      desc:  'Registrar ou aprovar análises',
+      href:  '/tecnico/analises',
+    },
+    {
+      title: 'Equipamentos',
+      desc:  'Gerenciar preventivas e corretivas',
+      href:  '/tecnico/equipamentos',
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Top bar */}
       <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3">
+        <div className="mx-auto max-w-2xl flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <span className="text-lg font-bold tracking-tight">Solentis</span>
             <span className="rounded-full bg-sky-900/60 px-2.5 py-0.5 text-xs font-medium text-sky-400">
@@ -33,26 +63,71 @@ export default async function TecnicoDashboard() {
         </div>
       </header>
 
-      {/* Conteúdo */}
-      <main className="mx-auto max-w-6xl px-4 py-10 space-y-8">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
-          <p className="text-slate-400 text-sm">Painel do Técnico — funcionalidades em desenvolvimento.</p>
+      <main className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            Olá, {session.user.name?.split(' ')[0]}
+          </h1>
+          <p className="text-slate-400 text-sm mt-0.5">Painel do Técnico</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-2 opacity-70"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="font-medium text-slate-200">{f.title}</h2>
-                <span className="text-xs text-slate-500 bg-slate-800 rounded px-1.5 py-0.5">Em breve</span>
-              </div>
-              <p className="text-xs text-slate-500">{f.desc}</p>
-            </div>
-          ))}
+        {/* Widgets de atenção */}
+        <div className="grid grid-cols-3 gap-3">
+          <Link
+            href="/tecnico/equipamentos"
+            className={[
+              'rounded-xl border p-4 space-y-1 hover:bg-slate-800/60 transition-colors',
+              overdueCount > 0 ? 'border-red-900/60 bg-red-950/20' : 'border-slate-800 bg-slate-900',
+            ].join(' ')}
+          >
+            <p className={['text-2xl font-bold', overdueCount > 0 ? 'text-red-400' : 'text-slate-200'].join(' ')}>
+              {overdueCount}
+            </p>
+            <p className="text-xs text-slate-500 leading-snug">Preventiva(s) vencida(s)</p>
+          </Link>
+
+          <Link
+            href="/tecnico/analises"
+            className={[
+              'rounded-xl border p-4 space-y-1 hover:bg-slate-800/60 transition-colors',
+              pendingAnalysesCount > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-slate-800 bg-slate-900',
+            ].join(' ')}
+          >
+            <p className={['text-2xl font-bold', pendingAnalysesCount > 0 ? 'text-amber-400' : 'text-slate-200'].join(' ')}>
+              {pendingAnalysesCount}
+            </p>
+            <p className="text-xs text-slate-500 leading-snug">Análise(s) pendentes</p>
+          </Link>
+
+          <Link
+            href="/tecnico/equipamentos"
+            className={[
+              'rounded-xl border p-4 space-y-1 hover:bg-slate-800/60 transition-colors',
+              openCorrectivesCount > 0 ? 'border-orange-900/60 bg-orange-950/20' : 'border-slate-800 bg-slate-900',
+            ].join(' ')}
+          >
+            <p className={['text-2xl font-bold', openCorrectivesCount > 0 ? 'text-orange-400' : 'text-slate-200'].join(' ')}>
+              {openCorrectivesCount}
+            </p>
+            <p className="text-xs text-slate-500 leading-snug">Corretiva(s) em andamento</p>
+          </Link>
+        </div>
+
+        {/* Atalhos */}
+        <div className="space-y-2">
+          <h2 className="text-sm font-medium text-slate-400">Atalhos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {SHORTCUTS.map((s) => (
+              <Link
+                key={s.href}
+                href={s.href}
+                className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-1 hover:bg-slate-800 transition-colors"
+              >
+                <p className="text-sm font-medium text-slate-200">{s.title}</p>
+                <p className="text-xs text-slate-500">{s.desc}</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </main>
     </div>

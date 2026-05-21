@@ -14,6 +14,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Item (g) — Fase 1 (scaffold) 100% CONCLUÍDA — ver seção abaixo
 ✅ Fase 5 — Leituras de campo CONCLUÍDA — ver seção abaixo
 ✅ Fase 6 — Análises laboratoriais CONCLUÍDA — ver seção abaixo
+✅ Fase 7 — Equipamentos e manutenções CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -122,6 +123,38 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - `crosses_midnight` (checkbox): `z.preprocess((v) => v === 'on', z.boolean())`
 - Campos JSON-like opcionais: `z.preprocess((v) => v === '' ? null : String(v), z.string().nullable())`
 
+## ✅ Fase 7 — Equipamentos e manutenções — CONCLUÍDA em 2026-05-21
+
+### Critérios de aceite — todos validados ✅
+1. Criar equipamento → preventiva agendada automaticamente (hoje + frequência em dias) ✅
+2. Concluir preventiva → nova preventiva agendada (data conclusão + frequência) ✅
+3. Preventiva vencida → badge vermelho na listagem e detalhe (computed na query, sem gravar no BD) ✅
+4. Registrar corretiva → responsável auto-preenchido com o usuário logado ✅
+5. Dashboard técnico exibe widgets: preventivas vencidas, análises pendentes, corretivas em andamento ✅
+6. 9 testes Vitest (addDays + isOverdue); 35 total passando ✅
+
+### Arquivos principais criados na Fase 7
+- `src/lib/equipment-utils.ts` — `addDays()` e `isOverdue()` puras e testáveis
+- `src/app/tecnico/equipamentos/actions.ts` — `criarEquipamento`, `editarEquipamento`, `toggleAtivoEquipamento`, `concluirPreventiva`, `registrarCorretiva`, `atualizarStatusCorretiva`
+- `src/app/tecnico/equipamentos/page.tsx` — listagem paginada com busca, filtro inativos, badge "Preventiva vencida"
+- `src/app/tecnico/equipamentos/novo/page.tsx` + `novo/equipment-form.tsx` — formulário de criação
+- `src/app/tecnico/equipamentos/[id]/page.tsx` — detalhe: preventivas + corretivas + formulário edição
+- `src/app/tecnico/equipamentos/[id]/edit-form.tsx` — formulário de edição inline
+- `src/app/tecnico/equipamentos/[id]/conclude-button.tsx` — Client Component `useTransition` para concluir preventiva
+- `src/app/tecnico/equipamentos/[id]/status-button.tsx` — Client Component para COMPLETED/CANCELLED de corretiva
+- `src/app/tecnico/equipamentos/[id]/corrective-form.tsx` — formulário de nova corretiva
+- `src/app/tecnico/equipamentos/[id]/toggle-button.tsx` — ativar/desativar equipamento
+- `src/app/tecnico/dashboard/page.tsx` — atualizado com 3 widgets de atenção (preventivas vencidas, análises pendentes, corretivas abertas)
+- `src/lib/__tests__/equipamentos.test.ts` — 9 testes Vitest (35 total passando)
+
+### Padrões estabelecidos na Fase 7
+- **OVERDUE sem background job:** `scheduled_date < today AND status = SCHEDULED` computado na query; campo `OVERDUE` no enum reservado para futura job
+- **Transações atômicas:** `prisma.$transaction` garante criação do equipamento + primeira preventiva como unidade atômica; idem para concluir + agendar próxima
+- **Responsável auto-preenchido:** `registrarCorretiva` usa `resolveUserId(session.user.email)` — Técnico não escolhe o responsável
+- **Editar frequência não reagenda:** decisão explícita — preventiva existente não é alterada; documentado na UI com texto explicativo
+- **`priority` nullable no Prisma:** tratado com guard `c.priority ? PRIORITY_MAP[c.priority] : fallback`
+- **Acesso ao `/tecnico/equipamentos`:** middleware bloqueia MANAGER (rota `/tecnico/*` → TECHNICIAN); MANAGER acessa equipamentos quando Fase 10 criar rota no gestor
+
 ## ✅ Fase 6 — Análises laboratoriais — CONCLUÍDA em 2026-05-21
 
 ### Critérios de aceite — todos validados ✅
@@ -202,7 +235,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 7 — Equipamentos e manutenções (CRUD de equipamentos + agendamento automático de preventivas).
+Iniciar Fase 8 — Ocorrências (formulário mobile-first para Operador + upload de fotos + localStorage + listagem com prazos por severidade).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
