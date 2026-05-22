@@ -44,6 +44,11 @@ export default async function TecnicoDashboard() {
       desc:  'Gerenciar preventivas e corretivas',
       href:  '/tecnico/equipamentos',
     },
+    {
+      title: 'Ocorrências',
+      desc:  'Acompanhar e fechar ocorrências',
+      href:  '/tecnico/ocorrencias',
+    },
   ]
 
   return (

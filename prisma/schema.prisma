@@ -410,13 +410,14 @@ model Occurrence {
   description    String
   severity       String
   status         String    @default("OPEN")
-  deadline       DateTime
-  resolved_at    DateTime?
-  resolved_by    String?
-  responsible_id String?
-  reported_by    String
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  deadline          DateTime
+  resolved_at       DateTime?
+  resolved_by       String?
+  resolution_notes  String?
+  responsible_id    String?
+  reported_by       String
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
 
   tenant      Tenant          @relation(fields: [tenant_id], references: [id])
   reporter    User            @relation("OccurrenceReporter",    fields: [reported_by],    references: [id])

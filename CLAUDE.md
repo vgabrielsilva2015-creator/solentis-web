@@ -15,6 +15,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Fase 5 — Leituras de campo CONCLUÍDA — ver seção abaixo
 ✅ Fase 6 — Análises laboratoriais CONCLUÍDA — ver seção abaixo
 ✅ Fase 7 — Equipamentos e manutenções CONCLUÍDA — ver seção abaixo
+✅ Fase 8 — Ocorrências CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -122,6 +123,40 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - Formulários de criação: Client Component com `useActionState`
 - `crosses_midnight` (checkbox): `z.preprocess((v) => v === 'on', z.boolean())`
 - Campos JSON-like opcionais: `z.preprocess((v) => v === '' ? null : String(v), z.string().nullable())`
+
+## ✅ Fase 8 — Ocorrências — CONCLUÍDA em 2026-05-22
+
+### Critérios de aceite — todos validados ✅
+1. Registrar ocorrência CRITICAL → deadline = now + 24h ✅
+2. Acessar `/api/occurrences/[id]/photo` sem sessão → 401 ✅
+3. Upload de `.exe` → rejeitado com mensagem clara ✅
+4. Preencher formulário → fechar aba → reabrir → campos de texto recuperados (localStorage) ✅
+
+### Arquivos principais criados na Fase 8
+- `prisma/schema.prisma` — campo `resolution_notes String?` adicionado ao model `Occurrence`
+- `migrations/20260522171925_add_occurrence_resolution_notes` — migration aplicada
+- `next.config.ts` — `bodySizeLimit: '6mb'` para Server Actions (upload de 5 MB)
+- `src/lib/occurrence-utils.ts` — `calcularDeadline`, `isPrazoVencido`, `isMimeTypeValido` (puras)
+- `src/app/operador/ocorrencias/actions.ts` — `registrarOcorrencia`: Zod + upload de arquivo + transação (Occurrence + OccurrencePhoto)
+- `src/app/operador/ocorrencias/nova/page.tsx` + `occurrence-form.tsx` — formulário com localStorage draft e auto-fill de prazo
+- `src/app/operador/ocorrencias/page.tsx` — listagem paginada própria com badge "PRAZO VENCIDO" animado
+- `src/app/operador/dashboard/page.tsx` — atualizado com widget "X ocorrências suas em aberto"
+- `src/app/api/occurrences/[id]/photo/route.ts` — GET autenticado: 401 sem sessão, stream do arquivo
+- `src/app/tecnico/ocorrencias/actions.ts` — `resolverOcorrencia`: Zod + status RESOLVED + resolution_notes
+- `src/app/tecnico/ocorrencias/page.tsx` — listagem completa (filtro em aberto/todas) com badge "PRAZO VENCIDO"
+- `src/app/tecnico/ocorrencias/[id]/page.tsx` — detalhe: descrição, foto, prazo, formulário de resolução
+- `src/app/tecnico/ocorrencias/[id]/resolve-form.tsx` — formulário de fechamento com campo obrigatório
+- `src/app/tecnico/dashboard/page.tsx` — atalho para ocorrências adicionado
+- `src/lib/__tests__/ocorrencias.test.ts` — 14 testes Vitest (49 total passando)
+
+### Padrões estabelecidos na Fase 8
+- **Upload em Server Action:** `formData.get('photo') as File | null` — verifica `size > 0`, MIME type e tamanho antes de `fs.writeFile`; path: `./uploads/occurrences/{uuid}.{ext}`
+- **Foto sem autenticação bloqueada:** arquivo salvo fora de `/public`; servido APENAS via `/api/occurrences/[id]/photo` com `auth()` obrigatório
+- **deadline calculado no servidor:** busca `occurrence_severity_defaults` por severidade → `now + deadlineHours * 3600 * 1000`; Operador vê prazo sugerido mas não edita
+- **`resolution_notes` obrigatório ao fechar:** Zod valida min 5 chars; campo `resolution_notes String?` adicionado ao schema
+- **localStorage draft em ocorrências:** mesma estratégia das fases anteriores (`mounted` guard, chave `occurrence_draft`); foto NÃO é salva no draft (limitação do browser — documentado na UI)
+- **Badge "PRAZO VENCIDO" animado:** `animate-pulse` do Tailwind em `text-red-400` para destaque forte
+- **`bodySizeLimit: '6mb'`:** configurado em `next.config.ts → experimental.serverActions` para suportar upload de 5 MB (+ overhead multipart)
 
 ## ✅ Fase 7 — Equipamentos e manutenções — CONCLUÍDA em 2026-05-21
 
@@ -235,7 +270,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 8 — Ocorrências (formulário mobile-first para Operador + upload de fotos + localStorage + listagem com prazos por severidade).
+Iniciar Fase 9 — Turnos (abertura, passagem em 2 etapas, fechamento, imutabilidade para Operador/Técnico, edição pelo Gestor com justificativa + AuditLog).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
