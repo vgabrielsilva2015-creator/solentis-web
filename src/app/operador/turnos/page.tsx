@@ -62,6 +62,10 @@ export default async function TurnosPage() {
           outgoing_user:    { select: { name: true } },
         },
       },
+      shift_tasks: {
+        where:  { status: 'PENDING' },
+        select: { id: true },
+      },
     },
     orderBy: { opened_at: 'asc' },
   })
@@ -113,7 +117,13 @@ export default async function TurnosPage() {
             {pendingToConfirm.map((inst) => {
               const h        = inst.handover!
               const vencido  = new Date(h.timeout_at) < now
-              let checklist: { readings_count?: number; open_occurrences_count?: number; pending_items?: string } = {}
+              let checklist: {
+                readings_count?: number
+                open_occurrences_count?: number
+                pending_items?: string
+                pending_tasks_count?: number
+                pending_tasks?: string[]
+              } = {}
               try { checklist = JSON.parse(h.checklist_data) } catch { /* ignora */ }
 
               return (
@@ -139,9 +149,21 @@ export default async function TurnosPage() {
                   </div>
 
                   {/* Resumo do checklist */}
-                  <div className="rounded-md bg-slate-800/60 px-3 py-2 text-xs text-slate-400 space-y-0.5">
+                  <div className="rounded-md bg-slate-800/60 px-3 py-2 text-xs text-slate-400 space-y-1">
                     <p>{checklist.readings_count ?? 0} leitura(s) no turno</p>
                     <p>{checklist.open_occurrences_count ?? 0} ocorrência(s) em aberto</p>
+                    {(checklist.pending_tasks_count ?? 0) > 0 && (
+                      <div className="pt-0.5">
+                        <p className="text-amber-400 font-medium">
+                          {checklist.pending_tasks_count} tarefa(s) não concluída(s):
+                        </p>
+                        <ul className="mt-0.5 space-y-0.5">
+                          {(checklist.pending_tasks ?? []).map((title, i) => (
+                            <li key={i} className="text-slate-300">• {title}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {checklist.pending_items && (
                       <p className="text-slate-300">Pendências: {checklist.pending_items}</p>
                     )}
@@ -179,6 +201,19 @@ export default async function TurnosPage() {
                     {STATUS_LABEL[inst.status]}
                   </span>
                 </div>
+                {/* Badge de tarefas pendentes */}
+                {inst.shift_tasks.length > 0 && (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/40 bg-amber-950/20 px-3 py-2">
+                    <span className="text-xs text-amber-400">
+                      {inst.shift_tasks.length} tarefa(s) pendente(s)
+                    </span>
+                    <Link href={`/operador/turnos/${inst.id}/tarefas`}>
+                      <Button className="h-7 border border-amber-900/50 bg-amber-950/30 text-amber-300 hover:bg-amber-950/60 text-xs px-3">
+                        Ver tarefas
+                      </Button>
+                    </Link>
+                  </div>
+                )}
                 <Link href={`/operador/turnos/${inst.id}/passagem`}>
                   <Button className="h-10 w-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm">
                     Iniciar passagem de turno
@@ -206,6 +241,18 @@ export default async function TurnosPage() {
                     {STATUS_LABEL[inst.status]}
                   </span>
                 </div>
+                {inst.shift_tasks.length > 0 && (
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/40 bg-amber-950/20 px-3 py-2">
+                    <span className="text-xs text-amber-400">
+                      {inst.shift_tasks.length} tarefa(s) pendente(s)
+                    </span>
+                    <Link href={`/operador/turnos/${inst.id}/tarefas`}>
+                      <Button className="h-7 border border-amber-900/50 bg-amber-950/30 text-amber-300 hover:bg-amber-950/60 text-xs px-3">
+                        Ver tarefas
+                      </Button>
+                    </Link>
+                  </div>
+                )}
                 <Link href={`/operador/turnos/${inst.id}/passagem`}>
                   <Button className="h-10 w-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm">
                     Iniciar passagem deste turno

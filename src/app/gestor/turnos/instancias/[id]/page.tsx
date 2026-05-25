@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { EditHandoverForm } from './edit-handover-form'
+import { TaskForm } from './task-form'
 
 const TENANT_ID = 'default'
 
@@ -37,20 +38,34 @@ export default async function InstanciaDetalhePage({
 }) {
   const { id } = await params
 
-  const instance = await prisma.shiftInstance.findUnique({
-    where: { id },
-    include: {
-      shift:  { select: { name: true, start_time: true, end_time: true } },
-      opener: { select: { name: true } },
-      handover: {
-        include: {
-          outgoing_user: { select: { name: true } },
-          incoming_user: { select: { name: true } },
+  const [instance, operators] = await Promise.all([
+    prisma.shiftInstance.findUnique({
+      where: { id },
+      include: {
+        shift:  { select: { name: true, start_time: true, end_time: true } },
+        opener: { select: { name: true } },
+        handover: {
+          include: {
+            outgoing_user: { select: { name: true } },
+            incoming_user: { select: { name: true } },
+          },
+        },
+        readings:    { select: { id: true } },
+        shift_tasks: {
+          include: {
+            assignee: { select: { name: true } },
+            creator:  { select: { name: true } },
+          },
+          orderBy: { created_at: 'asc' },
         },
       },
-      readings: { select: { id: true } },
-    },
-  })
+    }),
+    prisma.user.findMany({
+      where:   { tenant_id: TENANT_ID, role: 'OPERATOR', is_active: true },
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ])
 
   if (!instance || instance.tenant_id !== TENANT_ID) redirect('/gestor/turnos/instancias')
 
@@ -102,6 +117,23 @@ export default async function InstanciaDetalhePage({
             <p className="text-slate-200">{instance.readings.length}</p>
           </div>
         </div>
+      </div>
+
+      {/* Tarefas do turno */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tarefas</p>
+          <span className="text-xs text-slate-500">
+            {instance.shift_tasks.filter((t) => t.status === 'DONE').length}
+            /{instance.shift_tasks.length} concluídas
+          </span>
+        </div>
+        <TaskForm
+          instanceId={id}
+          operators={operators}
+          tasks={instance.shift_tasks}
+          canAdd={instance.status !== 'CLOSED'}
+        />
       </div>
 
       {/* Passagem de turno */}

@@ -34,9 +34,14 @@ export default async function PassagemPage({
   if (instance.status !== 'OPEN')  redirect('/operador/turnos')
   if (instance.handover)           redirect('/operador/turnos')
 
-  const openOccurrencesCount = await prisma.occurrence.count({
-    where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-  })
+  const [openOccurrencesCount, pendingTasksCount] = await Promise.all([
+    prisma.occurrence.count({
+      where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+    }),
+    prisma.shiftTask.count({
+      where: { tenant_id: TENANT_ID, shift_instance_id: id, status: 'PENDING' },
+    }),
+  ])
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -60,7 +65,7 @@ export default async function PassagemPage({
         {/* Resumo automático */}
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Resumo do turno</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
               <p className="text-2xl font-bold text-slate-100">{instance._count.readings}</p>
               <p className="text-xs text-slate-500">leitura(s)</p>
@@ -69,9 +74,20 @@ export default async function PassagemPage({
               <p className={['text-2xl font-bold', openOccurrencesCount > 0 ? 'text-amber-400' : 'text-slate-100'].join(' ')}>
                 {openOccurrencesCount}
               </p>
-              <p className="text-xs text-slate-500">ocorrência(s) em aberto</p>
+              <p className="text-xs text-slate-500">ocorrência(s)</p>
+            </div>
+            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
+              <p className={['text-2xl font-bold', pendingTasksCount > 0 ? 'text-red-400' : 'text-slate-100'].join(' ')}>
+                {pendingTasksCount}
+              </p>
+              <p className="text-xs text-slate-500">tarefa(s) pend.</p>
             </div>
           </div>
+          {pendingTasksCount > 0 && (
+            <p className="text-xs text-red-400 text-center">
+              Há tarefas não concluídas — elas aparecerão no checklist do próximo operador.
+            </p>
+          )}
         </div>
 
         <HandoverForm instanceId={id} />

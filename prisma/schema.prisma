@@ -35,6 +35,8 @@ model Tenant {
   occurrence_photos       OccurrencePhoto[]
   shift_instances         ShiftInstance[]
   shift_handovers         ShiftHandover[]
+  shift_tasks             ShiftTask[]
+  shift_task_photos       ShiftTaskPhoto[]
 
   @@map("tenants")
 }
@@ -81,6 +83,10 @@ model User {
   occurrences_resolved    Occurrence[]    @relation("OccurrenceResolver")
   handovers_outgoing      ShiftHandover[] @relation("HandoverOutgoing")
   handovers_incoming      ShiftHandover[] @relation("HandoverIncoming")
+  tasks_assigned          ShiftTask[]     @relation("TaskAssignee")
+  tasks_created           ShiftTask[]     @relation("TaskCreator")
+  tasks_completed         ShiftTask[]     @relation("TaskCompleter")
+  task_photos_uploaded    ShiftTaskPhoto[]
 
   @@unique([tenant_id, email])
   @@index([tenant_id, role, is_active])
@@ -282,11 +288,12 @@ model ShiftInstance {
   status     String    @default("OPEN")
   created_at DateTime  @default(now())
 
-  tenant   Tenant         @relation(fields: [tenant_id], references: [id])
-  shift    Shift          @relation(fields: [shift_id], references: [id])
-  opener   User           @relation(fields: [opened_by], references: [id])
-  readings Reading[]
-  handover ShiftHandover?
+  tenant      Tenant         @relation(fields: [tenant_id], references: [id])
+  shift       Shift          @relation(fields: [shift_id], references: [id])
+  opener      User           @relation(fields: [opened_by], references: [id])
+  readings    Reading[]
+  handover    ShiftHandover?
+  shift_tasks ShiftTask[]
 
   @@index([tenant_id, shift_id, date])
   @@index([opened_by])
@@ -476,6 +483,51 @@ model ShiftHandover {
 
   @@index([status, timeout_at])
   @@map("shift_handovers")
+}
+
+model ShiftTask {
+  id                String    @id @default(cuid())
+  tenant_id         String
+  shift_instance_id String
+  title             String
+  description       String?
+  assigned_to_id    String?
+  created_by        String
+  created_at        DateTime  @default(now())
+  completed_at      DateTime?
+  completed_by      String?
+  completion_notes  String?
+  status            String    @default("PENDING")
+
+  tenant         Tenant          @relation(fields: [tenant_id], references: [id])
+  shift_instance ShiftInstance   @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
+  assignee       User?           @relation("TaskAssignee", fields: [assigned_to_id], references: [id])
+  creator        User            @relation("TaskCreator", fields: [created_by], references: [id])
+  completer      User?           @relation("TaskCompleter", fields: [completed_by], references: [id])
+  photos         ShiftTaskPhoto[]
+
+  @@index([shift_instance_id, status])
+  @@index([tenant_id, assigned_to_id, status])
+  @@map("shift_tasks")
+}
+
+model ShiftTaskPhoto {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  task_id       String
+  filename      String
+  original_name String
+  mime_type     String
+  size_bytes    Int
+  uploaded_by   String
+  uploaded_at   DateTime @default(now())
+
+  tenant   Tenant    @relation(fields: [tenant_id], references: [id])
+  task     ShiftTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  uploader User      @relation(fields: [uploaded_by], references: [id])
+
+  @@index([task_id])
+  @@map("shift_task_photos")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

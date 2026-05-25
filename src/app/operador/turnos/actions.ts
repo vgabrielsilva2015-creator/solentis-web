@@ -4,8 +4,14 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import path from 'path'
+import fs from 'fs/promises'
+import { randomUUID } from 'crypto'
+import { isMimeTypeValido } from '@/lib/occurrence-utils'
 
-const TENANT_ID = 'default'
+const TENANT_ID       = 'default'
+const MAX_PHOTOS_TASK = 3
+const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
 
 // ─── Guards + helpers ─────────────────────────────────────────────────────────
 
@@ -53,6 +59,13 @@ const ConfirmarPassagemSchema = z.object({
   incoming_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
+  ),
+})
+
+const ConcluirTarefaSchema = z.object({
+  completion_notes: z.preprocess(
+    (v) => (v === '' || v == null ? null : String(v)),
+    z.string().max(500).nullable(),
   ),
 })
 
@@ -168,13 +181,17 @@ export async function iniciarPassagem(
   if (instance.status !== 'OPEN')    return { error: 'Este turno não está aberto.' }
   if (instance.handover)             return { error: 'A passagem já foi iniciada.' }
 
-  // Auto-captura do checklist: leituras do turno + ocorrências abertas do tenant
-  const [readingsCount, openOccurrencesCount] = await Promise.all([
+  // Auto-captura do checklist: leituras, ocorrências abertas e tarefas pendentes
+  const [readingsCount, openOccurrencesCount, pendingTasks] = await Promise.all([
     prisma.reading.count({
       where: { tenant_id: TENANT_ID, shift_instance_id: instanceId },
     }),
     prisma.occurrence.count({
       where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+    }),
+    prisma.shiftTask.findMany({
+      where:  { tenant_id: TENANT_ID, shift_instance_id: instanceId, status: 'PENDING' },
+      select: { title: true },
     }),
   ])
 
@@ -182,6 +199,8 @@ export async function iniciarPassagem(
     readings_count:         readingsCount,
     open_occurrences_count: openOccurrencesCount,
     pending_items:          parsed.data.pending_items ?? '',
+    pending_tasks_count:    pendingTasks.length,
+    pending_tasks:          pendingTasks.map((t) => t.title),
   })
 
   const handoverAt = new Date()
@@ -266,4 +285,108 @@ export async function confirmarPassagem(
 
   revalidatePath('/operador/turnos')
   return { success: true }
+}
+
+// ─── Concluir tarefa ──────────────────────────────────────────────────────────
+
+export async function concluirTarefa(
+  taskId: string,
+  _prev: TurnoFormState,
+  formData: FormData,
+): Promise<TurnoFormState> {
+  const session = await requireOperator()
+
+  const parsed = ConcluirTarefaSchema.safeParse({
+    completion_notes: formData.get('completion_notes'),
+  })
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
+
+  const task = await prisma.shiftTask.findFirst({
+    where:   { id: taskId, tenant_id: TENANT_ID },
+    include: {
+      shift_instance: { select: { status: true } },
+      photos:         { select: { id: true } },
+    },
+  })
+  if (!task)                                   return { error: 'Tarefa não encontrada.' }
+  if (task.status !== 'PENDING')               return { error: 'Esta tarefa já foi concluída ou pulada.' }
+  if (task.shift_instance.status === 'CLOSED') return { error: 'O turno já foi encerrado.' }
+
+  // Valida fotos (0–3 por tarefa; considera fotos já existentes)
+  const files = (formData.getAll('photos') as File[]).filter((f) => f.size > 0)
+  if (task.photos.length + files.length > MAX_PHOTOS_TASK) {
+    return { error: `Máximo de ${MAX_PHOTOS_TASK} fotos por tarefa.` }
+  }
+  for (const file of files) {
+    if (!isMimeTypeValido(file.type)) return { error: `Arquivo inválido: ${file.name}. Use JPG, PNG ou WebP.` }
+    if (file.size > MAX_FILE_SIZE)    return { error: `${file.name} excede 5 MB.` }
+  }
+
+  // Salva arquivos em disco antes da transação — evita BLOBs no SQLite
+  const photoRecords: { filename: string; original_name: string; mime_type: string; size_bytes: number }[] = []
+  if (files.length > 0) {
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'tasks')
+    await fs.mkdir(uploadsDir, { recursive: true })
+    for (const file of files) {
+      const ext      = file.name.split('.').pop() ?? 'bin'
+      const filename = `${randomUUID()}.${ext}`
+      await fs.writeFile(path.join(uploadsDir, filename), Buffer.from(await file.arrayBuffer()))
+      photoRecords.push({ filename, original_name: file.name, mime_type: file.type, size_bytes: file.size })
+    }
+  }
+
+  const now = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.shiftTask.update({
+      where: { id: taskId },
+      data:  {
+        status:           'DONE',
+        completed_at:     now,
+        completed_by:     userId,
+        completion_notes: parsed.data.completion_notes,
+      },
+    })
+    if (photoRecords.length > 0) {
+      await tx.shiftTaskPhoto.createMany({
+        data: photoRecords.map((p) => ({
+          tenant_id:     TENANT_ID,
+          task_id:       taskId,
+          filename:      p.filename,
+          original_name: p.original_name,
+          mime_type:     p.mime_type,
+          size_bytes:    p.size_bytes,
+          uploaded_by:   userId,
+          uploaded_at:   now,
+        })),
+      })
+    }
+  })
+
+  revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
+  revalidatePath('/operador/turnos')
+  return { success: true }
+}
+
+// ─── Pular tarefa ─────────────────────────────────────────────────────────────
+
+export async function pularTarefa(taskId: string): Promise<void> {
+  await requireOperator()
+
+  const task = await prisma.shiftTask.findFirst({
+    where:   { id: taskId, tenant_id: TENANT_ID, status: 'PENDING' },
+    include: { shift_instance: { select: { status: true } } },
+  })
+  if (!task || task.shift_instance.status === 'CLOSED') return
+
+  await prisma.shiftTask.update({
+    where: { id: taskId },
+    data:  { status: 'SKIPPED' },
+  })
+  revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
+  revalidatePath('/operador/turnos')
 }
