@@ -17,6 +17,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Fase 7 — Equipamentos e manutenções CONCLUÍDA — ver seção abaixo
 ✅ Fase 8 — Ocorrências CONCLUÍDA — ver seção abaixo
 ✅ Fase 9 — Turnos CONCLUÍDA — ver seção abaixo
+✅ Feature extra — Tarefas por Turno CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -271,7 +272,44 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 10 — Dashboard do Gestor (relatórios, não-conformidades, KPIs agregados, exportação CSV/PDF).
+Iniciar feature **Controle de Estoque de Produtos Químicos** (aprovada antes da Fase 10).
+Após essa feature: Fase 10 — Dashboard do Gestor (relatórios, não-conformidades, KPIs agregados, exportação CSV/PDF).
+
+## ✅ Feature extra — Tarefas por Turno — CONCLUÍDA em 2026-05-25
+
+### Critérios de aceite — todos validados ✅
+1. Gestor/Técnico atribui tarefa a operador específico (ou "qualquer") numa instância de turno ✅
+2. Operador vê tarefas pendentes com badge ambar no card do turno ativo ✅
+3. Ao concluir, pode anexar até 3 fotos (`<input multiple>`, JPG/PNG/WebP, máx 5 MB cada) ✅
+4. Tarefas não concluídas aparecem automaticamente no checklist da passagem de turno ✅
+5. Acessar `/api/shift-task-photos/[id]` sem sessão → 401 ✅
+
+### Commit
+- `a63e740` feat: tarefas por turno — schema, CRUD, UI operador mobile-first, integração handover
+
+### Arquivos principais criados
+- `prisma/schema.prisma` — modelos `ShiftTask` + `ShiftTaskPhoto` (2 tabelas, migration `add_shift_tasks`)
+- `src/app/api/shift-task-photos/[id]/route.ts` — GET autenticado por ID de foto
+- `src/app/gestor/turnos/instancias/[id]/task-actions.ts` — `atribuirTarefa` + `removerTarefa` (MANAGER ou TECHNICIAN)
+- `src/app/gestor/turnos/instancias/[id]/task-form.tsx` — Client Component: lista + formulário inline de criação
+- `src/app/gestor/turnos/instancias/[id]/page.tsx` — seção Tarefas adicionada (barra X/Y concluídas)
+- `src/app/tecnico/turnos/instancias/page.tsx` — lista de instâncias ativas para o Técnico
+- `src/app/tecnico/turnos/instancias/[id]/page.tsx` + `tecnico-task-form.tsx` — gerenciamento de tarefas pelo Técnico
+- `src/app/operador/turnos/actions.ts` — `concluirTarefa` (upload múltiplo) + `pularTarefa`; `iniciarPassagem` atualizado
+- `src/app/operador/turnos/[id]/tarefas/page.tsx` — lista mobile-first com barra de progresso
+- `src/app/operador/turnos/[id]/tarefas/task-card.tsx` — card expansível: botões h-12, form de conclusão com upload
+- `src/app/operador/turnos/page.tsx` — badge "X tarefa(s) pendente(s)" + botão "Ver tarefas" nos cards de turno
+- `src/app/operador/turnos/[id]/passagem/page.tsx` — widget de tarefas pendentes no resumo do turno
+
+### Padrões estabelecidos
+- **Tarefas por instância (não por template):** cada `ShiftTask` pertence a um `shift_instance_id` — sem recorrência automática no MVP
+- **Técnico importa actions do path do Gestor:** `@/app/gestor/turnos/instancias/[id]/task-actions` — decisão explícita de arquitetura
+- **Upload múltiplo no mobile:** `<input type="file" multiple accept="image/...">` — operador seleciona várias da galeria de uma vez
+- **Fotos salvas antes da transação:** `fs.writeFile` fora do `$transaction`, `createMany` para registros dentro — evita BLOBs no SQLite
+- **Até 3 fotos por tarefa:** validação `task.photos.length + files.length > 3` considera fotos já existentes
+- **SKIPPED não bloqueia passagem:** apenas status `PENDING` entra no `checklist_data` do handover
+- **`revalidatePath` duplo:** `[instanceId]/tarefas` + `/operador/turnos` — garante re-render na página atual e no index
+- **Integração handover retrocompatível:** `pending_tasks_count` e `pending_tasks[]` adicionados ao JSON do `checklist_data`; código antigo que parseia o campo ignora campos desconhecidos
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
