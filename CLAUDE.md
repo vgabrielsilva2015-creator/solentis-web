@@ -16,6 +16,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Fase 6 — Análises laboratoriais CONCLUÍDA — ver seção abaixo
 ✅ Fase 7 — Equipamentos e manutenções CONCLUÍDA — ver seção abaixo
 ✅ Fase 8 — Ocorrências CONCLUÍDA — ver seção abaixo
+✅ Fase 9 — Turnos CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis

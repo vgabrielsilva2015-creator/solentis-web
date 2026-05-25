@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Categorias',           href: '/gestor/categorias' },
   { type: 'link',    label: 'Pontos de Coleta',     href: '/gestor/pontos-de-coleta' },
   { type: 'link',    label: 'Turnos',               href: '/gestor/turnos' },
+  { type: 'link',    label: 'Instâncias de Turno',  href: '/gestor/turnos/instancias' },
   { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia' },
 ]
 

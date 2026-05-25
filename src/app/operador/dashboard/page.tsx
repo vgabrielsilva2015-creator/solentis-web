@@ -15,15 +15,33 @@ export default async function OperadorDashboard() {
     select: { id: true },
   })
 
-  const openOcorrencias = userRecord
-    ? await prisma.occurrence.count({
-        where: {
-          tenant_id:   TENANT_ID,
-          reported_by: userRecord.id,
-          status:      { in: ['OPEN', 'IN_PROGRESS'] },
-        },
-      })
-    : 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const [openOcorrencias, pendingHandovers] = await Promise.all([
+    userRecord
+      ? prisma.occurrence.count({
+          where: {
+            tenant_id:   TENANT_ID,
+            reported_by: userRecord.id,
+            status:      { in: ['OPEN', 'IN_PROGRESS'] },
+          },
+        })
+      : Promise.resolve(0),
+    userRecord
+      ? prisma.shiftHandover.count({
+          where: {
+            tenant_id:   TENANT_ID,
+            status:      'PENDING',
+            outgoing_user_id: { not: userRecord.id },
+            shift_instance: {
+              date:      today,
+              status:    'HANDOVER_PENDING',
+            },
+          },
+        })
+      : Promise.resolve(0),
+  ])
 
   const SHORTCUTS = [
     {
@@ -62,6 +80,21 @@ export default async function OperadorDashboard() {
           </h1>
           <p className="text-slate-400 text-sm mt-0.5">Painel do Operador</p>
         </div>
+
+        {/* Widget de passagens aguardando confirmação */}
+        {pendingHandovers > 0 && (
+          <Link
+            href="/operador/turnos"
+            className="block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 space-y-1 hover:bg-amber-950/30 transition-colors animate-pulse"
+          >
+            <p className="text-2xl font-bold text-amber-400">{pendingHandovers}</p>
+            <p className="text-xs text-amber-500 leading-snug">
+              {pendingHandovers === 1
+                ? 'Passagem de turno aguardando sua confirmação'
+                : 'Passagens de turno aguardando sua confirmação'}
+            </p>
+          </Link>
+        )}
 
         {/* Widget de ocorrências abertas */}
         <Link
