@@ -271,7 +271,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar Fase 9 — Turnos (abertura, passagem em 2 etapas, fechamento, imutabilidade para Operador/Técnico, edição pelo Gestor com justificativa + AuditLog).
+Iniciar Fase 10 — Dashboard do Gestor (relatórios, não-conformidades, KPIs agregados, exportação CSV/PDF).
 
 ## Descobertas durante a retomada (Fase 1 final — 2026-05-13)
 
