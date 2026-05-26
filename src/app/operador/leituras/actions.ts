@@ -10,7 +10,7 @@ const TENANT_ID = 'default'
 
 async function requireOperator() {
   const session = await auth()
-  if (!session || session.user.role !== 'OPERATOR') {
+  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
     throw new Error('Acesso não autorizado')
   }
   return session
@@ -63,6 +63,7 @@ export async function registrarLeitura(
   formData: FormData,
 ): Promise<LeituraFormState> {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar leituras.' }
 
   const parsed = LeituraSchema.safeParse({
     collection_point_id: formData.get('collection_point_id'),

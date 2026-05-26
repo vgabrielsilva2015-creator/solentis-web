@@ -17,7 +17,7 @@ const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
 
 async function requireOperator() {
   const session = await auth()
-  if (!session || session.user.role !== 'OPERATOR') {
+  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
     throw new Error('Acesso não autorizado')
   }
   return session
@@ -98,6 +98,7 @@ export async function abrirTurno(
   formData: FormData,
 ): Promise<TurnoFormState> {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem abrir turnos.' }
 
   const parsed = AbrirTurnoSchema.safeParse({
     shift_id: formData.get('shift_id'),
@@ -158,6 +159,7 @@ export async function iniciarPassagem(
   formData: FormData,
 ): Promise<TurnoFormState> {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem iniciar passagens.' }
 
   const parsed = IniciarPassagemSchema.safeParse({
     pending_items:         formData.get('pending_items'),
@@ -239,6 +241,7 @@ export async function confirmarPassagem(
   formData: FormData,
 ): Promise<TurnoFormState> {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem confirmar passagens.' }
 
   const parsed = ConfirmarPassagemSchema.safeParse({
     incoming_observations: formData.get('incoming_observations'),
@@ -295,6 +298,7 @@ export async function concluirTarefa(
   formData: FormData,
 ): Promise<TurnoFormState> {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem concluir tarefas.' }
 
   const parsed = ConcluirTarefaSchema.safeParse({
     completion_notes: formData.get('completion_notes'),
@@ -375,7 +379,8 @@ export async function concluirTarefa(
 // ─── Pular tarefa ─────────────────────────────────────────────────────────────
 
 export async function pularTarefa(taskId: string): Promise<void> {
-  await requireOperator()
+  const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return
 
   const task = await prisma.shiftTask.findFirst({
     where:   { id: taskId, tenant_id: TENANT_ID, status: 'PENDING' },

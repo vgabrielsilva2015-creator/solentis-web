@@ -13,7 +13,7 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 async function requireOperator() {
   const session = await auth()
-  if (!session || session.user.role !== 'OPERATOR') {
+  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
     throw new Error('Acesso não autorizado')
   }
   return session
@@ -51,6 +51,7 @@ export async function registrarOcorrencia(
   formData: FormData,
 ): Promise<OcorrenciaFormState> {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar ocorrências.' }
 
   const parsed = OcorrenciaSchema.safeParse({
     description: formData.get('description'),

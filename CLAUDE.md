@@ -456,3 +456,6 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - **Pós-MVP — OCR/IA para laudos laboratoriais:** Leitura automática de laudos em PDF/imagem via OCR ou IA (Caminho B). Fora do escopo do MVP; avaliar na v1.0.
 - **Migração de middleware para proxy:** Next.js 16 deprecou o arquivo `middleware.ts`; migrar para a convenção de proxy quando houver documentação estável.
 - **Pós-MVP — Notificação Nível 3 (push/email de não-conformidade):** Envio automático de push notification ou e-mail quando uma leitura não-conforme é registrada. Requer integração com serviço externo (ex: Resend, FCM). Avaliar na v1.0.
+- **Pós-MVP — Abertura automática de turno no login:** Quando Operador faz login, perguntar ou abrir automaticamente um turno; avaliar UX com operadores reais.
+- **Pós-MVP — Repensar fluxo de turno e passagem:** Revisar o fluxo de abertura/fechamento de turno e checklist de passagem com base no feedback dos operadores em campo.
+- **Pós-MVP — Resumo do turno anterior para o entrante:** Ao abrir um turno, Operador vê resumo do que o turno anterior registrou (leituras, ocorrências, tarefas concluídas).

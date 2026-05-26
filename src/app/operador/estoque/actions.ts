@@ -10,7 +10,7 @@ const TENANT_ID = 'default'
 
 async function requireOperator() {
   const session = await auth()
-  if (!session || session.user.role !== 'OPERATOR') {
+  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
     throw new Error('Acesso não autorizado')
   }
   return session
@@ -56,6 +56,7 @@ const ContagemSchema = z.object({
 
 export async function registrarSaida(_prev: unknown, formData: FormData) {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar saídas.' }
 
   const parsed = SaidaSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -110,6 +111,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
 export async function registrarContagem(_prev: unknown, formData: FormData) {
   const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar contagens.' }
 
   const parsed = ContagemSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
