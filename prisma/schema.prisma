@@ -37,6 +37,10 @@ model Tenant {
   shift_handovers         ShiftHandover[]
   shift_tasks             ShiftTask[]
   shift_task_photos       ShiftTaskPhoto[]
+  chemical_products       ChemicalProduct[]
+  chemical_stock_entries  ChemicalStockEntry[]
+  chemical_stock_exits    ChemicalStockExit[]
+  chemical_stock_counts   ChemicalStockCount[]
 
   @@map("tenants")
 }
@@ -87,6 +91,10 @@ model User {
   tasks_created           ShiftTask[]     @relation("TaskCreator")
   tasks_completed         ShiftTask[]     @relation("TaskCompleter")
   task_photos_uploaded    ShiftTaskPhoto[]
+  chemical_products       ChemicalProduct[]
+  chemical_stock_entries  ChemicalStockEntry[]
+  chemical_stock_exits    ChemicalStockExit[]
+  chemical_stock_counts   ChemicalStockCount[]
 
   @@unique([tenant_id, email])
   @@index([tenant_id, role, is_active])
@@ -528,6 +536,89 @@ model ShiftTaskPhoto {
 
   @@index([task_id])
   @@map("shift_task_photos")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// f) Estoque de Produtos Químicos
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ChemicalProduct {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  name        String
+  unit        String
+  min_stock   Float
+  description String?
+  is_active   Boolean  @default(true)
+  created_by  String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  tenant  Tenant @relation(fields: [tenant_id], references: [id])
+  creator User   @relation(fields: [created_by], references: [id])
+
+  entries ChemicalStockEntry[]
+  exits   ChemicalStockExit[]
+  counts  ChemicalStockCount[]
+
+  @@index([tenant_id, is_active])
+  @@map("chemical_products")
+}
+
+model ChemicalStockEntry {
+  id             String   @id @default(cuid())
+  tenant_id      String
+  product_id     String
+  quantity       Float
+  supplier       String?
+  invoice_number String?
+  notes          String?
+  received_at    DateTime
+  recorded_by    String
+  created_at     DateTime @default(now())
+
+  tenant   Tenant          @relation(fields: [tenant_id], references: [id])
+  product  ChemicalProduct @relation(fields: [product_id], references: [id])
+  recorder User            @relation(fields: [recorded_by], references: [id])
+
+  @@index([tenant_id, product_id, received_at])
+  @@map("chemical_stock_entries")
+}
+
+model ChemicalStockExit {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  product_id  String
+  quantity    Float
+  notes       String?
+  used_at     DateTime
+  recorded_by String
+  created_at  DateTime @default(now())
+
+  tenant   Tenant          @relation(fields: [tenant_id], references: [id])
+  product  ChemicalProduct @relation(fields: [product_id], references: [id])
+  recorder User            @relation(fields: [recorded_by], references: [id])
+
+  @@index([tenant_id, product_id, used_at])
+  @@map("chemical_stock_exits")
+}
+
+model ChemicalStockCount {
+  id               String   @id @default(cuid())
+  tenant_id        String
+  product_id       String
+  counted_quantity Float
+  notes            String?
+  counted_at       DateTime
+  recorded_by      String
+  created_at       DateTime @default(now())
+
+  tenant   Tenant          @relation(fields: [tenant_id], references: [id])
+  product  ChemicalProduct @relation(fields: [product_id], references: [id])
+  recorder User            @relation(fields: [recorded_by], references: [id])
+
+  @@index([tenant_id, product_id, counted_at])
+  @@map("chemical_stock_counts")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

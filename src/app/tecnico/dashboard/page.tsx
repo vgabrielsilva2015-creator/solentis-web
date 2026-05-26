@@ -49,6 +49,11 @@ export default async function TecnicoDashboard() {
       desc:  'Acompanhar e fechar ocorrências',
       href:  '/tecnico/ocorrencias',
     },
+    {
+      title: 'Estoque',
+      desc:  'Registrar entradas de produtos químicos',
+      href:  '/tecnico/estoque',
+    },
   ]
 
   return (

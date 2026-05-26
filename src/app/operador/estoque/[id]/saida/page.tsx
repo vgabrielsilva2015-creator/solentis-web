@@ -1,0 +1,64 @@
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { calcularEstoqueAtual, formatarQuantidade } from '@/lib/stock-utils'
+import { ExitForm } from './exit-form'
+
+const TENANT_ID = 'default'
+
+export default async function SaidaPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const { id } = await params
+
+  const product = await prisma.chemicalProduct.findFirst({
+    where:   { id, tenant_id: TENANT_ID, is_active: true },
+    include: {
+      entries: { select: { quantity: true } },
+      exits:   { select: { quantity: true } },
+    },
+  })
+
+  if (!product) notFound()
+
+  const calculado = calcularEstoqueAtual(
+    product.entries.reduce((s, e) => s + e.quantity, 0),
+    product.exits.reduce((s, e) => s + e.quantity, 0),
+  )
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="border-b border-slate-800 bg-slate-900 px-4 py-3">
+        <Link href="/operador/estoque" className="text-sm text-slate-400 hover:text-slate-200">
+          ← Estoque
+        </Link>
+        <h1 className="text-base font-semibold mt-1">Registrar Saída — {product.name}</h1>
+      </header>
+      <main className="px-4 py-6 max-w-lg mx-auto">
+        <div className="rounded-lg bg-slate-800/50 px-4 py-3 mb-5 flex gap-6 text-sm">
+          <div>
+            <p className="text-xs text-slate-500">Estoque calculado</p>
+            <p className={`font-semibold ${calculado < product.min_stock ? 'text-red-400' : 'text-slate-100'}`}>
+              {formatarQuantidade(calculado)} {product.unit}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Mínimo</p>
+            <p className="font-semibold text-slate-400">
+              {formatarQuantidade(product.min_stock)} {product.unit}
+            </p>
+          </div>
+        </div>
+        <ExitForm
+          productId={product.id}
+          productName={product.name}
+          unit={product.unit}
+          estoqueAtual={calculado}
+        />
+      </main>
+    </div>
+  )
+}

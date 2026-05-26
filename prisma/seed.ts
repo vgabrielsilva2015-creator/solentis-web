@@ -216,6 +216,33 @@ async function main() {
   }
   console.log(`Prazos de ocorrencia: CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h`)
 
+  // ── Produtos químicos ─────────────────────────────────────────────────────
+  const chemicalProducts = [
+    { id: 'seed-chem-cloro-gran',    name: 'Cloro Granulado',       unit: 'kg',   min_stock: 20,  description: 'Hipoclorito de calcio granulado 65% - desinfeccao' },
+    { id: 'seed-chem-hipoclorito',   name: 'Hipoclorito de Sodio',  unit: 'L',    min_stock: 50,  description: 'Solucao 12% - desinfeccao do efluente final' },
+    { id: 'seed-chem-cal',           name: 'Cal Hidratada',         unit: 'saco', min_stock: 5,   description: 'Saco 20 kg - correcao de pH e precipitacao de fosforo' },
+    { id: 'seed-chem-sulfato-al',    name: 'Sulfato de Aluminio',   unit: 'kg',   min_stock: 100, description: 'Coagulante primario para remocao de turbidez e SST' },
+    { id: 'seed-chem-polimero',      name: 'Polimero Cationico',    unit: 'kg',   min_stock: 10,  description: 'Floculante auxiliar para desaguamento do lodo' },
+  ]
+
+  for (const product of chemicalProducts) {
+    await prisma.chemicalProduct.upsert({
+      where: { id: product.id },
+      update: {},
+      create: {
+        id: product.id,
+        tenant_id: 'default',
+        name: product.name,
+        unit: product.unit,
+        min_stock: product.min_stock,
+        description: product.description,
+        is_active: true,
+        created_by: admin.id,
+      },
+    })
+  }
+  console.log(`Produtos quimicos: ${chemicalProducts.length}`)
+
   console.log('\nSeed concluido com sucesso.')
 }
 

@@ -86,6 +86,20 @@ export const HANDOVER_STATUSES = {
   TIMED_OUT: 'TIMED_OUT',
 } as const satisfies Record<HandoverStatus, HandoverStatus>
 
+// ─── Estoque de Produtos Químicos ─────────────────────────────────────────────
+
+export const CHEMICAL_UNITS_PRESET = [
+  'kg', 'g', 'L', 'mL', 'unidade', 'saco', 'galão', 'tambor',
+] as const
+
+export type ChemicalUnitPreset = typeof CHEMICAL_UNITS_PRESET[number]
+
+// Usado no select da UI: os presets + opção "Outro" para texto livre
+export const CHEMICAL_UNIT_OPTIONS = [
+  ...CHEMICAL_UNITS_PRESET.map((u) => ({ value: u, label: u })),
+  { value: 'outro', label: 'Outro...' },
+] as const
+
 // ─── Rastreabilidade ──────────────────────────────────────────────────────────
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'

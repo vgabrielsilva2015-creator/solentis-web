@@ -18,6 +18,8 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Turnos',               href: '/gestor/turnos' },
   { type: 'link',    label: 'Instâncias de Turno',  href: '/gestor/turnos/instancias' },
   { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia' },
+  { type: 'section', label: 'Estoque' },
+  { type: 'link',    label: 'Produtos Químicos',   href: '/gestor/produtos-quimicos' },
 ]
 
 export function GestorSidebar() {

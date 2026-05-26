@@ -18,7 +18,7 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers] = await Promise.all([
+  const [openOcorrencias, pendingHandovers, lowStockCount] = await Promise.all([
     userRecord
       ? prisma.occurrence.count({
           where: {
@@ -41,6 +41,18 @@ export default async function OperadorDashboard() {
           },
         })
       : Promise.resolve(0),
+    // Produtos com estoque calculado abaixo do mínimo
+    (async () => {
+      const products = await prisma.chemicalProduct.findMany({
+        where:   { tenant_id: TENANT_ID, is_active: true },
+        select:  { min_stock: true, entries: { select: { quantity: true } }, exits: { select: { quantity: true } } },
+      })
+      return products.filter((p) => {
+        const calc = p.entries.reduce((s, e) => s + e.quantity, 0)
+                   - p.exits.reduce((s, e) => s + e.quantity, 0)
+        return calc < p.min_stock
+      }).length
+    })(),
   ])
 
   const SHORTCUTS = [
@@ -53,6 +65,11 @@ export default async function OperadorDashboard() {
       title: 'Ocorrências',
       desc:  'Registrar ou acompanhar ocorrências',
       href:  '/operador/ocorrencias',
+    },
+    {
+      title: 'Estoque Químico',
+      desc:  'Registrar saídas e contagens físicas',
+      href:  '/operador/estoque',
     },
   ]
 
@@ -92,6 +109,21 @@ export default async function OperadorDashboard() {
               {pendingHandovers === 1
                 ? 'Passagem de turno aguardando sua confirmação'
                 : 'Passagens de turno aguardando sua confirmação'}
+            </p>
+          </Link>
+        )}
+
+        {/* Widget de estoque baixo */}
+        {lowStockCount > 0 && (
+          <Link
+            href="/operador/estoque"
+            className="block rounded-xl border border-red-900/60 bg-red-950/20 p-4 space-y-1 hover:bg-red-950/30 transition-colors"
+          >
+            <p className="text-2xl font-bold text-red-400">{lowStockCount}</p>
+            <p className="text-xs text-red-400/80 leading-snug">
+              {lowStockCount === 1
+                ? 'Produto com estoque abaixo do mínimo'
+                : 'Produtos com estoque abaixo do mínimo'}
             </p>
           </Link>
         )}
