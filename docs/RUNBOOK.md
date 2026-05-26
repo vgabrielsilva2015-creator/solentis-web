@@ -45,14 +45,23 @@ npx prisma migrate reset
 ⚠️ **DESTRUTIVO** — apaga todos os dados e recria o banco do zero com seed.
 Use apenas em desenvolvimento. Nunca em produção.
 
-### 2.2 Fazer backup manual
+### 2.2 Fazer backup (script automatizado)
 ```bash
-# Windows (PowerShell)
-$data = Get-Date -Format "yyyy-MM-dd"
-Copy-Item "prisma\dev.db" "backups\solentis-$data.db"
+npx tsx scripts/backup.ts
 ```
-Backups ficam em `/backups/` (pasta ignorada pelo Git).
-**Crie a pasta antes:** `mkdir backups` (se ainda não existir).
+Cria `backups/solentis-AAAA-MM-DD.db` (pasta ignorada pelo Git).
+O script verifica a existência do banco de origem e imprime o tamanho do arquivo gerado.
+
+**Recomendação de agendamento (produção):** configure um cron diário:
+```
+# Exemplo crontab (Linux/macOS) — 02:00 todo dia
+0 2 * * * cd /caminho/do/projeto && npx tsx scripts/backup.ts >> logs/backup.log 2>&1
+```
+No Windows, use o **Agendador de Tarefas** ou o Windows Task Scheduler.
+
+**Recomendação de infraestrutura:** use um **no-break (UPS)** no servidor que hospeda o banco.
+Quedas de energia durante uma escrita SQLite podem corromper o arquivo `dev.db`.
+O backup diário protege apenas contra corrupção silenciosa descoberta depois — não substitui UPS.
 
 ### 2.3 Restaurar backup (com teste de integridade)
 ```bash
@@ -70,6 +79,16 @@ npx prisma studio
 npm run dev
 ```
 **Princípio:** backup não testado não é backup. Sempre confirme o restore antes de confiar.
+
+### 2.4 Checklist de teste de restore
+Execute este procedimento ao validar um backup antes de colocá-lo em uso:
+- [ ] Servidor parado (`Ctrl+C`)
+- [ ] `Copy-Item backups\solentis-AAAA-MM-DD.db prisma\dev.db` executado
+- [ ] `npx prisma migrate status` — mostra "All migrations have been applied"
+- [ ] `npx prisma studio` — tabelas `users`, `readings`, `shift_handovers` visíveis com dados
+- [ ] `npm run dev` — servidor sobe sem erro na porta 3000
+- [ ] Login com `tecnico@solentis.local` funciona
+- [ ] Página `/tecnico/equipamentos` lista pelo menos um equipamento
 
 ---
 
@@ -170,3 +189,62 @@ Remove-Item -Recurse -Force node_modules
 npm install
 npx prisma generate   # necessário após reinstalar
 ```
+
+---
+
+## 6. Testes manuais dos cenários críticos (Briefing seção 5)
+
+Os cenários abaixo não são cobertos por Vitest porque dependem de comportamento de browser
+ou de infraestrutura externa. Execute-os manualmente antes de cada deploy.
+
+---
+
+### Cenário 1 — localStorage: rascunho de formulário sobrevive ao fechar a aba
+
+**Pré-condição:** servidor rodando (`npm run dev`), usuário `operador@solentis.local` logado.
+
+1. Acesse `/operador/leituras/nova`
+2. Selecione um ponto de coleta e preencha o campo de data/hora
+3. Feche a aba do navegador **sem submeter**
+4. Reabra `http://localhost:3000/operador/leituras/nova`
+
+**Critério de aceite:** os campos preenchidos no passo 2 aparecem automaticamente.
+
+Repita para:
+- `/operador/ocorrencias/nova` (campo Descrição)
+- `/tecnico/analises/nova` (campo Valor medido)
+
+---
+
+### Cenário 2 — Reconexão automática: sessão persiste após queda de rede
+
+**Pré-condição:** servidor rodando, usuário logado no Chrome.
+
+1. Abra qualquer página autenticada (ex.: `/operador/dashboard`)
+2. Desconecte o cabo de rede ou desative o Wi-Fi por 30 segundos
+3. Reconecte a rede
+4. Recarregue a página (`F5`)
+
+**Critério de aceite:** a página carrega normalmente sem redirecionar para `/login`.
+O token JWT está no cookie — sessões já estabelecidas sobrevivem a interrupções de rede.
+
+> **Nota:** se o servidor Next.js reiniciar durante a queda, o usuário precisará logar novamente
+> (comportamento esperado — sem modo offline no MVP).
+
+---
+
+### Cenário 4 — Recomendação de no-break (infraestrutura)
+
+Este cenário é de infraestrutura, não de software. Documente-o como procedimento operacional:
+
+**Risco:** queda de energia durante escrita no SQLite pode corromper `prisma/dev.db`.
+
+**Mitigações implementadas:**
+- Script `scripts/backup.ts` para backup diário do banco
+- Checklist de restore documentado na seção 2.4
+
+**Ação recomendada para produção:**
+- Instalar no-break (UPS) no servidor que hospeda o banco
+- Configurar script de backup no cron (ver seção 2.2)
+- Testar restore completo mensalmente (ver checklist 2.4)
+- Manter pelo menos 7 backups rotacionados antes de deletar os mais antigos
