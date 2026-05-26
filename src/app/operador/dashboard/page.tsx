@@ -18,59 +18,68 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers, lowStockCount] = await Promise.all([
-    userRecord
-      ? prisma.occurrence.count({
-          where: {
-            tenant_id:   TENANT_ID,
-            reported_by: userRecord.id,
-            status:      { in: ['OPEN', 'IN_PROGRESS'] },
-          },
-        })
-      : Promise.resolve(0),
-    userRecord
-      ? prisma.shiftHandover.count({
-          where: {
-            tenant_id:   TENANT_ID,
-            status:      'PENDING',
-            outgoing_user_id: { not: userRecord.id },
-            shift_instance: {
-              date:      today,
-              status:    'HANDOVER_PENDING',
+  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo] =
+    await Promise.all([
+      userRecord
+        ? prisma.occurrence.count({
+            where: {
+              tenant_id:   TENANT_ID,
+              reported_by: userRecord.id,
+              status:      { in: ['OPEN', 'IN_PROGRESS'] },
             },
-          },
+          })
+        : Promise.resolve(0),
+
+      userRecord
+        ? prisma.shiftHandover.count({
+            where: {
+              tenant_id:        TENANT_ID,
+              status:           'PENDING',
+              outgoing_user_id: { not: userRecord.id },
+              shift_instance:   { date: today, status: 'HANDOVER_PENDING' },
+            },
+          })
+        : Promise.resolve(0),
+
+      // Produtos com estoque calculado abaixo do mínimo
+      (async () => {
+        const products = await prisma.chemicalProduct.findMany({
+          where:  { tenant_id: TENANT_ID, is_active: true },
+          select: { min_stock: true, entries: { select: { quantity: true } }, exits: { select: { quantity: true } } },
         })
-      : Promise.resolve(0),
-    // Produtos com estoque calculado abaixo do mínimo
-    (async () => {
-      const products = await prisma.chemicalProduct.findMany({
-        where:   { tenant_id: TENANT_ID, is_active: true },
-        select:  { min_stock: true, entries: { select: { quantity: true } }, exits: { select: { quantity: true } } },
-      })
-      return products.filter((p) => {
-        const calc = p.entries.reduce((s, e) => s + e.quantity, 0)
-                   - p.exits.reduce((s, e) => s + e.quantity, 0)
-        return calc < p.min_stock
-      }).length
-    })(),
-  ])
+        return products.filter((p) => {
+          const calc = p.entries.reduce((s, e) => s + e.quantity, 0)
+                     - p.exits.reduce((s, e) => s + e.quantity, 0)
+          return calc < p.min_stock
+        }).length
+      })(),
+
+      // Leituras registradas hoje por este operador
+      userRecord
+        ? prisma.reading.count({
+            where: {
+              tenant_id:   TENANT_ID,
+              recorded_by: userRecord.id,
+              recorded_at: { gte: today },
+            },
+          })
+        : Promise.resolve(0),
+
+      // Turno ativo aberto por este operador
+      userRecord
+        ? prisma.shiftInstance.findFirst({
+            where:   { tenant_id: TENANT_ID, opened_by: userRecord.id, status: 'OPEN' },
+            include: { shift: { select: { name: true, start_time: true, end_time: true } } },
+            orderBy: { opened_at: 'desc' },
+          })
+        : Promise.resolve(null),
+    ])
 
   const SHORTCUTS = [
-    {
-      title: 'Leituras',
-      desc:  'Registrar leitura de campo',
-      href:  '/operador/leituras',
-    },
-    {
-      title: 'Ocorrências',
-      desc:  'Registrar ou acompanhar ocorrências',
-      href:  '/operador/ocorrencias',
-    },
-    {
-      title: 'Estoque Químico',
-      desc:  'Registrar saídas e contagens físicas',
-      href:  '/operador/estoque',
-    },
+    { title: 'Leituras',       desc: 'Registrar leitura de campo',            href: '/operador/leituras'    },
+    { title: 'Ocorrências',    desc: 'Registrar ou acompanhar ocorrências',   href: '/operador/ocorrencias' },
+    { title: 'Turnos',         desc: 'Abrir, acompanhar e passar turno',      href: '/operador/turnos'      },
+    { title: 'Estoque Químico', desc: 'Registrar saídas e contagens físicas', href: '/operador/estoque'     },
   ]
 
   return (
@@ -90,79 +99,105 @@ export default async function OperadorDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-8 space-y-6">
+      <main className="mx-auto max-w-lg px-4 py-8 space-y-4">
         <div>
-          <h1 className="text-2xl font-semibold">
-            Olá, {session.user.name?.split(' ')[0]}
-          </h1>
+          <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
           <p className="text-slate-400 text-sm mt-0.5">Painel do Operador</p>
         </div>
 
-        {/* Widget de passagens aguardando confirmação */}
+        {/* Passagens urgentes */}
         {pendingHandovers > 0 && (
           <Link
             href="/operador/turnos"
-            className="block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 space-y-1 hover:bg-amber-950/30 transition-colors animate-pulse"
+            className="block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 hover:bg-amber-950/30 transition-colors animate-pulse"
           >
             <p className="text-2xl font-bold text-amber-400">{pendingHandovers}</p>
-            <p className="text-xs text-amber-500 leading-snug">
-              {pendingHandovers === 1
-                ? 'Passagem de turno aguardando sua confirmação'
-                : 'Passagens de turno aguardando sua confirmação'}
+            <p className="text-xs text-amber-500 mt-1">
+              {pendingHandovers === 1 ? 'Passagem de turno aguardando sua confirmação' : 'Passagens de turno aguardando sua confirmação'}
             </p>
           </Link>
         )}
 
-        {/* Widget de estoque baixo */}
+        {/* Estoque baixo */}
         {lowStockCount > 0 && (
           <Link
             href="/operador/estoque"
-            className="block rounded-xl border border-red-900/60 bg-red-950/20 p-4 space-y-1 hover:bg-red-950/30 transition-colors"
+            className="block rounded-xl border border-red-900/60 bg-red-950/20 p-4 hover:bg-red-950/30 transition-colors"
           >
             <p className="text-2xl font-bold text-red-400">{lowStockCount}</p>
-            <p className="text-xs text-red-400/80 leading-snug">
-              {lowStockCount === 1
-                ? 'Produto com estoque abaixo do mínimo'
-                : 'Produtos com estoque abaixo do mínimo'}
+            <p className="text-xs text-red-400/80 mt-1">
+              {lowStockCount === 1 ? 'Produto com estoque abaixo do mínimo' : 'Produtos com estoque abaixo do mínimo'}
             </p>
           </Link>
         )}
 
-        {/* Widget de ocorrências abertas */}
-        <Link
-          href="/operador/ocorrencias"
-          className={[
-            'block rounded-xl border p-4 space-y-1 hover:bg-slate-800/60 transition-colors',
-            openOcorrencias > 0
-              ? 'border-amber-900/60 bg-amber-950/20'
-              : 'border-slate-800 bg-slate-900',
-          ].join(' ')}
-        >
-          <p className={[
-            'text-2xl font-bold',
-            openOcorrencias > 0 ? 'text-amber-400' : 'text-slate-200',
-          ].join(' ')}>
-            {openOcorrencias}
-          </p>
-          <p className="text-xs text-slate-500 leading-snug">
-            {openOcorrencias === 1
-              ? 'Ocorrência sua em aberto'
-              : 'Ocorrências suas em aberto'}
-          </p>
-        </Link>
+        {/* Turno ativo */}
+        {turnoAtivo ? (
+          <Link
+            href={`/operador/turnos/${turnoAtivo.id}`}
+            className="block rounded-xl border border-green-800/60 bg-green-950/20 p-4 hover:bg-green-950/30 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-300">Turno ativo</p>
+                <p className="text-lg font-bold text-green-400 mt-0.5">{turnoAtivo.shift.name}</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  {turnoAtivo.shift.start_time} – {turnoAtivo.shift.end_time} · Em andamento
+                </p>
+              </div>
+              <span className="text-green-500 text-xl">→</span>
+            </div>
+          </Link>
+        ) : (
+          <Link
+            href="/operador/turnos"
+            className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+          >
+            <p className="text-sm text-slate-500">Nenhum turno ativo</p>
+            <p className="text-xs text-slate-600 mt-0.5">Toque para abrir um turno →</p>
+          </Link>
+        )}
+
+        {/* Leituras de hoje + Ocorrências em aberto */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href="/operador/leituras"
+            className="rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+          >
+            <p className="text-2xl font-bold text-slate-100">{leiturasDoDia}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {leiturasDoDia === 1 ? 'Leitura hoje' : 'Leituras hoje'}
+            </p>
+          </Link>
+
+          <Link
+            href="/operador/ocorrencias"
+            className={[
+              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
+              openOcorrencias > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-slate-700 bg-slate-900',
+            ].join(' ')}
+          >
+            <p className={['text-2xl font-bold', openOcorrencias > 0 ? 'text-amber-400' : 'text-slate-100'].join(' ')}>
+              {openOcorrencias}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {openOcorrencias === 1 ? 'Ocorrência em aberto' : 'Ocorrências em aberto'}
+            </p>
+          </Link>
+        </div>
 
         {/* Atalhos */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2">
           <h2 className="text-sm font-medium text-slate-400">Atalhos</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {SHORTCUTS.map((s) => (
               <Link
                 key={s.href}
                 href={s.href}
-                className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-1 hover:bg-slate-800 transition-colors"
+                className="rounded-xl border border-slate-800 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
               >
                 <p className="text-sm font-medium text-slate-200">{s.title}</p>
-                <p className="text-xs text-slate-500">{s.desc}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
               </Link>
             ))}
           </div>
