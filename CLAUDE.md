@@ -19,6 +19,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Fase 9 — Turnos CONCLUÍDA — ver seção abaixo
 ✅ Feature extra — Tarefas por Turno CONCLUÍDA — ver seção abaixo
 ✅ Feature extra — Controle de Estoque de Produtos Químicos CONCLUÍDA — ver seção abaixo
+✅ Fase 10 — Dashboards CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -272,8 +273,36 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Turnos (3):** Manhã (06-14h), Tarde (14-22h), Noite (22-06h, crosses_midnight=true)
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
+## ✅ Fase 10 — Dashboards — CONCLUÍDA em 2026-05-26
+
+### Critérios de aceite — todos validados ✅
+1. Operador vê widget turno ativo (verde se aberto, "Nenhum turno ativo" se não) ✅
+2. Operador vê contagem de leituras do dia (próprio usuário) ✅
+3. Técnico tem 4 widgets: preventivas vencidas, n.c. em aberto, análises p/ aprovar, corretivas ✅
+4. Gestor tem KPIs + alertas + gráfico n.c. por parâmetro (seletor 7/30/90d) + severidades ✅
+5. Badge vermelho quando há n.c. em aberto (Técnico + Gestor) ✅
+6. Todas as queries do Gestor usam `count`/`groupBy` — nenhum `findMany` sem `take` ✅
+7. `seed-demo.ts` gera 629 registros de 6 meses; dashboards carregam sem timeout ✅
+
+### Commit
+- `513f625` feat: fase 10 — dashboards completos por perfil
+
+### Arquivos alterados/criados
+- `src/app/operador/dashboard/page.tsx` — +turno ativo, +leituras do dia, grid 2-col
+- `src/app/tecnico/dashboard/page.tsx` — +widget não-conformidades, grid 2×2
+- `src/app/gestor/dashboard/page.tsx` — refactor completo: KPIs + alertas + gráficos + navegação
+- `src/app/gestor/dashboard/nonconform-chart.tsx` — BarChart Recharts (Client Component)
+- `prisma/seed-demo.ts` — seed separado com 6 meses de dados operacionais
+
+### Padrões estabelecidos na Fase 10
+- **Seletor de período via searchParams:** `?dias=7|30|90` no dashboard do Gestor; Server Component lê o param e filtra a query de `groupBy`
+- **groupBy com parâmetros:** `prisma.analysis.groupBy({ by: ['parameter_id'], _count: { id: true } })` + join manual com `parameterNames`
+- **Ocorrências por severidade:** `groupBy(['severity'])` → `Map<severity, count>` → 4 stat-cards com cores fixas por severidade
+- **seed-demo.ts separado:** ~20% dos valores fora do limite para gerar n.c. realistas; ~60% das análises aprovadas; executar com `npx tsx prisma/seed-demo.ts`
+- **Preventivas no seed-demo:** puladas automaticamente se não houver equipamentos no banco (equipamentos criados via UI na Fase 7)
+
 ### 📍 Próximo passo ao retomar
-Fase 10 — Dashboard do Gestor (relatórios, não-conformidades, KPIs agregados, exportação CSV/PDF).
+Fase 11 — Auditoria (UI + filtros), testes dos 13 cenários críticos, hardening, backup/restore.
 
 ## ✅ Feature extra — Controle de Estoque de Produtos Químicos — CONCLUÍDA em 2026-05-26
 
