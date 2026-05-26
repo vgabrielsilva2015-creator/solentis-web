@@ -30,7 +30,7 @@ export async function loginAction(
     await signIn('credentials', {
       email:       parsed.data.email,
       password:    parsed.data.password,
-      redirectTo:  '/gestor/dashboard',
+      redirectTo:  '/',
     })
   } catch (err) {
     if (err instanceof AuthError) {

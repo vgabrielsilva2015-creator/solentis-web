@@ -18,7 +18,7 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo] =
+  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount] =
     await Promise.all([
       userRecord
         ? prisma.occurrence.count({
@@ -73,6 +73,18 @@ export default async function OperadorDashboard() {
             orderBy: { opened_at: 'desc' },
           })
         : Promise.resolve(null),
+
+      // Tarefas pendentes no turno ativo deste operador
+      userRecord
+        ? prisma.shiftTask.count({
+            where: {
+              tenant_id:      TENANT_ID,
+              status:         'PENDING',
+              shift_instance: { opened_by: userRecord.id, status: 'OPEN' },
+              OR: [{ assigned_to_id: userRecord.id }, { assigned_to_id: null }],
+            },
+          })
+        : Promise.resolve(0),
     ])
 
   const SHORTCUTS = [
@@ -156,6 +168,34 @@ export default async function OperadorDashboard() {
             <p className="text-sm text-slate-500">Nenhum turno ativo</p>
             <p className="text-xs text-slate-600 mt-0.5">Toque para abrir um turno →</p>
           </Link>
+        )}
+
+        {/* Tarefas do turno */}
+        {turnoAtivo ? (
+          pendingTasksCount > 0 ? (
+            <Link
+              href={`/operador/turnos/${turnoAtivo.id}/tarefas`}
+              className="block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 hover:bg-amber-950/30 transition-colors"
+            >
+              <p className="text-2xl font-bold text-amber-400">{pendingTasksCount}</p>
+              <p className="text-xs text-amber-500 mt-1">
+                {pendingTasksCount === 1 ? 'Tarefa pendente no turno atual' : 'Tarefas pendentes no turno atual'}
+              </p>
+            </Link>
+          ) : (
+            <Link
+              href={`/operador/turnos/${turnoAtivo.id}/tarefas`}
+              className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+            >
+              <p className="text-sm text-slate-400">Nenhuma tarefa atribuída</p>
+              <p className="text-xs text-slate-600 mt-0.5">Toque para ver tarefas do turno →</p>
+            </Link>
+          )
+        ) : (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+            <p className="text-sm text-slate-600">Tarefas do turno</p>
+            <p className="text-xs text-slate-700 mt-0.5">Abra um turno primeiro</p>
+          </div>
         )}
 
         {/* Leituras de hoje + Ocorrências em aberto */}
