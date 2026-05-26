@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { logAudit } from '@/lib/audit'
 
 const TENANT_ID = 'default'
 
@@ -54,19 +55,30 @@ export async function resolverOcorrencia(
 
   const occurrence = await prisma.occurrence.findUnique({
     where:  { id: ocorrenciaId },
-    select: { status: true },
+    select: { status: true, severity: true },
   })
   if (!occurrence)                        return { error: 'Ocorrência não encontrada.' }
   if (occurrence.status === 'RESOLVED')   return { error: 'Ocorrência já encerrada.' }
 
-  await prisma.occurrence.update({
-    where: { id: ocorrenciaId },
-    data: {
-      status:           'RESOLVED',
-      resolved_at:      new Date(),
-      resolved_by:      userId,
-      resolution_notes: parsed.data.resolution_notes,
-    },
+  const now = new Date()
+  await prisma.$transaction(async (tx) => {
+    await tx.occurrence.update({
+      where: { id: ocorrenciaId },
+      data: {
+        status:           'RESOLVED',
+        resolved_at:      now,
+        resolved_by:      userId,
+        resolution_notes: parsed.data.resolution_notes,
+      },
+    })
+    await logAudit(tx, {
+      userId,
+      action:    'UPDATE',
+      tableName: 'occurrences',
+      recordId:  ocorrenciaId,
+      before:    { status: occurrence.status },
+      after:     { status: 'RESOLVED', resolved_by: userId, resolution_notes: parsed.data.resolution_notes },
+    })
   })
 
   revalidatePath('/tecnico/ocorrencias')

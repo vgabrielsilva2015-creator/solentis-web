@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { logAudit } from '@/lib/audit'
 
 const TENANT_ID = 'default'
 
@@ -72,19 +73,31 @@ export async function criarParametro(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  await prisma.qualityParameter.create({
-    data: {
-      tenant_id:       TENANT_ID,
-      name:            parsed.data.name,
-      unit:            parsed.data.unit,
-      min_limit:       parsed.data.min_limit,
-      max_limit:       parsed.data.max_limit,
-      legal_reference: parsed.data.legal_reference,
-      effective_date:  new Date(parsed.data.effective_date + 'T00:00:00.000Z'),
-      is_active:       true,
-      created_by:      userId,
-    },
+  const created = await prisma.$transaction(async (tx) => {
+    const param = await tx.qualityParameter.create({
+      data: {
+        tenant_id:       TENANT_ID,
+        name:            parsed.data.name,
+        unit:            parsed.data.unit,
+        min_limit:       parsed.data.min_limit,
+        max_limit:       parsed.data.max_limit,
+        legal_reference: parsed.data.legal_reference,
+        effective_date:  new Date(parsed.data.effective_date + 'T00:00:00.000Z'),
+        is_active:       true,
+        created_by:      userId,
+      },
+      select: { id: true },
+    })
+    await logAudit(tx, {
+      userId,
+      action:    'CREATE',
+      tableName: 'quality_parameters',
+      recordId:  param.id,
+      after:     { name: parsed.data.name, unit: parsed.data.unit, min_limit: parsed.data.min_limit, max_limit: parsed.data.max_limit },
+    })
+    return param
   })
+  void created
 
   revalidatePath('/gestor/parametros')
   redirect('/gestor/parametros')
@@ -114,7 +127,7 @@ export async function editarParametro(
   const [current, userId] = await Promise.all([
     prisma.qualityParameter.findUnique({
       where:  { id: parametroId },
-      select: { min_limit: true, max_limit: true, effective_date: true },
+      select: { name: true, unit: true, min_limit: true, max_limit: true, effective_date: true },
     }),
     resolveUserId(session.user.email!),
   ])
@@ -129,31 +142,42 @@ export async function editarParametro(
     current.max_limit        !== parsed.data.max_limit ||
     current.effective_date.getTime() !== newDate.getTime()
 
-  if (limitsChanged) {
-    await prisma.parameterHistory.create({
+  await prisma.$transaction(async (tx) => {
+    if (limitsChanged) {
+      await tx.parameterHistory.create({
+        data: {
+          parameter_id:          parametroId,
+          min_limit_before:      current.min_limit,
+          max_limit_before:      current.max_limit,
+          min_limit_after:       parsed.data.min_limit,
+          max_limit_after:       parsed.data.max_limit,
+          effective_date_before: current.effective_date,
+          effective_date_after:  newDate,
+          changed_by:            userId,
+        },
+      })
+    }
+
+    await tx.qualityParameter.update({
+      where: { id: parametroId },
       data: {
-        parameter_id:         parametroId,
-        min_limit_before:     current.min_limit,
-        max_limit_before:     current.max_limit,
-        min_limit_after:      parsed.data.min_limit,
-        max_limit_after:      parsed.data.max_limit,
-        effective_date_before: current.effective_date,
-        effective_date_after:  newDate,
-        changed_by:           userId,
+        name:            parsed.data.name,
+        unit:            parsed.data.unit,
+        min_limit:       parsed.data.min_limit,
+        max_limit:       parsed.data.max_limit,
+        legal_reference: parsed.data.legal_reference,
+        effective_date:  newDate,
       },
     })
-  }
 
-  await prisma.qualityParameter.update({
-    where: { id: parametroId },
-    data: {
-      name:            parsed.data.name,
-      unit:            parsed.data.unit,
-      min_limit:       parsed.data.min_limit,
-      max_limit:       parsed.data.max_limit,
-      legal_reference: parsed.data.legal_reference,
-      effective_date:  newDate,
-    },
+    await logAudit(tx, {
+      userId,
+      action:    'UPDATE',
+      tableName: 'quality_parameters',
+      recordId:  parametroId,
+      before:    { name: current.name, unit: current.unit, min_limit: current.min_limit, max_limit: current.max_limit, effective_date: current.effective_date },
+      after:     { name: parsed.data.name, unit: parsed.data.unit, min_limit: parsed.data.min_limit, max_limit: parsed.data.max_limit, effective_date: newDate },
+    })
   })
 
   revalidatePath('/gestor/parametros')
@@ -166,17 +190,30 @@ export async function editarParametro(
 export async function toggleAtivoParametro(
   parametroId: string,
 ): Promise<{ error?: string }> {
-  await requireManager()
+  const session = await requireManager()
 
-  const param = await prisma.qualityParameter.findUnique({
-    where:  { id: parametroId },
-    select: { is_active: true },
-  })
+  const [param, userId] = await Promise.all([
+    prisma.qualityParameter.findUnique({
+      where:  { id: parametroId },
+      select: { is_active: true },
+    }),
+    resolveUserId(session.user.email!),
+  ])
   if (!param) return { error: 'Parâmetro não encontrado.' }
 
-  await prisma.qualityParameter.update({
-    where: { id: parametroId },
-    data:  { is_active: !param.is_active },
+  await prisma.$transaction(async (tx) => {
+    await tx.qualityParameter.update({
+      where: { id: parametroId },
+      data:  { is_active: !param.is_active },
+    })
+    await logAudit(tx, {
+      userId,
+      action:    'UPDATE',
+      tableName: 'quality_parameters',
+      recordId:  parametroId,
+      before:    { is_active:  param.is_active  },
+      after:     { is_active: !param.is_active  },
+    })
   })
 
   revalidatePath('/gestor/parametros')

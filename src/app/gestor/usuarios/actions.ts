@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { logAudit } from '@/lib/audit'
 
 const TENANT_ID = 'default'
 
@@ -15,14 +16,21 @@ async function requireManager() {
   if (!session || session.user.role !== 'MANAGER') {
     throw new Error('Acesso não autorizado')
   }
+  return session
+}
+
+async function resolveUserId(email: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    select: { id: true },
+  })
+  return user?.id ?? null
 }
 
 function gerarSenhaProvisoria(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
   let pwd = 'Sol@'
-  for (let i = 0; i < 6; i++) {
-    pwd += chars[Math.floor(Math.random() * chars.length)]
-  }
+  for (let i = 0; i < 6; i++) pwd += chars[Math.floor(Math.random() * chars.length)]
   return pwd
 }
 
@@ -44,32 +52,44 @@ export async function criarUsuario(
   _prev: UsuarioFormState,
   formData: FormData,
 ): Promise<UsuarioFormState> {
-  await requireManager()
+  const session = await requireManager()
 
   const parsed = UsuarioSchema.safeParse({
     name:  formData.get('name'),
     email: formData.get('email'),
     role:  formData.get('role'),
   })
-
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const tempPassword = gerarSenhaProvisoria()
+  const [managerId, tempPassword] = [
+    await resolveUserId(session.user.email!),
+    gerarSenhaProvisoria(),
+  ]
   const passwordHash = await hashPassword(tempPassword)
 
   try {
-    await prisma.user.create({
-      data: {
-        tenant_id:            TENANT_ID,
-        name:                 parsed.data.name,
-        email:                parsed.data.email,
-        role:                 parsed.data.role,
-        password_hash:        passwordHash,
-        must_change_password: true,
-        is_active:            true,
-      },
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          tenant_id:            TENANT_ID,
+          name:                 parsed.data.name,
+          email:                parsed.data.email,
+          role:                 parsed.data.role,
+          password_hash:        passwordHash,
+          must_change_password: true,
+          is_active:            true,
+        },
+        select: { id: true },
+      })
+      await logAudit(tx, {
+        userId:    managerId,
+        action:    'CREATE',
+        tableName: 'users',
+        recordId:  created.id,
+        after:     { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role, is_active: true },
+      })
     })
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -89,26 +109,40 @@ export async function editarUsuario(
   _prev: UsuarioFormState,
   formData: FormData,
 ): Promise<UsuarioFormState> {
-  await requireManager()
+  const session = await requireManager()
 
   const parsed = UsuarioSchema.safeParse({
     name:  formData.get('name'),
     email: formData.get('email'),
     role:  formData.get('role'),
   })
-
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  const [current, managerId] = await Promise.all([
+    prisma.user.findUnique({
+      where:  { id: userId },
+      select: { name: true, email: true, role: true },
+    }),
+    resolveUserId(session.user.email!),
+  ])
+  if (!current) return { error: 'Usuário não encontrado.' }
+
   try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        name:  parsed.data.name,
-        email: parsed.data.email,
-        role:  parsed.data.role,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
+      })
+      await logAudit(tx, {
+        userId:    managerId,
+        action:    'UPDATE',
+        tableName: 'users',
+        recordId:  userId,
+        before:    { name: current.name, email: current.email, role: current.role },
+        after:     { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
+      })
     })
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -126,17 +160,27 @@ export async function editarUsuario(
 export async function toggleAtivo(
   userId: string,
 ): Promise<{ error?: string }> {
-  await requireManager()
+  const session = await requireManager()
 
-  const user = await prisma.user.findUnique({
-    where:  { id: userId },
-    select: { is_active: true },
-  })
+  const [user, managerId] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { is_active: true } }),
+    resolveUserId(session.user.email!),
+  ])
   if (!user) return { error: 'Usuário não encontrado.' }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data:  { is_active: !user.is_active },
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data:  { is_active: !user.is_active },
+    })
+    await logAudit(tx, {
+      userId:    managerId,
+      action:    'UPDATE',
+      tableName: 'users',
+      recordId:  userId,
+      before:    { is_active:  user.is_active  },
+      after:     { is_active: !user.is_active  },
+    })
   })
 
   revalidatePath('/gestor/usuarios')
@@ -149,23 +193,29 @@ export async function toggleAtivo(
 export async function resetarSenha(
   userId: string,
 ): Promise<{ error?: string; tempPassword?: string }> {
-  await requireManager()
+  const session = await requireManager()
 
-  const user = await prisma.user.findUnique({
-    where:  { id: userId },
-    select: { id: true },
-  })
+  const [user, managerId] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+    resolveUserId(session.user.email!),
+  ])
   if (!user) return { error: 'Usuário não encontrado.' }
 
   const tempPassword = gerarSenhaProvisoria()
   const passwordHash = await hashPassword(tempPassword)
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      password_hash:        passwordHash,
-      must_change_password: true,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data:  { password_hash: passwordHash, must_change_password: true },
+    })
+    await logAudit(tx, {
+      userId:    managerId,
+      action:    'UPDATE',
+      tableName: 'users',
+      recordId:  userId,
+      after:     { must_change_password: true },
+    })
   })
 
   return { tempPassword }

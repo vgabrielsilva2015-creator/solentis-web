@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { logAudit } from '@/lib/audit'
 
 const TENANT_ID = 'default'
 
@@ -77,15 +78,6 @@ export async function editarPassagem(
     return { error: 'Apenas passagens confirmadas podem ser editadas.' }
   }
 
-  const before = JSON.stringify({
-    outgoing_observations: handover.outgoing_observations,
-    incoming_observations: handover.incoming_observations,
-  })
-  const after = JSON.stringify({
-    outgoing_observations: parsed.data.outgoing_observations,
-    incoming_observations: parsed.data.incoming_observations,
-  })
-
   await prisma.$transaction(async (tx) => {
     await tx.shiftHandover.update({
       where: { id: handoverId },
@@ -94,16 +86,14 @@ export async function editarPassagem(
         incoming_observations: parsed.data.incoming_observations,
       },
     })
-    await tx.auditLog.create({
-      data: {
-        user_id:       userId,
-        action:        'UPDATE',
-        table_name:    'shift_handovers',
-        record_id:     handoverId,
-        before,
-        after,
-        justification: parsed.data.justification,
-      },
+    await logAudit(tx, {
+      userId,
+      action:        'UPDATE',
+      tableName:     'shift_handovers',
+      recordId:      handoverId,
+      before:        { outgoing_observations: handover.outgoing_observations, incoming_observations: handover.incoming_observations },
+      after:         { outgoing_observations: parsed.data.outgoing_observations, incoming_observations: parsed.data.incoming_observations },
+      justification: parsed.data.justification,
     })
   })
 

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import path from 'path'
 import fs from 'fs/promises'
+import { logAudit } from '@/lib/audit'
 
 const TENANT_ID      = 'default'
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
@@ -106,7 +107,7 @@ export async function registrarOcorrencia(
     }
   }
 
-  // Cria ocorrência (+ foto se presente) em transação atômica
+  // Cria ocorrência (+ foto + audit) em transação atômica
   await prisma.$transaction(async (tx) => {
     const occurrence = await tx.occurrence.create({
       data: {
@@ -132,6 +133,14 @@ export async function registrarOcorrencia(
         },
       })
     }
+
+    await logAudit(tx, {
+      userId,
+      action:    'CREATE',
+      tableName: 'occurrences',
+      recordId:  occurrence.id,
+      after:     { description: parsed.data.description, severity: parsed.data.severity, status: 'OPEN', deadline },
+    })
   })
 
   revalidatePath('/operador/ocorrencias')
