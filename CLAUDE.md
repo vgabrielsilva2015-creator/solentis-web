@@ -20,6 +20,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Feature extra — Tarefas por Turno CONCLUÍDA — ver seção abaixo
 ✅ Feature extra — Controle de Estoque de Produtos Químicos CONCLUÍDA — ver seção abaixo
 ✅ Fase 10 — Dashboards CONCLUÍDA — ver seção abaixo
+✅ Fase 11 — Auditoria, Testes e Hardening CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -301,8 +302,36 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **seed-demo.ts separado:** ~20% dos valores fora do limite para gerar n.c. realistas; ~60% das análises aprovadas; executar com `npx tsx prisma/seed-demo.ts`
 - **Preventivas no seed-demo:** puladas automaticamente se não houver equipamentos no banco (equipamentos criados via UI na Fase 7)
 
+### 📍 Próximo passo ao retomar (após Fase 10)
+~~Fase 11 — Auditoria (UI + filtros), testes dos 13 cenários críticos, hardening, backup/restore.~~ CONCLUÍDA.
+
+## ✅ Fase 11 — Auditoria, Testes e Hardening — CONCLUÍDA em 2026-05-26
+
+### Critérios de aceite — todos validados ✅
+1. `logAudit()` centralizado em `src/lib/audit.ts` — aceita PrismaClient e transaction client ✅
+2. Audit log integrado em 5 fluxos críticos: usuários, parâmetros, ocorrências (criar/resolver), passagem de turno ✅
+3. UI `/gestor/auditoria` com filtros (usuário, entidade, período) e paginação (25/pág) ✅
+4. 35 testes Vitest cobrindo 10 dos 13 cenários críticos do briefing (3 são testes manuais) ✅
+5. Script `scripts/backup.ts` + checklist de restore + RUNBOOK atualizado com testes manuais ✅
+6. Security review: zero `console.*`, zero stack traces expostos, zero XSS vectors ✅
+
+### Sub-passos concluídos
+- **A** — `src/lib/audit.ts` — helper `logAudit()` com tipo `Pick<PrismaClient, 'auditLog'>` para uso em transações
+- **B** — Integração audit em: `gestor/usuarios/actions.ts`, `gestor/parametros/actions.ts`, `tecnico/ocorrencias/actions.ts`, `operador/ocorrencias/actions.ts`, `gestor/turnos/instancias/actions.ts`
+- **C** — `src/app/gestor/auditoria/page.tsx` — Server Component com filtros GET, tabela paginada, before/after expansível via `<details>`
+- **D** — `src/lib/__tests__/fase11-criticos.test.ts` — 35 testes Vitest (cenários 3, 5–13)
+- **E** — `scripts/backup.ts` + RUNBOOK seções 2.2–2.4 + seção 6 (testes manuais cenários 1, 2, 4)
+- **F** — Security review: sem console.*, sem stack traces, sem dangerouslySetInnerHTML, todas as 19 Server Actions têm Zod
+
+### Commits da Fase 11
+- `<audit-helper>` feat: fase 11A — helper logAudit() centralizado
+- `<audit-integration>` feat: fase 11B — audit log integrado em mutações críticas
+- `<audit-ui>` feat: fase 11C — UI de auditoria com filtros, paginação e diff expansível
+- `e36b4d4` test: fase 11D — 35 testes para os 13 cenários críticos do briefing
+- `5abf39d` feat: fase 11E — script de backup SQLite + restore documentado no RUNBOOK
+
 ### 📍 Próximo passo ao retomar
-Fase 11 — Auditoria (UI + filtros), testes dos 13 cenários críticos, hardening, backup/restore.
+Fase 12 — Polish mobile: touch targets h-12, atributos de teclado mobile (`inputmode`, `autocomplete`), tratamento de erro de rede offline.
 
 ## ✅ Feature extra — Controle de Estoque de Produtos Químicos — CONCLUÍDA em 2026-05-26
 
