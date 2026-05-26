@@ -18,6 +18,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Fase 8 — Ocorrências CONCLUÍDA — ver seção abaixo
 ✅ Fase 9 — Turnos CONCLUÍDA — ver seção abaixo
 ✅ Feature extra — Tarefas por Turno CONCLUÍDA — ver seção abaixo
+✅ Feature extra — Controle de Estoque de Produtos Químicos CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -272,8 +273,43 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - **Prazos de ocorrência:** CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h
 
 ### 📍 Próximo passo ao retomar
-Iniciar feature **Controle de Estoque de Produtos Químicos** (aprovada antes da Fase 10).
-Após essa feature: Fase 10 — Dashboard do Gestor (relatórios, não-conformidades, KPIs agregados, exportação CSV/PDF).
+Fase 10 — Dashboard do Gestor (relatórios, não-conformidades, KPIs agregados, exportação CSV/PDF).
+
+## ✅ Feature extra — Controle de Estoque de Produtos Químicos — CONCLUÍDA em 2026-05-26
+
+### Critérios de aceite — todos validados ✅
+1. Gestor cadastra produto com estoque mínimo; aparece na listagem ✅
+2. Gestor/Técnico registra entrada → estoque calculado atualiza ✅
+3. Operador registra saída maior que estoque → salvo com aviso âmbar "estoque ficará negativo" ✅
+4. Operador faz contagem física → divergência (físico − calculado) exibida em tempo real no form ✅
+5. Calculado < mínimo OU físico < mínimo → badge "ESTOQUE BAIXO" animado na listagem ✅
+6. Widget de alerta no dashboard do Gestor (link direto para /gestor/produtos-quimicos) ✅
+7. Widget de alerta no dashboard do Operador (link direto para /operador/estoque) ✅
+8. Histórico unificado (entradas, saídas, contagens) ordenado por data no detalhe do produto ✅
+9. 17 testes Vitest (76 total passando) ✅
+
+### Commit
+- `129b0ab` feat: estoque de produtos químicos — schema, CRUD, movimentação, alertas
+
+### Arquivos principais criados
+- `prisma/schema.prisma` — 4 modelos: `ChemicalProduct`, `ChemicalStockEntry`, `ChemicalStockExit`, `ChemicalStockCount`
+- `migrations/20260526011115_add_chemical_stock` — migration aplicada
+- `src/types/index.ts` — `CHEMICAL_UNITS_PRESET`, `ChemicalUnitPreset`, `CHEMICAL_UNIT_OPTIONS`
+- `src/lib/stock-utils.ts` — `calcularEstoqueAtual`, `estaAbaixoMinimo`, `calcularDivergencia`, `formatarQuantidade`
+- `src/app/gestor/produtos-quimicos/` — listagem, CRUD, formulário de entrada (Gestor)
+- `src/app/tecnico/estoque/` — listagem + formulário de entrada (Técnico; importa action do Gestor)
+- `src/app/operador/estoque/` — listagem, registrar saída (com aviso de negativo), contagem física
+- `src/lib/__tests__/estoque.test.ts` — 17 testes das 4 funções puras
+
+### Padrões estabelecidos
+- **Estoque calculado:** `sum(entries) - sum(exits)` — computado na query, nunca persistido
+- **Estoque físico:** última `ChemicalStockCount` por produto — sem histórico de "estoque corrente"
+- **Alerta duplo:** `calculado < min_stock OR (físico != null AND físico < min_stock)` — pior dos dois
+- **Saída negativa permitida:** action calcula stock antes, salva sempre, retorna `{ success, warning }` se negativo; form exibe aviso âmbar com botão "Entendido"
+- **Unidade "outro":** `unit_select === 'outro'` → usa `unit_custom`; validação no servidor rejeita se ambos vazios
+- **Técnico importa action do Gestor:** `@/app/gestor/produtos-quimicos/actions` — mesmo padrão das ShiftTasks
+- **Widgets assíncronos:** dashboard Gestor convertido de componente estático para Server Component async
+- **`_sum` aggregate:** `registrarSaida` usa `prisma.chemicalStockEntry.aggregate({ _sum })` — sem `findMany` para calcular stock
 
 ## ✅ Feature extra — Tarefas por Turno — CONCLUÍDA em 2026-05-25
 
