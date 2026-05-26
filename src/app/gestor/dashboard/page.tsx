@@ -5,15 +5,15 @@ import { NonConformChart } from './nonconform-chart'
 const TENANT_ID = 'default'
 
 const FEATURES = [
-  { title: 'Usuários',          href: '/gestor/usuarios',           desc: 'Cadastro e gerenciamento de contas',      active: true  },
-  { title: 'Parâmetros',        href: '/gestor/parametros',         desc: 'Limites de qualidade e histórico CONAMA', active: true  },
-  { title: 'Configurações',     href: '/gestor/metodos',            desc: 'Métodos, categorias, pontos e turnos',    active: true  },
-  { title: 'Produtos Químicos', href: '/gestor/produtos-quimicos',  desc: 'Estoque, entradas e movimentação',        active: true  },
-  { title: 'Leituras',          href: '#',                          desc: 'Registros de campo por turno',            active: false },
-  { title: 'Análises',          href: '#',                          desc: 'Análises laboratoriais',                  active: false },
-  { title: 'Equipamentos',      href: '#',                          desc: 'Cadastro e manutenção preventiva',        active: false },
-  { title: 'Ocorrências',       href: '#',                          desc: 'Gestão de incidentes e resoluções',       active: false },
-  { title: 'Turnos',            href: '#',                          desc: 'Histórico e passagens de turno',          active: false },
+  { title: 'Usuários',          href: '/gestor/usuarios',              desc: 'Cadastro e gerenciamento de contas',      active: true },
+  { title: 'Parâmetros',        href: '/gestor/parametros',            desc: 'Limites de qualidade e histórico CONAMA', active: true },
+  { title: 'Configurações',     href: '/gestor/metodos',               desc: 'Métodos, categorias, pontos e turnos',    active: true },
+  { title: 'Produtos Químicos', href: '/gestor/produtos-quimicos',     desc: 'Estoque, entradas e movimentação',        active: true },
+  { title: 'Leituras',          href: '/operador/leituras',            desc: 'Registros de campo por turno',            active: true },
+  { title: 'Análises',          href: '/tecnico/analises',             desc: 'Análises laboratoriais',                  active: true },
+  { title: 'Equipamentos',      href: '/tecnico/equipamentos',         desc: 'Cadastro e manutenção preventiva',        active: true },
+  { title: 'Ocorrências',       href: '/tecnico/ocorrencias',          desc: 'Gestão de incidentes e resoluções',       active: true },
+  { title: 'Turnos',            href: '/gestor/turnos/instancias',     desc: 'Histórico e passagens de turno',          active: true },
 ]
 
 const SEVERITY_CONFIG = {

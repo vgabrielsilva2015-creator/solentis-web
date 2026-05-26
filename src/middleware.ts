@@ -35,7 +35,7 @@ export default auth((req) => {
   // Verifica permissão por prefixo de rota
   for (const [prefix, requiredRole] of Object.entries(ROLE_PREFIXES)) {
     if (pathname.startsWith(prefix)) {
-      if (session.user.role !== requiredRole) {
+      if (session.user.role !== requiredRole && session.user.role !== 'MANAGER') {
         return NextResponse.redirect(new URL('/acesso-negado', req.url))
       }
       break

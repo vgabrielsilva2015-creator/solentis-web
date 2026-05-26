@@ -39,10 +39,11 @@ export default async function TecnicoDashboard() {
     ])
 
   const SHORTCUTS = [
-    { title: 'Análises',    desc: 'Registrar ou aprovar análises',          href: '/tecnico/analises'    },
-    { title: 'Equipamentos', desc: 'Gerenciar preventivas e corretivas',    href: '/tecnico/equipamentos' },
-    { title: 'Ocorrências', desc: 'Acompanhar e fechar ocorrências',        href: '/tecnico/ocorrencias' },
-    { title: 'Estoque',     desc: 'Registrar entradas de produtos químicos', href: '/tecnico/estoque'    },
+    { title: 'Análises',     desc: 'Registrar ou aprovar análises',          href: '/tecnico/analises'          },
+    { title: 'Equipamentos', desc: 'Gerenciar preventivas e corretivas',     href: '/tecnico/equipamentos'      },
+    { title: 'Ocorrências',  desc: 'Acompanhar e fechar ocorrências',        href: '/tecnico/ocorrencias'       },
+    { title: 'Estoque',      desc: 'Registrar entradas de produtos químicos', href: '/tecnico/estoque'          },
+    { title: 'Turnos',       desc: 'Instâncias de turno ativas',             href: '/tecnico/turnos/instancias' },
   ]
 
   return (
