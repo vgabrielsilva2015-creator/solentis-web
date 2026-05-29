@@ -21,6 +21,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Feature extra — Controle de Estoque de Produtos Químicos CONCLUÍDA — ver seção abaixo
 ✅ Fase 10 — Dashboards CONCLUÍDA — ver seção abaixo
 ✅ Fase 11 — Auditoria, Testes e Hardening CONCLUÍDA — ver seção abaixo
+✅ Fase 12 — Polish Mobile CONCLUÍDA — ver seção abaixo
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
@@ -331,7 +332,7 @@ Priority, ShiftInstanceStatus, HandoverStatus, AuditAction
 - `5abf39d` feat: fase 11E — script de backup SQLite + restore documentado no RUNBOOK
 
 ### 📍 Próximo passo ao retomar
-Fase 12 — Polish mobile: touch targets h-12, atributos de teclado mobile (`inputmode`, `autocomplete`), tratamento de erro de rede offline.
+~~Fase 12 — Polish mobile: touch targets h-12, atributos de teclado mobile, tratamento de erro de rede offline.~~ CONCLUÍDA.
 
 ## ✅ Feature extra — Controle de Estoque de Produtos Químicos — CONCLUÍDA em 2026-05-26
 
@@ -458,6 +459,45 @@ Fase 12 — Polish mobile: touch targets h-12, atributos de teclado mobile (`inp
 - O `.gitignore` usava o wildcard `.env*` que cobria também o `.env.example`
 - **Corrigido em 2026-05-14:** adicionado `!.env.example` logo abaixo de `.env*`
 - `.env.example` agora entra no Git normalmente ✅
+
+## ✅ Fase 12 — Polish Mobile — CONCLUÍDA em 2026-05-29
+
+### Critérios de aceite — todos validados ✅
+1. Bottom nav fixo com 5 itens para Operador (Dashboard, Leituras, Turnos, Ocorrências, Estoque) ✅
+2. Bottom nav fixo com 5 itens para Técnico (Dashboard, Análises, Equip., Ocorrências, Turnos) ✅
+3. Header unificado "Solentis + badge de perfil + botão de logout" via layout compartilhado ✅
+4. Zero headers duplicados em todas as 21 páginas do Operador e 14 do Técnico ✅
+5. `inputMode="decimal"` em todos os campos numéricos (leituras, análises, estoque) ✅
+6. `autoComplete="off"` em textareas técnicos (descrição de ocorrência, observação de leitura) ✅
+7. `navigator.onLine` no `onSubmit` dos 3 formulários críticos do Operador com mensagem âmbar ✅
+8. Touch targets mínimos: botões inline → h-10 (40px); botões primários → h-12/h-14 (48–56px) ✅
+
+### Sub-passos concluídos
+- **A** — Layout compartilhado Operador (`src/app/operador/layout.tsx`) + `OperadorBottomNav`; headers removidos de 11 páginas do Operador
+- **B** — Layout compartilhado Técnico (`src/app/tecnico/layout.tsx`) + `TecnicoBottomNav`; headers removidos de 14 páginas do Técnico
+- **C** — `inputMode="decimal"` nos campos de quantidade de estoque (saída, contagem, entrada); `autoComplete="off"` nos textareas técnicos
+- **D** — `navigator.onLine` no `onSubmit` de leitura-form, occurrence-form e exit-form com mensagem de erro âmbar inline
+- **E** — Touch targets: approve-button h-7→h-10, conclude/status/toggle-button h-8→h-10, tecnico-task-form h-9→h-12
+
+### Commits da Fase 12
+- `126b68f` feat: fase 12A-D — bottom nav Operador e Técnico + polish mobile
+- `c4a9626` feat: fase 12E — touch targets mínimos nos botões inline do Técnico
+
+### Arquivos principais criados/alterados
+- `src/app/operador/layout.tsx` — novo layout compartilhado (auth + header + bottom nav + pb-16)
+- `src/app/tecnico/layout.tsx` — novo layout compartilhado para o Técnico (badge azul "Técnico")
+- `src/components/operador/bottom-nav.tsx` — OperadorBottomNav (5 itens, active state via usePathname)
+- `src/components/tecnico/bottom-nav.tsx` — TecnicoBottomNav (5 itens: Dashboard/Análises/Equip./Ocorrências/Turnos)
+
+### Padrões estabelecidos na Fase 12
+- **Layout + bottom nav:** `pb-16` no wrapper de conteúdo para não ficar atrás da nav fixada em `bottom-0`
+- **Active state na bottom nav:** `pathname === href || pathname.startsWith(href + '/')` — cobre sub-rotas
+- **`navigator.onLine` pattern:** `onSubmit={(e) => { if (!navigator.onLine) { e.preventDefault(); setOfflineError(true) }}}` — simples e sem dependência de service worker
+- **Touch targets:** botões inline em lista → h-10 (40px mínimo); botões de submit de formulários → h-12 ou h-14
+
+### 📍 MVP CONCLUÍDO
+Todas as 12 fases planejadas foram implementadas e testadas. O sistema está pronto para uso.
+Próximos passos (pós-MVP): ver seção "Pendências futuras" abaixo.
 
 ## Como retomar
 Próxima sessão: usuário dirá "vamos continuar". Você deve:
