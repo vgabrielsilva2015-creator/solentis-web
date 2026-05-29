@@ -44,17 +44,7 @@ export default async function TecnicoInstanciaDetalhePage({
   const pending = instance.shift_tasks.filter((t) => t.status === 'PENDING').length
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto max-w-2xl flex items-center justify-between px-4 py-3">
-          <span className="text-base font-bold tracking-tight">Solentis</span>
-          <span className="rounded-full bg-blue-900/60 px-2.5 py-0.5 text-xs font-medium text-blue-400">
-            Técnico
-          </span>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
+    <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -92,7 +82,6 @@ export default async function TecnicoInstanciaDetalhePage({
             ← Voltar
           </Link>
         </div>
-      </main>
-    </div>
+    </main>
   )
 }

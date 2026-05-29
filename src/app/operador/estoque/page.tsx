@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { calcularEstoqueAtual, estaAbaixoMinimo, formatarQuantidade } from '@/lib/stock-utils'
-import { SignOutButton } from '@/components/sign-out-button'
 
 const TENANT_ID = 'default'
 
@@ -22,16 +21,8 @@ export default async function OperadorEstoquePage() {
   })
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/operador/dashboard" className="text-sm text-slate-400 hover:text-slate-200">← Dashboard</Link>
-          <h1 className="text-base font-semibold">Estoque Químico</h1>
-        </div>
-        <SignOutButton />
-      </header>
-
-      <main className="px-4 py-6 max-w-lg mx-auto space-y-3">
+    <main className="px-4 py-6 max-w-lg mx-auto space-y-3">
+        <h1 className="text-xl font-semibold">Estoque Químico</h1>
         {products.length === 0 ? (
           <p className="text-sm text-slate-500 text-center py-12">Nenhum produto cadastrado.</p>
         ) : (
@@ -100,7 +91,6 @@ export default async function OperadorEstoquePage() {
             )
           })
         )}
-      </main>
-    </div>
+    </main>
   )
 }

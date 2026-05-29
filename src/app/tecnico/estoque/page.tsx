@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { calcularEstoqueAtual, estaAbaixoMinimo, formatarQuantidade } from '@/lib/stock-utils'
-import { SignOutButton } from '@/components/sign-out-button'
 
 const TENANT_ID = 'default'
 
@@ -22,16 +21,8 @@ export default async function TecnicoEstoquePage() {
   })
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/tecnico/dashboard" className="text-sm text-slate-400 hover:text-slate-200">← Dashboard</Link>
-          <h1 className="text-lg font-semibold">Estoque de Produtos Químicos</h1>
-        </div>
-        <SignOutButton />
-      </header>
-
-      <main className="p-6 max-w-3xl mx-auto space-y-4">
+    <main className="p-6 max-w-3xl mx-auto space-y-4">
+      <h1 className="text-xl font-semibold">Estoque de Produtos Químicos</h1>
         <p className="text-sm text-slate-400">
           Registre entradas de compra ou recebimento. Para saídas e contagens, use o Operador.
         </p>
@@ -81,7 +72,6 @@ export default async function TecnicoEstoquePage() {
             })}
           </div>
         )}
-      </main>
-    </div>
+    </main>
   )
 }

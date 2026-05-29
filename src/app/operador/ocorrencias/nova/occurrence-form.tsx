@@ -24,10 +24,11 @@ export function OccurrenceForm() {
   const formRef  = useRef<HTMLFormElement>(null)
   const [state, action, isPending] = useActionState(registrarOcorrencia, INITIAL)
 
-  const [mounted,     setMounted]     = useState(false)
-  const [draft,       setDraft]       = useState<Draft>(EMPTY_DRAFT)
-  const [photoName,   setPhotoName]   = useState<string | null>(null)
-  const [photoError,  setPhotoError]  = useState<string | null>(null)
+  const [mounted,      setMounted]      = useState(false)
+  const [draft,        setDraft]        = useState<Draft>(EMPTY_DRAFT)
+  const [photoName,    setPhotoName]    = useState<string | null>(null)
+  const [photoError,   setPhotoError]   = useState<string | null>(null)
+  const [offlineError, setOfflineError] = useState(false)
 
   // Hidrata do localStorage
   useEffect(() => {
@@ -76,7 +77,22 @@ export function OccurrenceForm() {
   const photoFieldError = photoError ?? state.fieldErrors?.photo?.[0]
 
   return (
-    <form ref={formRef} action={action} className="space-y-5">
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={(e) => {
+        if (!navigator.onLine) {
+          e.preventDefault()
+          setOfflineError(true)
+        }
+      }}
+      className="space-y-5"
+    >
+      {offlineError && (
+        <p className="rounded-md border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-400">
+          Sem conexão. Verifique sua internet e tente novamente.
+        </p>
+      )}
       {state.error && (
         <p className="rounded-md border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-400">
           {state.error}
@@ -91,6 +107,7 @@ export function OccurrenceForm() {
         <textarea
           id="description" name="description"
           rows={4}
+          autoComplete="off"
           value={draft.description}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"

@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { SignOutButton } from '@/components/sign-out-button'
 
 const TENANT_ID = 'default'
 
@@ -95,23 +94,7 @@ export default async function OperadorDashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto max-w-lg flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-bold tracking-tight">Solentis</span>
-            <span className="rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
-              Operador
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">{session.user.name ?? session.user.email}</span>
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-lg px-4 py-8 space-y-4">
+    <main className="mx-auto max-w-lg px-4 py-8 space-y-4">
         <div>
           <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
           <p className="text-slate-400 text-sm mt-0.5">Painel do Operador</p>
@@ -242,7 +225,6 @@ export default async function OperadorDashboard() {
             ))}
           </div>
         </div>
-      </main>
-    </div>
+    </main>
   )
 }

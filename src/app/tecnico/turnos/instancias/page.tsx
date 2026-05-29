@@ -53,17 +53,7 @@ export default async function TecnicoInstanciasPage() {
   const pendingMap = Object.fromEntries(pendingByInstance.map((r) => [r.shift_instance_id, r._count._all]))
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto max-w-2xl flex items-center justify-between px-4 py-3">
-          <span className="text-base font-bold tracking-tight">Solentis</span>
-          <span className="rounded-full bg-blue-900/60 px-2.5 py-0.5 text-xs font-medium text-blue-400">
-            Técnico
-          </span>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
+    <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
         <h1 className="text-xl font-semibold">Turnos — Atribuir tarefas</h1>
 
         {instances.length === 0 ? (
@@ -114,12 +104,6 @@ export default async function TecnicoInstanciasPage() {
           </div>
         )}
 
-        <div className="pt-2">
-          <Link href="/tecnico/dashboard" className="text-xs text-slate-600 hover:text-slate-400">
-            ← Voltar ao painel
-          </Link>
-        </div>
-      </main>
-    </div>
+    </main>
   )
 }

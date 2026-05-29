@@ -13,7 +13,8 @@ type Props = {
 
 export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) {
   const router  = useRouter()
-  const [qty, setQty] = useState('')
+  const [qty, setQty]             = useState('')
+  const [offlineError, setOfflineError] = useState(false)
   const now = new Date()
   now.setSeconds(0, 0)
   const defaultDate = now.toISOString().slice(0, 16)
@@ -28,8 +29,23 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
   const ficaNegativo = qtyNum > 0 && qtyNum > estoqueAtual
 
   return (
-    <form action={action} className="space-y-4">
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (!navigator.onLine) {
+          e.preventDefault()
+          setOfflineError(true)
+        }
+      }}
+      className="space-y-4"
+    >
       <input type="hidden" name="product_id" value={productId} />
+
+      {offlineError && (
+        <p className="rounded-lg bg-amber-900/30 border border-amber-700/50 px-4 py-3 text-sm text-amber-300">
+          Sem conexão. Verifique sua internet e tente novamente.
+        </p>
+      )}
 
       {state?.error && (
         <p className="rounded-lg bg-red-900/40 border border-red-700 px-4 py-3 text-sm text-red-300">
@@ -59,6 +75,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
             <input
               name="quantity"
               type="number"
+              inputMode="decimal"
               min="0.01"
               step="0.01"
               required

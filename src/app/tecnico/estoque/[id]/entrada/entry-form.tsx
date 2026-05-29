@@ -37,6 +37,7 @@ export function TecnicoEntryForm({ productId, productName, unit }: Props) {
         <input
           name="quantity"
           type="number"
+          inputMode="decimal"
           min="0.01"
           step="0.01"
           required

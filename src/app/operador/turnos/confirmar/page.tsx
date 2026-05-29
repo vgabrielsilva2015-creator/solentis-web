@@ -51,17 +51,7 @@ export default async function ConfirmarPage({
   const vencido = new Date(handover.timeout_at) < new Date()
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
-        <div className="mx-auto max-w-lg flex items-center justify-between px-4 py-3">
-          <span className="text-base font-bold tracking-tight">Solentis</span>
-          <span className="rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
-            Operador
-          </span>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
+    <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="text-xl font-semibold">Confirmar recebimento</h1>
@@ -114,12 +104,6 @@ export default async function ConfirmarPage({
 
         <ConfirmForm handoverId={handoverId} />
 
-        <div className="pt-2">
-          <Link href="/operador/turnos" className="text-xs text-slate-600 hover:text-slate-400">
-            ← Voltar
-          </Link>
-        </div>
-      </main>
-    </div>
+    </main>
   )
 }

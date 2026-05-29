@@ -47,7 +47,8 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
   const [state, formAction, isPending] = useActionState(registrarLeitura, initialState)
 
   // Controle de hidratação: impede salvar rascunho com estado vazio antes de carregar o draft
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted]     = useState(false)
+  const [offlineError, setOfflineError] = useState(false)
 
   const [collectionPointId, setCollectionPointId] = useState('')
   const [parameterId, setParameterId]             = useState('')
@@ -128,7 +129,21 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
         <p className="text-xs text-slate-400">Registre a leitura de campo do turno atual.</p>
       </div>
 
-      <form action={formAction} className="space-y-5">
+      <form
+        action={formAction}
+        onSubmit={(e) => {
+          if (!navigator.onLine) {
+            e.preventDefault()
+            setOfflineError(true)
+          }
+        }}
+        className="space-y-5"
+      >
+        {offlineError && (
+          <p className="rounded-md border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-400">
+            Sem conexão. Verifique sua internet e tente novamente.
+          </p>
+        )}
 
         {/* ── Ponto de coleta ───────────────────────────────────────────── */}
         <div className="space-y-1.5">
@@ -234,6 +249,7 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
             id="notes"
             name="notes"
             rows={3}
+            autoComplete="off"
             placeholder="Ex: amostra coletada após chuva forte"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

@@ -30,15 +30,15 @@ export default async function SaidaPage({ params }: { params: Promise<{ id: stri
   )
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-900 px-4 py-3">
+    <main className="px-4 py-6 max-w-lg mx-auto">
+      <div className="flex items-center gap-3 mb-5">
         <Link href="/operador/estoque" className="text-sm text-slate-400 hover:text-slate-200">
           ← Estoque
         </Link>
-        <h1 className="text-base font-semibold mt-1">Registrar Saída — {product.name}</h1>
-      </header>
-      <main className="px-4 py-6 max-w-lg mx-auto">
-        <div className="rounded-lg bg-slate-800/50 px-4 py-3 mb-5 flex gap-6 text-sm">
+        <span className="text-slate-700">/</span>
+        <h1 className="text-base font-semibold">Registrar Saída — {product.name}</h1>
+      </div>
+      <div className="rounded-lg bg-slate-800/50 px-4 py-3 mb-5 flex gap-6 text-sm">
           <div>
             <p className="text-xs text-slate-500">Estoque calculado</p>
             <p className={`font-semibold ${calculado < product.min_stock ? 'text-red-400' : 'text-slate-100'}`}>
@@ -58,7 +58,6 @@ export default async function SaidaPage({ params }: { params: Promise<{ id: stri
           unit={product.unit}
           estoqueAtual={calculado}
         />
-      </main>
-    </div>
+    </main>
   )
 }
