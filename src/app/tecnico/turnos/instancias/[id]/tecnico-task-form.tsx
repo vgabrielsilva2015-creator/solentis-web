@@ -127,7 +127,7 @@ export function TecnicoTaskForm({
           <Button
             type="submit"
             disabled={isPending}
-            className="h-9 w-full bg-slate-100 text-sm text-slate-900 hover:bg-white"
+            className="h-12 w-full bg-slate-100 text-sm text-slate-900 hover:bg-white"
           >
             {isPending ? 'Salvando…' : '+ Atribuir tarefa'}
           </Button>

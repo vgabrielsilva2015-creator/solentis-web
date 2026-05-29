@@ -27,7 +27,7 @@ export function ToggleButton({
       onClick={handleToggle}
       disabled={isPending}
       className={[
-        'h-8 text-xs border disabled:opacity-50',
+        'h-10 text-xs border disabled:opacity-50',
         isActive
           ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 border-slate-700'
           : 'bg-green-900/40 text-green-400 hover:bg-green-900/60 border-green-900/50',

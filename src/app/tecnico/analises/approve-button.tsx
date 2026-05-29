@@ -22,7 +22,7 @@ export function ApproveButton({ analysisId }: { analysisId: string }) {
       variant="outline"
       disabled={isPending}
       onClick={handleApprove}
-      className="border-green-800/60 text-green-400 hover:bg-green-950/30 disabled:opacity-50 text-xs h-7 px-2.5"
+      className="border-green-800/60 text-green-400 hover:bg-green-950/30 disabled:opacity-50 text-xs h-10 px-3"
     >
       {isPending ? 'Aprovando…' : 'Aprovar'}
     </Button>

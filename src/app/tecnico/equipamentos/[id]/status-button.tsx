@@ -29,7 +29,7 @@ export function StatusButton({
       onClick={handleClick}
       disabled={isPending}
       className={[
-        'h-8 text-xs border disabled:opacity-50',
+        'h-10 text-xs border disabled:opacity-50',
         isComplete
           ? 'bg-green-900/60 text-green-300 hover:bg-green-900 border-green-900/50'
           : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border-slate-700',
