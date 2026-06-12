@@ -17,7 +17,7 @@ const NAV: NavItem[] = [
   { href: '/tecnico/analises',     label: 'Análises',     icon: FlaskConical    },
   { href: '/tecnico/equipamentos', label: 'Equip.',       icon: Wrench          },
   { href: '/tecnico/ocorrencias',  label: 'Ocorrências',  icon: AlertTriangle   },
-  { href: '/tecnico/turnos',       label: 'Turnos',       icon: Clock           },
+  { href: '/tecnico/turnos/instancias', label: 'Turnos', icon: Clock           },
 ]
 
 export function TecnicoBottomNav() {
