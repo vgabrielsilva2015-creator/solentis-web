@@ -39,14 +39,11 @@ export default async function TurnosPage() {
 
   const userId = userRecord.id
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  // Instâncias ativas hoje (OPEN ou HANDOVER_PENDING)
+  // Instâncias ativas (OPEN ou HANDOVER_PENDING) de qualquer data
+  // Inclui turnos noturnos (crosses_midnight) abertos ontem e ainda não encerrados
   const activeInstances = await prisma.shiftInstance.findMany({
     where: {
       tenant_id: TENANT_ID,
-      date:      today,
       status:    { in: ['OPEN', 'HANDOVER_PENDING'] },
     },
     include: {
