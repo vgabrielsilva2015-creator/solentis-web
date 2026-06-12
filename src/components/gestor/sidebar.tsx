@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 type NavItem =
-  | { type: 'link'; label: string; href: string }
+  | { type: 'link'; label: string; href: string; excludePrefix?: string }
   | { type: 'section'; label: string }
 
 const NAV: NavItem[] = [
@@ -15,7 +15,7 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Métodos de Análise',   href: '/gestor/metodos' },
   { type: 'link',    label: 'Categorias',           href: '/gestor/categorias' },
   { type: 'link',    label: 'Pontos de Coleta',     href: '/gestor/pontos-de-coleta' },
-  { type: 'link',    label: 'Turnos',               href: '/gestor/turnos' },
+  { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/instancias' },
   { type: 'link',    label: 'Instâncias de Turno',  href: '/gestor/turnos/instancias' },
   { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia' },
   { type: 'section', label: 'Estoque' },
@@ -41,7 +41,8 @@ export function GestorSidebar() {
           )
         }
         const isActive =
-          pathname === item.href || pathname.startsWith(item.href + '/')
+          (pathname === item.href || pathname.startsWith(item.href + '/')) &&
+          (!item.excludePrefix || !pathname.startsWith(item.excludePrefix))
         return (
           <Link
             key={item.href}
