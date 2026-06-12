@@ -1,10 +1,12 @@
 import { signOut } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
 export function SignOutButton() {
   async function action() {
     'use server'
-    await signOut({ redirectTo: '/login' })
+    await signOut({ redirect: false })
+    redirect('/login')
   }
 
   return (
