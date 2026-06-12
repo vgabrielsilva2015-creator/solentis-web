@@ -248,3 +248,33 @@ Este cenário é de infraestrutura, não de software. Documente-o como procedime
 - Configurar script de backup no cron (ver seção 2.2)
 - Testar restore completo mensalmente (ver checklist 2.4)
 - Manter pelo menos 7 backups rotacionados antes de deletar os mais antigos
+
+---
+
+## 7. Limitações conhecidas de sessão (JWT)
+
+### 7.1 Não usar 2 perfis na mesma janela do navegador
+
+**Causa:** o Solentis usa JWT armazenado em cookie HTTP. O browser compartilha o mesmo cookie entre TODAS as abas da mesma origem (localhost:3000 ou o domínio em produção). Isso significa:
+
+- Tab 1 logada como Gestor → cookie contém JWT do Gestor
+- Tab 2 navega para `/login` → o middleware detecta a sessão do Gestor e redireciona para `/gestor/dashboard`
+- Tab 2 NÃO consegue logar como Operador sem que o Gestor faça logout primeiro
+
+**Comportamento esperado (não é bug):** ao acessar um perfil diferente, o sistema mostrará os dados do perfil logado, não do perfil desejado.
+
+**Procedimento correto para testar múltiplos perfis:**
+1. Use **abas anônimas/privadas** separadas (cada aba anônima tem cookies isolados)
+2. OU use **perfis diferentes do Chrome/Firefox** (cada perfil tem cookies separados)
+3. OU faça logout completo (`Sair`) antes de logar com outro perfil na mesma janela
+
+**Por que o MANAGER aparece em páginas do Operador/Técnico:** o MANAGER tem permissão para acessar rotas `/operador/*` e `/tecnico/*` (para monitoramento). Ao navegar para essas rotas, o MANAGER vê o seu próprio nome (ex.: "Administrador") no layout, o que é comportamento correto.
+
+### 7.2 Expiração de sessão por perfil
+
+| Perfil | Duração da sessão |
+|--------|-------------------|
+| Operador | 30 minutos |
+| Técnico / Gestor | 60 minutos |
+
+Após a expiração, o usuário é redirecionado para `/login` na próxima navegação protegida.

@@ -12,7 +12,7 @@ export default async function TarefasDoTurnoPage({
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
-  if (!session || session.user.role !== 'OPERATOR') redirect('/login')
+  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) redirect('/acesso-negado')
 
   const { id } = await params
 

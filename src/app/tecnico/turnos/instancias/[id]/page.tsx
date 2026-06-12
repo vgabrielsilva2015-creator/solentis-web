@@ -12,7 +12,7 @@ export default async function TecnicoInstanciaDetalhePage({
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
-  if (!session || session.user.role !== 'TECHNICIAN') redirect('/login')
+  if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) redirect('/acesso-negado')
 
   const { id } = await params
 
