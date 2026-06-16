@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { GestorSidebar } from '@/components/gestor/sidebar'
 
@@ -17,7 +18,7 @@ export default async function GestorLayout({
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold tracking-tight">Solentis</span>
+            <Link href="/gestor/dashboard" className="text-lg font-bold tracking-tight hover:text-slate-300 transition-colors">Solentis</Link>
             <span className="rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
               Gestor
             </span>
