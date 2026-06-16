@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { BackButton } from '@/components/back-button'
 import { ReadingForm } from './reading-form'
 
 const TENANT_ID = 'default'
@@ -23,7 +24,8 @@ export default async function NovaLeituraPage() {
   ])
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-6">
+    <main className="mx-auto max-w-lg px-4 py-6 space-y-4">
+      <BackButton href="/operador/leituras" label="Leituras" />
       <ReadingForm collectionPoints={collectionPoints} parameters={parameters} />
     </main>
   )

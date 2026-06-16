@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { ShiftForm } from './shift-form'
 
 const TENANT_ID = 'default'
@@ -18,12 +18,9 @@ export default async function AbrirTurnoPage() {
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <Link href="/operador/turnos" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Turnos
-        </Link>
-        <span className="text-slate-700">/</span>
-        <h1 className="text-xl font-semibold">Abrir turno</h1>
+      <div>
+        <BackButton href="/operador/turnos" label="Turnos" />
+        <h1 className="text-xl font-semibold mt-1">Abrir turno</h1>
       </div>
 
       {shifts.length === 0 ? (

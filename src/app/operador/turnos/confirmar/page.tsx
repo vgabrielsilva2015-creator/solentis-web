@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { ConfirmForm } from './confirm-form'
 
 const TENANT_ID = 'default'
@@ -52,6 +52,7 @@ export default async function ConfirmarPage({
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
+        <BackButton href="/operador/turnos" label="Turnos" />
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="text-xl font-semibold">Confirmar recebimento</h1>

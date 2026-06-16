@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { calcularEstoqueAtual, formatarQuantidade } from '@/lib/stock-utils'
 import { ExitForm } from './exit-form'
 
@@ -31,12 +31,9 @@ export default async function SaidaPage({ params }: { params: Promise<{ id: stri
 
   return (
     <main className="px-4 py-6 max-w-lg mx-auto">
-      <div className="flex items-center gap-3 mb-5">
-        <Link href="/operador/estoque" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Estoque
-        </Link>
-        <span className="text-slate-700">/</span>
-        <h1 className="text-base font-semibold">Registrar Saída — {product.name}</h1>
+      <div className="mb-4">
+        <BackButton href="/operador/estoque" label="Estoque" />
+        <h1 className="text-base font-semibold mt-1">Registrar Saída — {product.name}</h1>
       </div>
       <div className="rounded-lg bg-slate-800/50 px-4 py-3 mb-5 flex gap-6 text-sm">
           <div>

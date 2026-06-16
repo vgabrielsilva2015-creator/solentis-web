@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { HandoverForm } from './handover-form'
 
 const TENANT_ID = 'default'
@@ -45,6 +45,7 @@ export default async function PassagemPage({
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
+        <BackButton href="/operador/turnos" label="Turnos" />
         <div>
           <h1 className="text-xl font-semibold">Passagem de turno</h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -82,11 +83,6 @@ export default async function PassagemPage({
 
         <HandoverForm instanceId={id} />
 
-      <div className="pt-2">
-        <Link href="/operador/turnos" className="text-xs text-slate-600 hover:text-slate-400">
-          ← Cancelar
-        </Link>
-      </div>
     </main>
   )
 }

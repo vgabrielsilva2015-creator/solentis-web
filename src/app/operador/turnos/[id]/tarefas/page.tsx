@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { TaskCard } from './task-card'
 
 const TENANT_ID = 'default'
@@ -41,6 +41,7 @@ export default async function TarefasDoTurnoPage({
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
+        <BackButton href="/operador/turnos" label="Turnos" />
         <div>
           <h1 className="text-xl font-semibold">Tarefas do turno</h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -95,11 +96,6 @@ export default async function TarefasDoTurnoPage({
           </div>
         )}
 
-      <div className="pt-2">
-        <Link href="/operador/turnos" className="text-xs text-slate-600 hover:text-slate-400">
-          ← Voltar aos turnos
-        </Link>
-      </div>
     </main>
   )
 }
