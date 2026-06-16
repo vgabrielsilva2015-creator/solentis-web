@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { TecnicoEntryForm } from './entry-form'
 
 const TENANT_ID = 'default'
@@ -22,12 +22,9 @@ export default async function TecnicoEntradaPage({ params }: { params: Promise<{
 
   return (
     <main className="p-6 max-w-lg mx-auto space-y-5">
-      <div className="flex items-center gap-3">
-        <Link href="/tecnico/estoque" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Estoque
-        </Link>
-        <span className="text-slate-700">/</span>
-        <h1 className="text-base font-semibold">Registrar Entrada — {product.name}</h1>
+      <div>
+        <BackButton href="/tecnico/estoque" label="Estoque" />
+        <h1 className="text-base font-semibold mt-1">Registrar Entrada — {product.name}</h1>
       </div>
       <TecnicoEntryForm productId={product.id} productName={product.name} unit={product.unit} />
     </main>

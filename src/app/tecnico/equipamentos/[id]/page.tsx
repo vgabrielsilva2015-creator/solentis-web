@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { ConcludeButton } from './conclude-button'
 import { StatusButton } from './status-button'
 import { CorrectiveForm } from './corrective-form'
@@ -75,13 +75,9 @@ export default async function EquipamentoDetailPage({
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-3">
-          <Link href="/tecnico/equipamentos" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Equipamentos
-          </Link>
-          <span className="text-slate-700">/</span>
-          <h1 className="text-xl font-semibold truncate">{equipment.name}</h1>
+        <div>
+          <BackButton href="/tecnico/equipamentos" label="Equipamentos" />
+          <h1 className="text-xl font-semibold truncate mt-1">{equipment.name}</h1>
         </div>
 
         {/* Cabeçalho do equipamento */}

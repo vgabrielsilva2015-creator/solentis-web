@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { BackButton } from '@/components/back-button'
 import { AnalysisForm } from './analysis-form'
 
 const TENANT_ID = 'default'
@@ -28,7 +29,8 @@ export default async function NovaAnalisePage() {
   ])
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-6">
+    <main className="mx-auto max-w-lg px-4 py-6 space-y-4">
+      <BackButton href="/tecnico/analises" label="Análises" />
       <AnalysisForm
         collectionPoints={collectionPoints}
         parameters={parameters}

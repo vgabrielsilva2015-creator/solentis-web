@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { TecnicoTaskForm } from './tecnico-task-form'
 
 const TENANT_ID = 'default'
@@ -45,6 +45,7 @@ export default async function TecnicoInstanciaDetalhePage({
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
+        <BackButton href="/tecnico/turnos/instancias" label="Instâncias" />
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -77,11 +78,6 @@ export default async function TecnicoInstanciaDetalhePage({
           />
         </div>
 
-        <div className="pt-2">
-          <Link href="/tecnico/turnos/instancias" className="text-xs text-slate-600 hover:text-slate-400">
-            ← Voltar
-          </Link>
-        </div>
     </main>
   )
 }

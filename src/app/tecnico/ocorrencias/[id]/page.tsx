@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { ResolveForm } from './resolve-form'
 
 const TENANT_ID = 'default'
@@ -51,13 +52,9 @@ export default async function OcorrenciaDetailPage({
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-3">
-          <Link href="/tecnico/ocorrencias" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Ocorrências
-          </Link>
-          <span className="text-slate-700">/</span>
-          <h1 className="text-base font-semibold truncate">Detalhe</h1>
+        <div>
+          <BackButton href="/tecnico/ocorrencias" label="Ocorrências" />
+          <h1 className="text-base font-semibold mt-1">Detalhe da ocorrência</h1>
         </div>
 
         {/* Card da ocorrência */}

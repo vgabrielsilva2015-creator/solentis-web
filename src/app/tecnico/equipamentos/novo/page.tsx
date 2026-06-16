@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { EquipmentForm } from './equipment-form'
 
 const TENANT_ID = 'default'
@@ -18,12 +18,9 @@ export default async function NovoEquipamentoPage() {
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/tecnico/equipamentos" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Equipamentos
-        </Link>
-        <span className="text-slate-700">/</span>
-        <h1 className="text-xl font-semibold">Novo equipamento</h1>
+      <div>
+        <BackButton href="/tecnico/equipamentos" label="Equipamentos" />
+        <h1 className="text-xl font-semibold mt-1">Novo equipamento</h1>
       </div>
 
       <EquipmentForm categories={categories} />

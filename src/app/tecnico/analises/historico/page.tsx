@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { AnalysisChart } from './analysis-chart'
 
 const TENANT_ID = 'default'
@@ -45,12 +45,9 @@ export default async function HistoricoPage({
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/tecnico/analises" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Análises
-          </Link>
-          <span className="text-slate-700">/</span>
-          <h1 className="text-xl font-semibold">Histórico</h1>
+        <div>
+          <BackButton href="/tecnico/analises" label="Análises" />
+          <h1 className="text-xl font-semibold mt-1">Histórico</h1>
         </div>
 
         {/* Filtros */}
