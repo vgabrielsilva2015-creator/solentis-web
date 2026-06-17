@@ -10,7 +10,7 @@ const TENANT_ID = 'default'
 
 async function requireOperator() {
   const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
+  if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
     throw new Error('Acesso não autorizado')
   }
   return session
@@ -56,7 +56,7 @@ const ContagemSchema = z.object({
 
 export async function registrarSaida(_prev: unknown, formData: FormData) {
   const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar saídas.' }
+  if (!['OPERATOR', 'TECHNICIAN'].includes(session.user.role)) return { error: 'Apenas operadores ou técnicos podem registrar saídas.' }
 
   const parsed = SaidaSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -97,6 +97,8 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
   revalidatePath('/operador/estoque')
   revalidatePath(`/operador/estoque/${product_id}`)
+  revalidatePath('/tecnico/estoque')
+  revalidatePath(`/tecnico/estoque/${product_id}`)
 
   const novoEstoque = estoqueAtual - quantity
   if (novoEstoque < 0) {

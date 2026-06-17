@@ -538,6 +538,484 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - **Pós-MVP — Repensar fluxo de turno e passagem:** Revisar o fluxo de abertura/fechamento de turno e checklist de passagem com base no feedback dos operadores em campo.
 - **Pós-MVP — Resumo do turno anterior para o entrante:** Ao abrir um turno, Operador vê resumo do que o turno anterior registrou (leituras, ocorrências, tarefas concluídas).
 
+
+# SOLENTIS — Relatório de Handoff Técnico
+### Documento de transferência de contexto para colaboração entre IAs
+**Última atualização:** sessão de correção de bugs (Onda 1 concluída)
+**Destino:** Antigravity / IA colaboradora
+**Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
+
+---
+
+## COMO USAR ESTE DOCUMENTO
+
+Este é o documento-mãe de contexto do projeto Solentis. Ele existe para que **qualquer IA** possa entrar no projeto sem quebrar o que já foi construído. Antes de propor ou executar QUALQUER alteração, leia as seções 1 a 6. As **regras invioláveis** estão na seção 3 — violá-las causa retrabalho ou quebra do sistema.
+
+Princípio de colaboração: o autor (Vitor) é iniciante em programação. Explique decisões em linguagem acessível, trabalhe em incrementos pequenos e versionáveis, e NUNCA aplique grandes mudanças sem mostrar o diff antes.
+
+---
+
+## 1. DE ONDE VIEMOS — o que é o Solentis
+
+### 1.1 O problema real
+Estações de Tratamento de Efluentes (ETEs) de pequeno e médio porte no Brasil controlam sua operação em papel ou planilhas soltas. Isso dificulta:
+- Comprovar conformidade com a **Resolução CONAMA nº 430/2011** (limites de lançamento de efluentes)
+- Rastrear quem mediu o quê, quando, e sob qual limite legal vigente
+- Auditar alterações e passagens de turno
+- Tomar decisão baseada em dados
+
+### 1.2 A solução
+**Solentis** é uma aplicação web mobile-first que digitaliza o ciclo operacional completo de uma ETE, com a conformidade CONAMA como motor de design (não como relatório acoplado no fim). O contexto real de uso é a operação de uma fábrica de ARLA 32 (gestão do tratamento de efluentes industriais).
+
+### 1.3 Os 3 perfis de usuário
+| Perfil | Responsabilidade | Acesso |
+|---|---|---|
+| **OPERATOR** | Leituras de campo, ocorrências in loco, operação de turnos, saída/contagem de estoque | Cria e edita o que é seu |
+| **TECHNICIAN** | Análises laboratoriais, equipamentos, manutenções, resolução de ocorrências, entrada de estoque | Cria e edita o técnico |
+| **MANAGER (Gestor)** | Configuração, cadastros de referência, KPIs, auditoria | Vê tudo (inclusive telas de operador/técnico); escreve só no que é dele |
+
+**Regra de ouro de permissão:** MANAGER tem acesso de LEITURA às rotas `/operador/*` e `/tecnico/*` (para monitoramento), mas operações de ESCRITA permanecem restritas ao perfil dono.
+
+---
+
+## 2. ONDE ESTAMOS — estado atual do código
+
+### 2.1 Status geral (no fim da Onda 1)
+```
+✅ Fases 0 a 12 — completas e commitadas
+✅ 2 features extras — Tarefas por Turno + Estoque Químico
+✅ Onda 1 de bugs — 6 bugs críticos corrigidos
+✅ 111 testes automatizados passando (Vitest)
+✅ TypeScript estrito — zero erros
+✅ Working tree limpo
+```
+
+### 2.2 Localização e como rodar
+```
+Pasta:    C:\Users\Vitor\projetos\meu-projeto  (Windows, pt-BR)
+Subir:    npm run dev           → localhost:3000
+Reset DB: npx prisma migrate reset   (recria seed)
+Dados demo: npx tsx prisma/seed-demo.ts   (6 meses de dados p/ gráficos)
+Testes:   npx vitest run
+Tipos:    npx tsc --noEmit
+```
+
+### 2.3 Credenciais seed
+```
+admin@solentis.local    / Admin@123     (MANAGER)
+tecnico@solentis.local  / Tecnico@123   (TECHNICIAN)
+operador@solentis.local / Operador@123  (OPERATOR)
+```
+
+---
+
+## 3. REGRAS INVIOLÁVEIS — leia antes de tocar no código
+
+> Estas decisões foram tomadas com motivo. Reverter qualquer uma SEM um plano de migração explícito quebra o sistema.
+
+### 3.1 Prisma v5.22.0 — NÃO atualizar para v7
+O Prisma foi **deliberadamente fixado na v5.22.0**. A v7 é incompatível com a configuração SQLite simples usada aqui. Se sugerir update, PARE — exige plano de migração de banco completo.
+
+### 3.2 SQLite não tem tipo Json nem enum nativo
+Consequências obrigatórias no código:
+- Campos que seriam JSON são armazenados como **String serializada** (5 campos no schema). Serializar/desserializar na aplicação.
+- Enums são implementados como **String + constantes TypeScript** em `src/types/index.ts`. Nunca usar `enum` nativo do Prisma.
+
+### 3.3 Status OVERDUE / TIMED_OUT é computado em query
+Não há job em segundo plano. Vencimento de prazo de ocorrência e timeout de passagem de turno são avaliados **na própria query de leitura**, comparando com a data atual. Não criar cron para isso sem discutir.
+
+### 3.4 Sessão JWT é compartilhada entre abas
+Comportamento normal de cookie HTTP, NÃO é bug. Para testar múltiplos perfis: usar **janelas anônimas separadas** ou perfis diferentes do navegador. Documentado na seção 7 do RUNBOOK. Por isso, CADA `page.tsx` valida o role da sessão — não confiar só no middleware.
+
+### 3.5 Snapshots imutáveis de limites legais
+Ao registrar uma análise laboratorial, os limites mínimo/máximo vigentes são **copiados para a própria análise** (`min_limit_applied`, `max_limit_applied`). Atualizar o limite depois NÃO altera análises antigas. Isso é exigência de rastreabilidade temporal da CONAMA. Nunca "normalizar" isso para buscar o limite atual via FK.
+
+### 3.6 Protocolo de trabalho com o autor
+- Uma alteração / aprovação por vez. NÃO usar "allow all edits".
+- `tsc --noEmit` antes de cada commit.
+- Conventional Commits em **português**.
+- Pausar em arquivos `actions.ts` para revisão manual; diffs visuais podem ser aprovados direto.
+- `CLAUDE.md` é a memória viva do projeto — manter atualizado.
+
+---
+
+## 4. STACK TÉCNICA COMPLETA
+
+| Camada | Tecnologia | Observação |
+|---|---|---|
+| Framework | Next.js 15 (Turbopack) | App Router, React Server Components |
+| Linguagem | TypeScript (modo estrito) | terceira linha de defesa contra bugs |
+| UI | Tailwind CSS v4 + shadcn/ui | tema escuro (slate-950/900/800) |
+| ORM | Prisma 5.22.0 | fixo — ver regra 3.1 |
+| Banco | SQLite (dev) | preparado p/ PostgreSQL em produção |
+| Auth | NextAuth v5 | JWT, bcrypt 12 rounds |
+| Validação | Zod | cliente + servidor, em todas as Server Actions |
+| Testes | Vitest | 111 testes |
+| Gráficos | Recharts | com ReferenceLine nos limites legais |
+
+---
+
+## 5. ARQUITETURA E MÓDULOS
+
+### 5.1 Banco — 21 tabelas em 5 domínios
+```
+IDENTIDADE      tenants, usuários, sessões
+CONFIGURAÇÃO    parâmetros (+ histórico de versões), métodos, pontos de coleta,
+                turnos, categorias de equipamento, prazos por severidade
+EXECUÇÃO        leituras, análises, equipamentos, manutenções (prev. + corret.),
+                ocorrências (+ fotos), instâncias de turno, passagens,
+                tarefas por turno (+ fotos)
+ESTOQUE         produtos químicos, entradas, saídas, contagens físicas
+RASTREABILIDADE log de auditoria, histórico de versões de parâmetros
+```
+
+### 5.2 Os 13 módulos funcionais
+1. **Leituras de campo** (operador) — mobile, detecção imediata de não-conformidade ao digitar (campo fica vermelho), draft em localStorage
+2. **Análises laboratoriais** (técnico) — snapshots imutáveis, fluxo de aprovação, gráfico de tendência
+3. **Equipamentos + manutenções** — preventiva auto-agenda a próxima via `$transaction`; corretiva com prioridade
+4. **Ocorrências** — severidade → prazo (CRITICAL 24h / HIGH 72h / MEDIUM 168h / LOW 720h), foto até 5MB, resolução pelo técnico
+5. **Turnos** — abertura + passagem em 2 etapas (sainte → entrante), checklist automático, timeout lazy, guard sainte≠entrante
+6. **Tarefas por turno** (extra) — gestor/técnico atribui, operador conclui com até 3 fotos
+7. **Estoque químico** (extra) — entrada/saída/contagem, estoque calculado vs físico, alerta duplo
+8. **Dashboards** — um por perfil (operador, técnico, gestor com KPIs + BarChart)
+9. **Configurações** (gestor) — 6 CRUDs
+10. **Usuários** (gestor)
+11. **Auditoria** (gestor) — log com estado anterior/posterior, filtros
+12. **Troca de senha obrigatória** no 1º acesso
+13. **Autenticação** — login, rate limiting, middleware por perfil
+
+### 5.3 Estrutura de rotas (resumo)
+```
+/login, /trocar-senha, /acesso-negado
+/operador/{dashboard, leituras, leituras/nova, turnos, turnos/abrir,
+          turnos/[id]/tarefas, ocorrencias, ocorrencias/nova, estoque, ...}
+/tecnico/{dashboard, analises, analises/historico, equipamentos,
+          manutencoes, ocorrencias, turnos/instancias, turnos/instancias/[id], ...}
+/gestor/{dashboard, usuarios, parametros, metodos, categorias,
+         pontos-de-coleta, turnos, turnos/instancias, prazos-ocorrencia,
+         produtos-quimicos, auditoria, ...}
+```
+
+---
+
+## 6. O QUE ACABOU DE SER FEITO — Onda 1 (correção de bugs)
+
+Seis bugs encontrados em teste de uso real, todos corrigidos com commit individual:
+
+| # | Bug | Causa-raiz | Correção | Commit |
+|---|---|---|---|---|
+| 1 | `/tecnico/turnos` dava 404 | href incompleto no TecnicoBottomNav | apontado p/ `/tecnico/turnos/instancias` | `50a9301` |
+| 2 | "Turnos" do Gestor dava 404 | mesma raiz do Bug 1 (gestor acessa rota do técnico) + double-active no sidebar | corrigido + `excludePrefix` no sidebar | `72528e0` |
+| 3 | Header duplicado em abrir turno | já resolvido na Fase 12; achado extra: título "Create Next App" | título → "Solentis" | `cad94e0` |
+| 4 | Botão "Sair" do técnico dava erro | `signOut({redirectTo})` não propaga cookie em Server Action | `signOut({redirect:false})` + `redirect('/login')` | `832a277` |
+| 5 | Operador via turnos fechados, gestor via aberto | `date: today` na query do operador escondia turno noturno aberto ontem | removido filtro de data, filtra só por status | `0cefed3` |
+| 6 | Sessões "se misturando" entre perfis | (a) limitação JWT entre abas — documentada; (b) guards `role !==` mais restritivos que o layout, expulsando MANAGER | guards corrigidos p/ incluir MANAGER + redirect p/ `/acesso-negado` + RUNBOOK seção 7 | `998cbb3` |
+
+---
+
+## 7. PARA ONDE VAMOS — roadmap
+
+### 7.1 CONCLUÍDA — Onda 2 (UX de navegação)
+Etapas A–F foram concluídas:
+- **A** — componente `BackButton` reutilizável (href + label, fallback router.back)
+- **B** — logo "Solentis" clicável → dashboard do perfil
+- **C** — botão voltar nas telas internas do operador
+- **D** — botão voltar nas telas internas do técnico
+- **E** — botão voltar nas telas internas do gestor
+- **F** — auditar botão "Sair" presente em todas as telas
+
+### 7.2 PRÓXIMA — Onda 3 (mudanças de fluxo / regras de negócio)
+- Técnico também registrar **saída** de produtos químicos (hoje só operador) — facilita ajustes de estoque
+- Técnico **e** Gestor também registrarem ocorrências (hoje só operador)
+- Atribuir tarefa a um turno **sem precisar abrir o turno** (pré-agendamento / pré-datado) → tornar o fluxo de tarefas contínuo e confiável
+- Repensar o uso de "ocorrências" (definir melhor o propósito)
+- Estoque: mostrar **quem registrou** cada movimento (rastreabilidade visual)
+
+### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
+- **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
+- Abertura automática de turno no login do operador
+- Resumo do turno anterior para o operador entrante
+- Notificações push/email para não-conformidade (severidade alta)
+- PWA (instalação no dispositivo, offline parcial)
+- DBO5 tratado como "último resultado com data" (não tempo real)
+- Deploy (Vercel/Railway, ~R$50-80/mês + domínio) → migração SQLite → PostgreSQL
+- **Sensores online** (DBO, OD, pH) — pesquisa de prazo LONGO; DBO exige 5 dias de incubação, é desafio técnico, não implementação imediata
+
+### 7.4 Validação obrigatória antes de "produção"
+O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. NÃO está pronto para produção até Ondas 1-3 + QA completo.
+
+---
+
+## 8. ATIVOS PARALELOS (fora do código, mas do projeto)
+
+### 8.1 Protótipo de leitura de laudos com IA
+Arquivo React `solentis-laudos-ia.jsx` — protótipo funcional da feature da Onda 4. Usa a API Claude (model `claude-sonnet-4-6`) para extrair parâmetros de PDF/texto de laudo, comparar com CONAMA e gerar tabela + gráfico. Prompt de extração e lógica de conformidade já calibrados. Serve como especificação pronta para implementação.
+
+### 8.2 Trabalho técnico AESabesp 2026
+Artigo completo (`Solentis-AESabesp-2026-1afase.docx`) submetido ao Prêmio Jovem Profissional do 37º Encontro Técnico AESabesp. 10 páginas, resumo 190 palavras, 30 referências, 5 figuras. 1ª fase é anônima (sem nome de autor). Posiciona o sistema honestamente como protótipo. Não interfere no código, mas descreve o projeto com precisão técnica.
+
+### 8.3 Logo (em criação)
+Identidade visual sendo gerada: combinação da letra "S" com gota d'água, paleta azul (água/confiança), para integrar no header do app, favicon e ícone PWA.
+
+---
+
+## 9. CHECKLIST PARA A IA COLABORADORA
+
+Antes de propor qualquer mudança, confirme:
+- [ ] Li as regras invioláveis (seção 3)?
+- [ ] A mudança respeita Prisma v5 (String p/ enum/JSON)?
+- [ ] Server Actions novas têm Zod + guard de role?
+- [ ] Queries filtram por `tenant_id`?
+- [ ] Há `revalidatePath` após mutações?
+- [ ] Snapshots de limite legal preservados (não trocar por FK ao limite atual)?
+- [ ] `tsc --noEmit` limpo + testes verdes?
+- [ ] Commit em português, atômico, com mensagem descritiva?
+- [ ] CLAUDE.md atualizado se mudou arquitetura?
+- [ ] Mostrei o diff ao autor antes de aplicar mudança grande?
+
+---
+
+*Fim do relatório de handoff. Mantenha este documento atualizado ao concluir cada Onda.*
+
+
+# SOLENTIS — Relatório de Handoff Técnico
+### Documento de transferência de contexto para colaboração entre IAs
+**Última atualização:** sessão de correção de bugs (Onda 1 concluída)
+**Destino:** Antigravity / IA colaboradora
+**Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
+
+---
+
+## COMO USAR ESTE DOCUMENTO
+
+Este é o documento-mãe de contexto do projeto Solentis. Ele existe para que **qualquer IA** possa entrar no projeto sem quebrar o que já foi construído. Antes de propor ou executar QUALQUER alteração, leia as seções 1 a 6. As **regras invioláveis** estão na seção 3 — violá-las causa retrabalho ou quebra do sistema.
+
+Princípio de colaboração: o autor (Vitor) é iniciante em programação. Explique decisões em linguagem acessível, trabalhe em incrementos pequenos e versionáveis, e NUNCA aplique grandes mudanças sem mostrar o diff antes.
+
+---
+
+## 1. DE ONDE VIEMOS — o que é o Solentis
+
+### 1.1 O problema real
+Estações de Tratamento de Efluentes (ETEs) de pequeno e médio porte no Brasil controlam sua operação em papel ou planilhas soltas. Isso dificulta:
+- Comprovar conformidade com a **Resolução CONAMA nº 430/2011** (limites de lançamento de efluentes)
+- Rastrear quem mediu o quê, quando, e sob qual limite legal vigente
+- Auditar alterações e passagens de turno
+- Tomar decisão baseada em dados
+
+### 1.2 A solução
+**Solentis** é uma aplicação web mobile-first que digitaliza o ciclo operacional completo de uma ETE, com a conformidade CONAMA como motor de design (não como relatório acoplado no fim). O contexto real de uso é a operação de uma fábrica de ARLA 32 (gestão do tratamento de efluentes industriais).
+
+### 1.3 Os 3 perfis de usuário
+| Perfil | Responsabilidade | Acesso |
+|---|---|---|
+| **OPERATOR** | Leituras de campo, ocorrências in loco, operação de turnos, saída/contagem de estoque | Cria e edita o que é seu |
+| **TECHNICIAN** | Análises laboratoriais, equipamentos, manutenções, resolução de ocorrências, entrada de estoque | Cria e edita o técnico |
+| **MANAGER (Gestor)** | Configuração, cadastros de referência, KPIs, auditoria | Vê tudo (inclusive telas de operador/técnico); escreve só no que é dele |
+
+**Regra de ouro de permissão:** MANAGER tem acesso de LEITURA às rotas `/operador/*` e `/tecnico/*` (para monitoramento), mas operações de ESCRITA permanecem restritas ao perfil dono.
+
+---
+
+## 2. ONDE ESTAMOS — estado atual do código
+
+### 2.1 Status geral (no fim da Onda 1)
+```
+✅ Fases 0 a 12 — completas e commitadas
+✅ 2 features extras — Tarefas por Turno + Estoque Químico
+✅ Onda 1 de bugs — 6 bugs críticos corrigidos
+✅ 111 testes automatizados passando (Vitest)
+✅ TypeScript estrito — zero erros
+✅ Working tree limpo
+```
+
+### 2.2 Localização e como rodar
+```
+Pasta:    C:\Users\Vitor\projetos\meu-projeto  (Windows, pt-BR)
+Subir:    npm run dev           → localhost:3000
+Reset DB: npx prisma migrate reset   (recria seed)
+Dados demo: npx tsx prisma/seed-demo.ts   (6 meses de dados p/ gráficos)
+Testes:   npx vitest run
+Tipos:    npx tsc --noEmit
+```
+
+### 2.3 Credenciais seed
+```
+admin@solentis.local    / Admin@123     (MANAGER)
+tecnico@solentis.local  / Tecnico@123   (TECHNICIAN)
+operador@solentis.local / Operador@123  (OPERATOR)
+```
+
+---
+
+## 3. REGRAS INVIOLÁVEIS — leia antes de tocar no código
+
+> Estas decisões foram tomadas com motivo. Reverter qualquer uma SEM um plano de migração explícito quebra o sistema.
+
+### 3.1 Prisma v5.22.0 — NÃO atualizar para v7
+O Prisma foi **deliberadamente fixado na v5.22.0**. A v7 é incompatível com a configuração SQLite simples usada aqui. Se sugerir update, PARE — exige plano de migração de banco completo.
+
+### 3.2 SQLite não tem tipo Json nem enum nativo
+Consequências obrigatórias no código:
+- Campos que seriam JSON são armazenados como **String serializada** (5 campos no schema). Serializar/desserializar na aplicação.
+- Enums são implementados como **String + constantes TypeScript** em `src/types/index.ts`. Nunca usar `enum` nativo do Prisma.
+
+### 3.3 Status OVERDUE / TIMED_OUT é computado em query
+Não há job em segundo plano. Vencimento de prazo de ocorrência e timeout de passagem de turno são avaliados **na própria query de leitura**, comparando com a data atual. Não criar cron para isso sem discutir.
+
+### 3.4 Sessão JWT é compartilhada entre abas
+Comportamento normal de cookie HTTP, NÃO é bug. Para testar múltiplos perfis: usar **janelas anônimas separadas** ou perfis diferentes do navegador. Documentado na seção 7 do RUNBOOK. Por isso, CADA `page.tsx` valida o role da sessão — não confiar só no middleware.
+
+### 3.5 Snapshots imutáveis de limites legais
+Ao registrar uma análise laboratorial, os limites mínimo/máximo vigentes são **copiados para a própria análise** (`min_limit_applied`, `max_limit_applied`). Atualizar o limite depois NÃO altera análises antigas. Isso é exigência de rastreabilidade temporal da CONAMA. Nunca "normalizar" isso para buscar o limite atual via FK.
+
+### 3.6 Protocolo de trabalho com o autor
+- Uma alteração / aprovação por vez. NÃO usar "allow all edits".
+- `tsc --noEmit` antes de cada commit.
+- Conventional Commits em **português**.
+- Pausar em arquivos `actions.ts` para revisão manual; diffs visuais podem ser aprovados direto.
+- `CLAUDE.md` é a memória viva do projeto — manter atualizado.
+
+---
+
+## 4. STACK TÉCNICA COMPLETA
+
+| Camada | Tecnologia | Observação |
+|---|---|---|
+| Framework | Next.js 15 (Turbopack) | App Router, React Server Components |
+| Linguagem | TypeScript (modo estrito) | terceira linha de defesa contra bugs |
+| UI | Tailwind CSS v4 + shadcn/ui | tema escuro (slate-950/900/800) |
+| ORM | Prisma 5.22.0 | fixo — ver regra 3.1 |
+| Banco | SQLite (dev) | preparado p/ PostgreSQL em produção |
+| Auth | NextAuth v5 | JWT, bcrypt 12 rounds |
+| Validação | Zod | cliente + servidor, em todas as Server Actions |
+| Testes | Vitest | 111 testes |
+| Gráficos | Recharts | com ReferenceLine nos limites legais |
+
+---
+
+## 5. ARQUITETURA E MÓDULOS
+
+### 5.1 Banco — 21 tabelas em 5 domínios
+```
+IDENTIDADE      tenants, usuários, sessões
+CONFIGURAÇÃO    parâmetros (+ histórico de versões), métodos, pontos de coleta,
+                turnos, categorias de equipamento, prazos por severidade
+EXECUÇÃO        leituras, análises, equipamentos, manutenções (prev. + corret.),
+                ocorrências (+ fotos), instâncias de turno, passagens,
+                tarefas por turno (+ fotos)
+ESTOQUE         produtos químicos, entradas, saídas, contagens físicas
+RASTREABILIDADE log de auditoria, histórico de versões de parâmetros
+```
+
+### 5.2 Os 13 módulos funcionais
+1. **Leituras de campo** (operador) — mobile, detecção imediata de não-conformidade ao digitar (campo fica vermelho), draft em localStorage
+2. **Análises laboratoriais** (técnico) — snapshots imutáveis, fluxo de aprovação, gráfico de tendência
+3. **Equipamentos + manutenções** — preventiva auto-agenda a próxima via `$transaction`; corretiva com prioridade
+4. **Ocorrências** — severidade → prazo (CRITICAL 24h / HIGH 72h / MEDIUM 168h / LOW 720h), foto até 5MB, resolução pelo técnico
+5. **Turnos** — abertura + passagem em 2 etapas (sainte → entrante), checklist automático, timeout lazy, guard sainte≠entrante
+6. **Tarefas por turno** (extra) — gestor/técnico atribui, operador conclui com até 3 fotos
+7. **Estoque químico** (extra) — entrada/saída/contagem, estoque calculado vs físico, alerta duplo
+8. **Dashboards** — um por perfil (operador, técnico, gestor com KPIs + BarChart)
+9. **Configurações** (gestor) — 6 CRUDs
+10. **Usuários** (gestor)
+11. **Auditoria** (gestor) — log com estado anterior/posterior, filtros
+12. **Troca de senha obrigatória** no 1º acesso
+13. **Autenticação** — login, rate limiting, middleware por perfil
+
+### 5.3 Estrutura de rotas (resumo)
+```
+/login, /trocar-senha, /acesso-negado
+/operador/{dashboard, leituras, leituras/nova, turnos, turnos/abrir,
+          turnos/[id]/tarefas, ocorrencias, ocorrencias/nova, estoque, ...}
+/tecnico/{dashboard, analises, analises/historico, equipamentos,
+          manutencoes, ocorrencias, turnos/instancias, turnos/instancias/[id], ...}
+/gestor/{dashboard, usuarios, parametros, metodos, categorias,
+         pontos-de-coleta, turnos, turnos/instancias, prazos-ocorrencia,
+         produtos-quimicos, auditoria, ...}
+```
+
+---
+
+## 6. O QUE ACABOU DE SER FEITO — Onda 1 (correção de bugs)
+
+Seis bugs encontrados em teste de uso real, todos corrigidos com commit individual:
+
+| # | Bug | Causa-raiz | Correção | Commit |
+|---|---|---|---|---|
+| 1 | `/tecnico/turnos` dava 404 | href incompleto no TecnicoBottomNav | apontado p/ `/tecnico/turnos/instancias` | `50a9301` |
+| 2 | "Turnos" do Gestor dava 404 | mesma raiz do Bug 1 (gestor acessa rota do técnico) + double-active no sidebar | corrigido + `excludePrefix` no sidebar | `72528e0` |
+| 3 | Header duplicado em abrir turno | já resolvido na Fase 12; achado extra: título "Create Next App" | título → "Solentis" | `cad94e0` |
+| 4 | Botão "Sair" do técnico dava erro | `signOut({redirectTo})` não propaga cookie em Server Action | `signOut({redirect:false})` + `redirect('/login')` | `832a277` |
+| 5 | Operador via turnos fechados, gestor via aberto | `date: today` na query do operador escondia turno noturno aberto ontem | removido filtro de data, filtra só por status | `0cefed3` |
+| 6 | Sessões "se misturando" entre perfis | (a) limitação JWT entre abas — documentada; (b) guards `role !==` mais restritivos que o layout, expulsando MANAGER | guards corrigidos p/ incluir MANAGER + redirect p/ `/acesso-negado` + RUNBOOK seção 7 | `998cbb3` |
+
+---
+
+## 7. PARA ONDE VAMOS — roadmap
+
+### 7.1 CONCLUÍDA — Onda 2 (UX de navegação)
+Etapas A–F foram concluídas:
+- **A** — componente `BackButton` reutilizável (href + label, fallback router.back)
+- **B** — logo "Solentis" clicável → dashboard do perfil
+- **C** — botão voltar nas telas internas do operador
+- **D** — botão voltar nas telas internas do técnico
+- **E** — botão voltar nas telas internas do gestor
+- **F** — auditar botão "Sair" presente em todas as telas
+
+### 7.2 PRÓXIMA — Onda 3 (mudanças de fluxo / regras de negócio)
+- Técnico também registrar **saída** de produtos químicos (hoje só operador) — facilita ajustes de estoque
+- Técnico **e** Gestor também registrarem ocorrências (hoje só operador)
+- Atribuir tarefa a um turno **sem precisar abrir o turno** (pré-agendamento / pré-datado) → tornar o fluxo de tarefas contínuo e confiável
+- Repensar o uso de "ocorrências" (definir melhor o propósito)
+- Estoque: mostrar **quem registrou** cada movimento (rastreabilidade visual)
+
+### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
+- **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
+- Abertura automática de turno no login do operador
+- Resumo do turno anterior para o operador entrante
+- Notificações push/email para não-conformidade (severidade alta)
+- PWA (instalação no dispositivo, offline parcial)
+- DBO5 tratado como "último resultado com data" (não tempo real)
+- Deploy (Vercel/Railway, ~R$50-80/mês + domínio) → migração SQLite → PostgreSQL
+- **Sensores online** (DBO, OD, pH) — pesquisa de prazo LONGO; DBO exige 5 dias de incubação, é desafio técnico, não implementação imediata
+
+### 7.4 Validação obrigatória antes de "produção"
+O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. NÃO está pronto para produção até Ondas 1-3 + QA completo.
+
+---
+
+## 8. ATIVOS PARALELOS (fora do código, mas do projeto)
+
+### 8.1 Protótipo de leitura de laudos com IA
+Arquivo React `solentis-laudos-ia.jsx` — protótipo funcional da feature da Onda 4. Usa a API Claude (model `claude-sonnet-4-6`) para extrair parâmetros de PDF/texto de laudo, comparar com CONAMA e gerar tabela + gráfico. Prompt de extração e lógica de conformidade já calibrados. Serve como especificação pronta para implementação.
+
+### 8.2 Trabalho técnico AESabesp 2026
+Artigo completo (`Solentis-AESabesp-2026-1afase.docx`) submetido ao Prêmio Jovem Profissional do 37º Encontro Técnico AESabesp. 10 páginas, resumo 190 palavras, 30 referências, 5 figuras. 1ª fase é anônima (sem nome de autor). Posiciona o sistema honestamente como protótipo. Não interfere no código, mas descreve o projeto com precisão técnica.
+
+### 8.3 Logo (em criação)
+Identidade visual sendo gerada: combinação da letra "S" com gota d'água, paleta azul (água/confiança), para integrar no header do app, favicon e ícone PWA.
+
+---
+
+## 9. CHECKLIST PARA A IA COLABORADORA
+
+Antes de propor qualquer mudança, confirme:
+- [ ] Li as regras invioláveis (seção 3)?
+- [ ] A mudança respeita Prisma v5 (String p/ enum/JSON)?
+- [ ] Server Actions novas têm Zod + guard de role?
+- [ ] Queries filtram por `tenant_id`?
+- [ ] Há `revalidatePath` após mutações?
+- [ ] Snapshots de limite legal preservados (não trocar por FK ao limite atual)?
+- [ ] `tsc --noEmit` limpo + testes verdes?
+- [ ] Commit em português, atômico, com mensagem descritiva?
+- [ ] CLAUDE.md atualizado se mudou arquitetura?
+- [ ] Mostrei o diff ao autor antes de aplicar mudança grande?
+
+---
+
+*Fim do relatório de handoff. Mantenha este documento atualizado ao concluir cada Onda.*
+
 ```
 
 ---
