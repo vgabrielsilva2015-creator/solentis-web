@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { criarTurno, type TurnoFormState } from '../actions'
@@ -14,7 +14,7 @@ export default function NovoTurnoPage() {
   return (
     <div className="flex items-start justify-center px-4 py-8">
       <div className="w-full max-w-lg space-y-6">
-        <Link href="/gestor/turnos" className="text-sm text-slate-400 hover:text-slate-200">← Voltar para turnos</Link>
+        <BackButton href="/gestor/turnos" label="Turnos" />
 
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
           <h2 className="text-lg font-semibold text-slate-100">Novo turno</h2>

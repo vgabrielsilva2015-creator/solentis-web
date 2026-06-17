@@ -9,6 +9,7 @@ import {
 } from '@/lib/stock-utils'
 import { EditForm } from './edit-form'
 import { ToggleButton } from './toggle-button'
+import { BackButton } from '@/components/back-button'
 
 const TENANT_ID = 'default'
 
@@ -68,9 +69,7 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/gestor/produtos-quimicos" className="text-sm text-slate-400 hover:text-slate-200">
-            ← Produtos Químicos
-          </Link>
+          <BackButton href="/gestor/produtos-quimicos" label="Produtos Químicos" />
           <div className="flex items-center gap-3 mt-2 flex-wrap">
             <h1 className="text-xl font-semibold text-slate-100">{product.name}</h1>
             {!product.is_active && (

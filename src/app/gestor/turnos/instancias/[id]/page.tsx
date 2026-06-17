@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { BackButton } from '@/components/back-button'
 import { EditHandoverForm } from './edit-handover-form'
 import { TaskForm } from './task-form'
 
@@ -82,6 +82,7 @@ export default async function InstanciaDetalhePage({
 
   return (
     <div className="space-y-6 max-w-2xl">
+      <BackButton href="/gestor/turnos/instancias" label="Instâncias de Turno" />
       <div className="flex items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
@@ -224,10 +225,6 @@ export default async function InstanciaDetalhePage({
           <p className="text-sm text-slate-500">Nenhuma passagem registrada.</p>
         </div>
       )}
-
-      <Link href="/gestor/turnos/instancias" className="text-xs text-slate-600 hover:text-slate-400">
-        ← Voltar
-      </Link>
     </div>
   )
 }

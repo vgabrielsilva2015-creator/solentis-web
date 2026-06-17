@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { criarUsuario, type UsuarioFormState } from '../actions'
@@ -67,9 +68,7 @@ export default function NovoUsuarioPage() {
   return (
     <div className="px-4 py-8 flex items-start justify-center">
       <div className="w-full max-w-sm space-y-6">
-        <Link href="/gestor/usuarios" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Voltar para usuários
-        </Link>
+        <BackButton href="/gestor/usuarios" label="Usuários" />
 
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
           <div className="space-y-1">

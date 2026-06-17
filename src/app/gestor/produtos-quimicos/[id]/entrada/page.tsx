@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { EntryForm } from './entry-form'
 
 const TENANT_ID = 'default'
@@ -18,12 +18,7 @@ export default async function EntradaPage({ params }: { params: Promise<{ id: st
   return (
     <div className="p-6 max-w-lg mx-auto space-y-6">
       <div>
-        <Link
-          href={`/gestor/produtos-quimicos/${id}`}
-          className="text-sm text-slate-400 hover:text-slate-200"
-        >
-          ← {product.name}
-        </Link>
+        <BackButton href={`/gestor/produtos-quimicos/${id}`} label={product.name} />
         <h1 className="text-xl font-semibold text-slate-100 mt-2">Registrar Entrada</h1>
         <p className="text-sm text-slate-400 mt-0.5">Compra ou recebimento de estoque</p>
       </div>

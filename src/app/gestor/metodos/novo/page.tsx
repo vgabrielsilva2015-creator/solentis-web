@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { criarMetodo, type MetodoFormState } from '../actions'
@@ -13,10 +13,8 @@ export default function NovoMetodoPage() {
 
   return (
     <div className="flex items-start justify-center px-4 py-8">
-      <div className="w-full max-w-lg space-y-6">
-        <Link href="/gestor/metodos" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Voltar para métodos
-        </Link>
+      <div className="w-full max-w-sm space-y-6">
+        <BackButton href="/gestor/metodos" label="Métodos" />
 
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
           <h2 className="text-lg font-semibold text-slate-100">Novo método de análise</h2>

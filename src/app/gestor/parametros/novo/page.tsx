@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import Link from 'next/link'
+import { BackButton } from '@/components/back-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { criarParametro, type ParametroFormState } from '../actions'
@@ -16,9 +16,7 @@ export default function NovoParametroPage() {
   return (
     <div className="px-4 py-8 flex items-start justify-center">
       <div className="w-full max-w-lg space-y-6">
-        <Link href="/gestor/parametros" className="text-sm text-slate-400 hover:text-slate-200">
-          ← Voltar para parâmetros
-        </Link>
+        <BackButton href="/gestor/parametros" label="Parâmetros" />
 
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
           <div className="space-y-1">

@@ -2,8 +2,8 @@
 
 import { useActionState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { BackButton } from '@/components/back-button'
 import { Input } from '@/components/ui/input'
 import { editarPonto, toggleAtivoPonto, type PontoFormState } from '../actions'
 
@@ -25,11 +25,7 @@ export function EditPontoForm({ ponto }: { ponto: Ponto }) {
 
   return (
     <main className="px-6 py-8 space-y-6 max-w-2xl">
-      <nav className="flex items-center gap-2 text-sm text-slate-400">
-        <Link href="/gestor/pontos-de-coleta" className="hover:text-slate-200">Pontos de Coleta</Link>
-        <span className="text-slate-700">/</span>
-        <span className="text-slate-300">Editar</span>
-      </nav>
+      <BackButton href="/gestor/pontos-de-coleta" label="Pontos de Coleta" />
 
       <div className="flex items-start justify-between">
         <div>
