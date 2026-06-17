@@ -70,9 +70,10 @@ export const PRIORITIES = {
 
 // ─── Turnos ───────────────────────────────────────────────────────────────────
 
-export type ShiftInstanceStatus = 'OPEN' | 'HANDOVER_PENDING' | 'CLOSED'
+export type ShiftInstanceStatus = 'SCHEDULED' | 'OPEN' | 'HANDOVER_PENDING' | 'CLOSED'
 
 export const SHIFT_INSTANCE_STATUSES = {
+  SCHEDULED:        'SCHEDULED',
   OPEN:             'OPEN',
   HANDOVER_PENDING: 'HANDOVER_PENDING',
   CLOSED:           'CLOSED',

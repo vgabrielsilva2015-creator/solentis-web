@@ -7,12 +7,14 @@ import { TaskForm } from './task-form'
 const TENANT_ID = 'default'
 
 const STATUS_LABEL: Record<string, string> = {
+  SCHEDULED:        'Agendado',
   OPEN:             'Aberto',
   HANDOVER_PENDING: 'Aguardando confirmação',
   CLOSED:           'Fechado',
 }
 
 const STATUS_COLOR: Record<string, string> = {
+  SCHEDULED:        'bg-blue-950/60 text-blue-400 border-blue-900/50',
   OPEN:             'bg-green-950/60 text-green-400 border-green-900/50',
   HANDOVER_PENDING: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
   CLOSED:           'bg-slate-800/60 text-slate-400 border-slate-700/50',

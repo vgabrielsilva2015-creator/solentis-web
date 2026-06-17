@@ -1,15 +1,18 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 const TENANT_ID = 'default'
 
 const STATUS_LABEL: Record<string, string> = {
+  SCHEDULED:        'Agendado',
   OPEN:             'Aberto',
   HANDOVER_PENDING: 'Aguard. confirmação',
   CLOSED:           'Fechado',
 }
 
 const STATUS_COLOR: Record<string, string> = {
+  SCHEDULED:        'bg-blue-950/60 text-blue-400 border-blue-900/50',
   OPEN:             'bg-green-950/60 text-green-400 border-green-900/50',
   HANDOVER_PENDING: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
   CLOSED:           'bg-slate-800/60 text-slate-400 border-slate-700/50',
@@ -67,6 +70,7 @@ export default async function InstanciasTurnosPage({
 
   const STATUS_FILTERS = [
     { label: 'Todos',              value: '' },
+    { label: 'Agendados',          value: 'SCHEDULED' },
     { label: 'Abertos',            value: 'OPEN' },
     { label: 'Em passagem',        value: 'HANDOVER_PENDING' },
     { label: 'Fechados',           value: 'CLOSED' },
@@ -76,7 +80,14 @@ export default async function InstanciasTurnosPage({
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Instâncias de Turno</h1>
-        <span className="text-xs text-slate-500">{total} registro(s)</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">{total} registro(s)</span>
+          <Link href="/gestor/turnos/instancias/pre-agendar">
+            <Button className="bg-blue-700 text-white hover:bg-blue-600 text-xs h-8">
+              + Pré-agendar
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filtros de status */}
@@ -117,7 +128,11 @@ export default async function InstanciasTurnosPage({
                 <div className="space-y-0.5 min-w-0">
                   <p className="text-sm font-medium">{inst.shift.name}</p>
                   <p className="text-xs text-slate-500 truncate">
-                    {formatDate(inst.date)} · Aberto por {inst.opener.name} às {formatDatetime(inst.opened_at)}
+                    {formatDate(inst.date)}
+                    {inst.status === 'SCHEDULED'
+                      ? ` · Agendado por ${inst.opener.name}`
+                      : ` · Aberto por ${inst.opener.name} às ${formatDatetime(inst.opened_at)}`
+                    }
                   </p>
                   {inst.handover && (
                     <p className="text-xs text-slate-600">

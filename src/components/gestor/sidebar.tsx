@@ -20,6 +20,8 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia' },
   { type: 'section', label: 'Estoque' },
   { type: 'link',    label: 'Produtos Químicos',   href: '/gestor/produtos-quimicos' },
+  { type: 'section', label: 'Operação' },
+  { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias' },
   { type: 'section', label: 'Sistema' },
   { type: 'link',    label: 'Auditoria',            href: '/gestor/auditoria' },
 ]

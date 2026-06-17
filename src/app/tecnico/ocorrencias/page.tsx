@@ -68,6 +68,12 @@ export default async function OcorrenciasTecnicoPage({
           </div>
           <div className="flex gap-2">
             <Link
+              href="/tecnico/ocorrencias/nova"
+              className="rounded-md border border-green-700 bg-green-900/40 px-3 py-1.5 text-xs text-green-400 hover:bg-green-900/60"
+            >
+              + Nova
+            </Link>
+            <Link
               href="/tecnico/ocorrencias"
               className={[
                 'rounded-md border px-3 py-1.5 text-xs',

@@ -12,9 +12,9 @@ const TENANT_ID      = 'default'
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 
-async function requireOperator() {
+async function requireAuthenticated() {
   const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
+  if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
     throw new Error('Acesso não autorizado')
   }
   return session
@@ -51,8 +51,7 @@ export async function registrarOcorrencia(
   _prev: OcorrenciaFormState,
   formData: FormData,
 ): Promise<OcorrenciaFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar ocorrências.' }
+  const session = await requireAuthenticated()
 
   const parsed = OcorrenciaSchema.safeParse({
     description: formData.get('description'),
@@ -144,5 +143,7 @@ export async function registrarOcorrencia(
   })
 
   revalidatePath('/operador/ocorrencias')
+  revalidatePath('/tecnico/ocorrencias')
+  revalidatePath('/gestor/ocorrencias')
   return { success: true }
 }

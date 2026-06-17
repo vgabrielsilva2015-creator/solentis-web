@@ -100,3 +100,69 @@ export async function editarPassagem(
   revalidatePath('/gestor/turnos/instancias')
   return { success: true }
 }
+
+// ─── Pré-agendar turno (criar instância futura com status SCHEDULED) ──────────
+
+const PreAgendarSchema = z.object({
+  shift_id: z.string().min(1, 'Selecione o turno'),
+  date:     z.string().min(1, 'Informe a data'),
+})
+
+export type PreAgendarFormState = {
+  error?: string
+  fieldErrors?: Record<string, string[]>
+  success?: boolean
+  instanceId?: string
+}
+
+export async function preAgendarTurno(
+  _prev: PreAgendarFormState,
+  formData: FormData,
+): Promise<PreAgendarFormState> {
+  const session = await requireManager()
+
+  const parsed = PreAgendarSchema.safeParse({
+    shift_id: formData.get('shift_id'),
+    date:     formData.get('date'),
+  })
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
+
+  const shift = await prisma.shift.findFirst({
+    where:  { id: parsed.data.shift_id, tenant_id: TENANT_ID, is_active: true },
+    select: { id: true },
+  })
+  if (!shift) return { error: 'Turno não encontrado.' }
+
+  const targetDate = new Date(parsed.data.date + 'T00:00:00')
+
+  // Verifica duplicado
+  const existing = await prisma.shiftInstance.findFirst({
+    where: {
+      tenant_id: TENANT_ID,
+      shift_id:  parsed.data.shift_id,
+      date:      targetDate,
+    },
+  })
+  if (existing) {
+    return { error: 'Já existe uma instância para esse turno nessa data.' }
+  }
+
+  const instance = await prisma.shiftInstance.create({
+    data: {
+      tenant_id: TENANT_ID,
+      shift_id:  parsed.data.shift_id,
+      date:      targetDate,
+      opened_by: userId,
+      opened_at: new Date(),
+      status:    'SCHEDULED',
+    },
+  })
+
+  revalidatePath('/gestor/turnos/instancias')
+  return { success: true, instanceId: instance.id }
+}

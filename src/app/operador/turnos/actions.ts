@@ -133,16 +133,37 @@ export async function abrirTurno(
       return { error: 'Já existe um turno aberto para este período.' } as TurnoFormState
     }
 
-    await tx.shiftInstance.create({
-      data: {
+    // Se existe instância pré-agendada (SCHEDULED), promove para OPEN
+    const scheduled = await tx.shiftInstance.findFirst({
+      where: {
         tenant_id: TENANT_ID,
         shift_id:  parsed.data.shift_id,
         date:      today,
-        opened_by: userId,
-        opened_at: new Date(),
-        status:    'OPEN',
+        status:    'SCHEDULED',
       },
     })
+
+    if (scheduled) {
+      await tx.shiftInstance.update({
+        where: { id: scheduled.id },
+        data: {
+          opened_by: userId,
+          opened_at: new Date(),
+          status:    'OPEN',
+        },
+      })
+    } else {
+      await tx.shiftInstance.create({
+        data: {
+          tenant_id: TENANT_ID,
+          shift_id:  parsed.data.shift_id,
+          date:      today,
+          opened_by: userId,
+          opened_at: new Date(),
+          status:    'OPEN',
+        },
+      })
+    }
     return null
   })
 
