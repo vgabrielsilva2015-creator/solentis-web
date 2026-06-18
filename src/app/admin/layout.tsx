@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { AdminSidebar } from '@/components/admin/sidebar'
+import { MobileNav } from '@/components/mobile-nav'
 
 export default async function AdminLayout({
   children,
@@ -18,6 +19,7 @@ export default async function AdminLayout({
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
+            <MobileNav><AdminSidebar /></MobileNav>
             <Link href="/admin/plantas" className="text-lg font-bold tracking-tight hover:text-slate-300 transition-colors">
               Solentis
             </Link>
