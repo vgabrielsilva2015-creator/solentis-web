@@ -73,7 +73,7 @@ export function TaskForm({
                 </span>
                 {task.status === 'PENDING' && canAdd && (
                   <form action={removerTarefa.bind(null, task.id)}>
-                    <button type="submit" className="text-xs text-red-500 hover:text-red-400">
+                    <button type="submit" className="text-xs text-red-500 hover:text-red-400" disabled={isPending}>
                       Remover
                     </button>
                   </form>

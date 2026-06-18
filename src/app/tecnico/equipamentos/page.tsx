@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 const PAGE_SIZE = 20
 
 function formatDate(d: Date | null): string {
@@ -27,7 +27,7 @@ export default async function EquipamentosPage({
   const search    = q?.trim() ?? ''
 
   const where = {
-    tenant_id: TENANT_ID,
+    tenant_id: (await getTenantId()),
     ...(showAll ? {} : { is_active: true }),
     ...(search ? { name: { contains: search } } : {}),
   }

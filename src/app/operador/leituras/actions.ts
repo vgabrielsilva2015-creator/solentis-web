@@ -5,20 +5,21 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireOperator() {
   const session = await auth()
   if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where: { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -84,10 +85,21 @@ export async function registrarLeitura(
   let unit = parsed.data.unit
 
   if (parsed.data.parameter_id) {
-    const param = await prisma.qualityParameter.findUnique({
-      where:  { id: parsed.data.parameter_id },
-      select: { min_limit: true, max_limit: true, unit: true },
-    })
+    const [param, collectionPoint] = await Promise.all([
+      prisma.qualityParameter.findFirst({
+        where:  { id: parsed.data.parameter_id, tenant_id: await getTenantId() },
+        select: { min_limit: true, max_limit: true, unit: true },
+      }),
+      prisma.collectionPoint.findFirst({
+        where: { id: parsed.data.collection_point_id, tenant_id: await getTenantId() },
+        select: { id: true },
+      })
+    ])
+
+    if (!collectionPoint) {
+      return { error: 'Ponto de coleta inválido ou não autorizado.' }
+    }
+
     if (param) {
       // Copia a unidade do parâmetro quando o formulário não enviou uma
       unit = unit ?? param.unit
@@ -96,26 +108,63 @@ export async function registrarLeitura(
         param.min_limit,
         param.max_limit,
       )
+    } else {
+      return { error: 'Parâmetro inválido ou não autorizado.' }
     }
+  } else {
+    // If no parameter is provided, we still need to validate the collection point
+    const collectionPoint = await prisma.collectionPoint.findFirst({
+      where: { id: parsed.data.collection_point_id, tenant_id: await getTenantId() },
+      select: { id: true },
+    })
+    if (!collectionPoint) return { error: 'Ponto de coleta inválido ou não autorizado.' }
   }
 
-  await prisma.reading.create({
-    data: {
-      tenant_id:           TENANT_ID,
-      collection_point_id: parsed.data.collection_point_id,
-      parameter_id:        parsed.data.parameter_id,
-      shift_instance_id:   null, // associado ao turno na Fase 9
-      value:               parsed.data.value,
-      unit,
-      notes:               parsed.data.notes,
-      is_non_conformant:   isNonConformant,
-      origin:              'MANUAL',
-      metadata_origin:     null,
-      recorded_by:         userId,
-      recorded_at:         new Date(parsed.data.recorded_at),
-    },
+  await prisma.$transaction(async (tx) => {
+    const reading = await tx.reading.create({
+      data: {
+        tenant_id:           (await getTenantId()),
+        collection_point_id: parsed.data.collection_point_id,
+        parameter_id:        parsed.data.parameter_id,
+        shift_instance_id:   null, // associado ao turno na Fase 9
+        value:               parsed.data.value,
+        unit,
+        notes:               parsed.data.notes,
+        is_non_conformant:   isNonConformant,
+        origin:              'MANUAL',
+        metadata_origin:     null,
+        recorded_by:         userId,
+        recorded_at:         new Date(parsed.data.recorded_at),
+      },
+    })
+
+    // Se estiver fora da faixa, abre automaticamente uma ocorrência
+    if (isNonConformant && parsed.data.parameter_id) {
+      const paramName = await tx.qualityParameter.findFirst({ where: { id: parsed.data.parameter_id , tenant_id: (await getTenantId()) },
+        select: { name: true }
+      })
+      
+      const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
+        where: { severity: 'HIGH' }
+      })
+      const deadlineHours = defaultSeverity?.deadline_hours || 24
+      const deadline = new Date()
+      deadline.setHours(deadline.getHours() + deadlineHours)
+
+      await tx.occurrence.create({
+        data: {
+          tenant_id:   (await getTenantId()),
+          description: `Não Conformidade (${paramName?.name}): Leitura registrada = ${parsed.data.value} ${unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${parsed.data.collection_point_id}`,
+          severity:    'HIGH',
+          status:      'OPEN',
+          deadline,
+          reported_by: userId,
+        }
+      })
+    }
   })
 
   revalidatePath('/operador/leituras')
+  revalidatePath('/operador/ocorrencias')
   return { success: true }
 }

@@ -5,20 +5,21 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularEstoqueAtual } from '@/lib/stock-utils'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireOperator() {
   const session = await auth()
   if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string> {
   const user = await prisma.user.findUniqueOrThrow({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user.id
@@ -68,11 +69,11 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   // Calcula estoque atual para verificar se ficará negativo
   const [entries, exits] = await Promise.all([
     prisma.chemicalStockEntry.aggregate({
-      where: { tenant_id: TENANT_ID, product_id },
+      where: { tenant_id: (await getTenantId()), product_id },
       _sum:  { quantity: true },
     }),
     prisma.chemicalStockExit.aggregate({
-      where: { tenant_id: TENANT_ID, product_id },
+      where: { tenant_id: (await getTenantId()), product_id },
       _sum:  { quantity: true },
     }),
   ])
@@ -86,7 +87,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
   await prisma.chemicalStockExit.create({
     data: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       product_id,
       quantity,
       notes,
@@ -125,7 +126,7 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
 
   await prisma.chemicalStockCount.create({
     data: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       product_id,
       counted_quantity,
       notes,

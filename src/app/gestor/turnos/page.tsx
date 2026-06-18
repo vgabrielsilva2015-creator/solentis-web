@@ -1,10 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function TurnosPage() {
   const turnos = await prisma.shift.findMany({
-    where:   { tenant_id: 'default' },
+    where:   { tenant_id: (await getTenantId()) },
     orderBy: { start_time: 'asc' },
   })
 

@@ -3,15 +3,15 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { EquipmentForm } from './equipment-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function NovoEquipamentoPage() {
   const session = await auth()
   if (!session) redirect('/login')
 
   const categories = await prisma.equipmentCategory.findMany({
-    where:   { tenant_id: TENANT_ID, is_active: true },
+    where:   { tenant_id: (await getTenantId()), is_active: true },
     select:  { id: true, name: true },
     orderBy: { name: 'asc' },
   })

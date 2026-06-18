@@ -6,12 +6,12 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') throw new Error('Acesso não autorizado')
+  if (!session || session.user.role !== 'MANAGER') redirect('/login')
 }
 
 const CategoriaSchema = z.object({
@@ -44,7 +44,7 @@ export async function criarCategoria(
 
   try {
     await prisma.equipmentCategory.create({
-      data: { tenant_id: TENANT_ID, name: parsed.data.name, description: parsed.data.description, is_active: true },
+      data: { tenant_id: (await getTenantId()), name: parsed.data.name, description: parsed.data.description, is_active: true },
     })
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -73,9 +73,7 @@ export async function editarCategoria(
   }
 
   try {
-    await prisma.equipmentCategory.update({
-      where: { id: categoriaId },
-      data:  { name: parsed.data.name, description: parsed.data.description },
+    await prisma.equipmentCategory.updateMany({ where: { id: categoriaId , tenant_id: (await getTenantId()) }, data:  { name: parsed.data.name, description: parsed.data.description },
     })
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -91,9 +89,9 @@ export async function editarCategoria(
 
 export async function toggleAtivoCategoria(id: string): Promise<{ error?: string }> {
   await requireManager()
-  const cat = await prisma.equipmentCategory.findUnique({ where: { id }, select: { is_active: true } })
+  const cat = await prisma.equipmentCategory.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
   if (!cat) return { error: 'Categoria não encontrada.' }
-  await prisma.equipmentCategory.update({ where: { id }, data: { is_active: !cat.is_active } })
+  await prisma.equipmentCategory.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !cat.is_active } })
   revalidatePath('/gestor/categorias')
   revalidatePath(`/gestor/categorias/${id}`)
   return {}

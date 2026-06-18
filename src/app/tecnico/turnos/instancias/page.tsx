@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 function formatDatetime(d: Date | string): string {
   return new Date(d).toLocaleString('pt-BR', {
@@ -33,7 +33,7 @@ export default async function TecnicoInstanciasPage() {
 
   const instances = await prisma.shiftInstance.findMany({
     where: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       date:      { gte: today },
     },
     include: {
@@ -47,7 +47,7 @@ export default async function TecnicoInstanciasPage() {
 
   const pendingByInstance = await prisma.shiftTask.groupBy({
     by:     ['shift_instance_id'],
-    where:  { tenant_id: TENANT_ID, status: 'PENDING', shift_instance_id: { in: instances.map((i) => i.id) } },
+    where:  { tenant_id: (await getTenantId()), status: 'PENDING', shift_instance_id: { in: instances.map((i) => i.id) } },
     _count: { _all: true },
   })
   const pendingMap = Object.fromEntries(pendingByInstance.map((r) => [r.shift_instance_id, r._count._all]))

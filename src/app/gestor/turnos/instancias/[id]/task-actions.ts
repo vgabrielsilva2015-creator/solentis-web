@@ -4,20 +4,21 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireManagerOrTechnician() {
   const session = await auth()
   if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -69,7 +70,7 @@ export async function atribuirTarefa(
   if (!userId) return { error: 'Sessão inválida.' }
 
   const instance = await prisma.shiftInstance.findFirst({
-    where:  { id: instanceId, tenant_id: TENANT_ID },
+    where:  { id: instanceId, tenant_id: (await getTenantId()) },
     select: { status: true },
   })
   if (!instance)                    return { error: 'Instância não encontrada.' }
@@ -78,7 +79,7 @@ export async function atribuirTarefa(
   // Garante que o operador atribuído pertence ao tenant e está ativo
   if (parsed.data.assigned_to_id) {
     const assignee = await prisma.user.findFirst({
-      where:  { id: parsed.data.assigned_to_id, tenant_id: TENANT_ID, is_active: true, role: 'OPERATOR' },
+      where:  { id: parsed.data.assigned_to_id, tenant_id: (await getTenantId()), is_active: true, role: 'OPERATOR' },
       select: { id: true },
     })
     if (!assignee) return { error: 'Operador selecionado não encontrado ou inativo.' }
@@ -86,7 +87,7 @@ export async function atribuirTarefa(
 
   await prisma.shiftTask.create({
     data: {
-      tenant_id:         TENANT_ID,
+      tenant_id:         (await getTenantId()),
       shift_instance_id: instanceId,
       title:             parsed.data.title,
       description:       parsed.data.description,
@@ -107,11 +108,11 @@ export async function removerTarefa(taskId: string): Promise<void> {
   await requireManagerOrTechnician()
 
   const task = await prisma.shiftTask.findFirst({
-    where:  { id: taskId, tenant_id: TENANT_ID, status: 'PENDING' },
+    where:  { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
     select: { shift_instance_id: true },
   })
   if (!task) return
 
-  await prisma.shiftTask.delete({ where: { id: taskId } })
+  await prisma.shiftTask.deleteMany({ where: { id: taskId , tenant_id: (await getTenantId()) } })
   revalidatePath(`/gestor/turnos/instancias/${task.shift_instance_id}`)
 }

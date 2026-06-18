@@ -2,6 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { 
+  LayoutDashboard, 
+  Settings, 
+  Activity, 
+  Droplet,
+  UploadCloud,
+  AlertTriangle,
+  FileText
+} from 'lucide-react'
 
 type NavItem =
   | { type: 'link'; label: string; href: string; excludePrefix?: string }
@@ -21,7 +30,10 @@ const NAV: NavItem[] = [
   { type: 'section', label: 'Estoque' },
   { type: 'link',    label: 'Produtos Químicos',   href: '/gestor/produtos-quimicos' },
   { type: 'section', label: 'Operação' },
+  { type: 'link',    label: 'Importar Laudo (IA)',  href: '/gestor/laudos/importar' },
+  { type: 'link',    label: 'Leituras Realizadas',  href: '/gestor/leituras' },
   { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias' },
+  { type: 'link',    label: 'Relatórios (Auditoria)', href: '/gestor/relatorios' },
   { type: 'section', label: 'Sistema' },
   { type: 'link',    label: 'Auditoria',            href: '/gestor/auditoria' },
 ]

@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
 import { ResolveForm } from './resolve-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 const SEVERITY_LABEL: Record<string, string> = {
   LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
@@ -34,8 +34,7 @@ export default async function OcorrenciaDetailPage({
 
   const { id } = await params
 
-  const occurrence = await prisma.occurrence.findUnique({
-    where:   { id },
+  const occurrence = await prisma.occurrence.findFirst({ where: { id, tenant_id: (await getTenantId()) },
     include: {
       reporter:    { select: { name: true } },
       resolver:    { select: { name: true } },
@@ -44,7 +43,7 @@ export default async function OcorrenciaDetailPage({
     },
   })
 
-  if (!occurrence || occurrence.tenant_id !== TENANT_ID) notFound()
+  if (!occurrence || occurrence.tenant_id !== (await getTenantId())) notFound()
 
   const now          = new Date()
   const prazoVencido = occurrence.status !== 'RESOLVED' && new Date(occurrence.deadline) < now

@@ -5,13 +5,14 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireTechnician() {
   const session = await auth()
   if (!session || session.user.role !== 'TECHNICIAN') {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
@@ -19,14 +20,14 @@ async function requireTechnician() {
 async function requireTechnicianOrManager() {
   const session = await auth()
   if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -82,8 +83,7 @@ export async function registrarAnalise(
 
   // Busca os limites vigentes do parâmetro no momento da coleta.
   // Esses limites são capturados como snapshot imutável — rastreabilidade legal (CONAMA 430/2011).
-  const param = await prisma.qualityParameter.findUnique({
-    where:  { id: parsed.data.parameter_id },
+  const param = await prisma.qualityParameter.findFirst({ where: { id: parsed.data.parameter_id , tenant_id: (await getTenantId()) },
     select: { min_limit: true, max_limit: true, unit: true },
   })
   if (!param) return { error: 'Parâmetro não encontrado.' }
@@ -93,7 +93,7 @@ export async function registrarAnalise(
 
   await prisma.analysis.create({
     data: {
-      tenant_id:           TENANT_ID,
+      tenant_id:           (await getTenantId()),
       collection_point_id: parsed.data.collection_point_id,
       parameter_id:        parsed.data.parameter_id,
       method_id:           parsed.data.method_id,
@@ -127,16 +127,13 @@ export async function aprovarAnalise(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  const analysis = await prisma.analysis.findUnique({
-    where:  { id: analysisId },
+  const analysis = await prisma.analysis.findFirst({ where: { id: analysisId , tenant_id: (await getTenantId()) },
     select: { approved_by: true },
   })
   if (!analysis)              return { error: 'Análise não encontrada.' }
   if (analysis.approved_by)   return { error: 'Análise já aprovada.' }
 
-  await prisma.analysis.update({
-    where: { id: analysisId },
-    data:  { approved_by: userId, approved_at: new Date() },
+  await prisma.analysis.updateMany({ where: { id: analysisId , tenant_id: (await getTenantId()) }, data:  { approved_by: userId, approved_at: new Date() },
   })
 
   revalidatePath('/tecnico/analises')

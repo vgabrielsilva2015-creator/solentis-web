@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { aplicarTimeouts } from './actions'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 const STATUS_LABEL: Record<string, string> = {
   OPEN:             'Aberto',
@@ -32,7 +32,7 @@ export default async function TurnosPage() {
   await aplicarTimeouts()
 
   const userRecord = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email: session.user.email! } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
     select: { id: true },
   })
   if (!userRecord) redirect('/login')
@@ -43,7 +43,7 @@ export default async function TurnosPage() {
   // Inclui turnos noturnos (crosses_midnight) abertos ontem e ainda não encerrados
   const activeInstances = await prisma.shiftInstance.findMany({
     where: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       status:    { in: ['OPEN', 'HANDOVER_PENDING'] },
     },
     include: {

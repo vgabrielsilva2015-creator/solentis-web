@@ -10,6 +10,7 @@ import {
   isRateLimited,
   getSessionMaxAge,
 } from '@/lib/auth-utils'
+import { getTenantId } from '@/lib/tenant'
 
 // ─── Augmentação de tipos do NextAuth ────────────────────────────────────────
 declare module 'next-auth' {
@@ -36,7 +37,6 @@ declare module '@auth/core/jwt' {
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-const TENANT_ID = 'default'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -57,12 +57,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data
 
-        // Verifica rate limit ANTES de consultar o usuário
-        // (evita que atacante contorne o bloqueio explorando timing de resposta)
+        // Para evitar timing attacks, consultamos o usuário primeiro,
+        // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
+        const user = await prisma.user.findFirst({
+          where: { email, is_active: true },
+        })
+
+        const tenantIdForLog = user?.tenant_id || 'unknown'
+
         const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
         const recentFailures = await prisma.loginAttempt.count({
           where: {
-            tenant_id: TENANT_ID,
+            tenant_id: tenantIdForLog,
             email,
             success: false,
             attempted_at: { gte: windowStart },
@@ -73,12 +79,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error('RATE_LIMITED')
         }
 
-        const user = await prisma.user.findFirst({
-          where: { email, is_active: true },
-        })
-
-        // Sempre verifica a senha (mesmo que usuário não exista) para evitar
-        // ataque de enumeração de e-mails por diferença de tempo de resposta
         const isValid = user
           ? await verifyPassword(password, user.password_hash)
           : false
@@ -86,7 +86,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Registra a tentativa independente do resultado
         await prisma.loginAttempt.create({
           data: {
-            tenant_id: TENANT_ID,
+            tenant_id: tenantIdForLog,
             email,
             success: isValid,
           },

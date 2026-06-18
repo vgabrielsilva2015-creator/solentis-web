@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { ConfirmForm } from './confirm-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 function formatDatetime(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -24,8 +24,7 @@ export default async function ConfirmarPage({
   const { handoverId } = await searchParams
   if (!handoverId) redirect('/operador/turnos')
 
-  const handover = await prisma.shiftHandover.findUnique({
-    where:   { id: handoverId },
+  const handover = await prisma.shiftHandover.findFirst({ where: { id: handoverId , tenant_id: (await getTenantId()) },
     include: {
       shift_instance: {
         select: {
@@ -38,7 +37,7 @@ export default async function ConfirmarPage({
     },
   })
 
-  if (!handover || handover.shift_instance.tenant_id !== TENANT_ID) redirect('/operador/turnos')
+  if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) redirect('/operador/turnos')
   if (handover.status !== 'PENDING') redirect('/operador/turnos')
 
   let checklist: {

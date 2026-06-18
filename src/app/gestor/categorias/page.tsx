@@ -1,13 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function CategoriasPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams
   const search = q?.trim() ?? ''
 
   const categorias = await prisma.equipmentCategory.findMany({
-    where: { tenant_id: 'default', ...(search ? { name: { contains: search } } : {}) },
+    where: { tenant_id: (await getTenantId()), ...(search ? { name: { contains: search } } : {}) },
     orderBy: { name: 'asc' },
   })
 

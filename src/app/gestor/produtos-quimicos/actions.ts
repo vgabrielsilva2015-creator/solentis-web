@@ -5,13 +5,14 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
   if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
@@ -19,14 +20,14 @@ async function requireManager() {
 async function requireManagerOrTechnician() {
   const session = await auth()
   if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string> {
   const user = await prisma.user.findUniqueOrThrow({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user.id
@@ -98,7 +99,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
   const recorded_by = await resolveUserId(session.user.email!)
 
   await prisma.chemicalProduct.create({
-    data: { tenant_id: TENANT_ID, name, unit, min_stock, description, created_by: recorded_by },
+    data: { tenant_id: (await getTenantId()), name, unit, min_stock, description, created_by: recorded_by },
   })
 
   revalidatePath('/gestor/produtos-quimicos')
@@ -121,9 +122,7 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 
   if (!unit) return { error: 'Informe a unidade de medida' }
 
-  await prisma.chemicalProduct.update({
-    where: { id },
-    data:  { name, unit, min_stock, description },
+  await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data:  { name, unit, min_stock, description },
   })
 
   revalidatePath('/gestor/produtos-quimicos')
@@ -134,9 +133,7 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 export async function toggleAtivoProduto(id: string, is_active: boolean) {
   await requireManager()
 
-  await prisma.chemicalProduct.update({
-    where: { id },
-    data:  { is_active },
+  await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data:  { is_active },
   })
 
   revalidatePath('/gestor/produtos-quimicos')
@@ -156,7 +153,7 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
 
   await prisma.chemicalStockEntry.create({
     data: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       product_id,
       quantity,
       supplier,

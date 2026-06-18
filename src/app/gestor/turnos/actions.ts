@@ -5,12 +5,12 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') throw new Error('Acesso não autorizado')
+  if (!session || session.user.role !== 'MANAGER') redirect('/login')
 }
 
 const TurnoSchema = z.object({
@@ -49,7 +49,7 @@ export async function criarTurno(
 
   await prisma.shift.create({
     data: {
-      tenant_id:                TENANT_ID,
+      tenant_id:                (await getTenantId()),
       name:                     parsed.data.name,
       start_time:               parsed.data.start_time,
       end_time:                 parsed.data.end_time,
@@ -81,9 +81,7 @@ export async function editarTurno(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  await prisma.shift.update({
-    where: { id: turnoId },
-    data: {
+  await prisma.shift.updateMany({ where: { id: turnoId , tenant_id: (await getTenantId()) }, data: {
       name:                     parsed.data.name,
       start_time:               parsed.data.start_time,
       end_time:                 parsed.data.end_time,
@@ -99,9 +97,9 @@ export async function editarTurno(
 
 export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> {
   await requireManager()
-  const turno = await prisma.shift.findUnique({ where: { id }, select: { is_active: true } })
+  const turno = await prisma.shift.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
   if (!turno) return { error: 'Turno não encontrado.' }
-  await prisma.shift.update({ where: { id }, data: { is_active: !turno.is_active } })
+  await prisma.shift.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !turno.is_active } })
   revalidatePath('/gestor/turnos')
   revalidatePath(`/gestor/turnos/${id}`)
   return {}

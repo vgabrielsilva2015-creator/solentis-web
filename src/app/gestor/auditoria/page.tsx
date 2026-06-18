@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID  = 'default'
 const PAGE_SIZE  = 25
 
 // Nomes amigáveis para as tabelas auditadas
@@ -73,7 +73,7 @@ export default async function AuditoriaPage({
     }),
     prisma.auditLog.count({ where }),
     prisma.user.findMany({
-      where:   { tenant_id: TENANT_ID },
+      where:   { tenant_id: (await getTenantId()) },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),

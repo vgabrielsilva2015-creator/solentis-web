@@ -7,8 +7,8 @@ import { StatusButton } from './status-button'
 import { CorrectiveForm } from './corrective-form'
 import { EditForm } from './edit-form'
 import { ToggleButton } from './toggle-button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 function formatDate(d: Date | null): string {
   if (!d) return '—'
@@ -39,8 +39,7 @@ export default async function EquipamentoDetailPage({
 
   const { id } = await params
 
-  const equipment = await prisma.equipment.findUnique({
-    where:   { id },
+  const equipment = await prisma.equipment.findFirst({ where: { id, tenant_id: (await getTenantId()) },
     include: {
       category: { select: { name: true } },
       preventive_maintenances: {
@@ -56,7 +55,7 @@ export default async function EquipamentoDetailPage({
     },
   })
 
-  if (!equipment || equipment.tenant_id !== TENANT_ID) notFound()
+  if (!equipment || equipment.tenant_id !== (await getTenantId())) notFound()
 
   const today    = new Date()
   today.setHours(0, 0, 0, 0)
@@ -68,7 +67,7 @@ export default async function EquipamentoDetailPage({
     : false
 
   const categories = await prisma.equipmentCategory.findMany({
-    where:   { tenant_id: TENANT_ID, is_active: true },
+    where:   { tenant_id: (await getTenantId()), is_active: true },
     select:  { id: true, name: true },
     orderBy: { name: 'asc' },
   })

@@ -7,6 +7,7 @@ export const ROLE_PREFIXES: Record<string, string> = {
   '/gestor':   'MANAGER',
   '/tecnico':  'TECHNICIAN',
   '/operador': 'OPERATOR',
+  '/admin':    'SUPER_ADMIN',
 }
 
 export function isRateLimited(recentFailures: number): boolean {
@@ -19,10 +20,11 @@ export function getSessionMaxAge(role: string): number {
 
 export function getDashboardRoute(role: string): string {
   switch (role) {
-    case 'MANAGER':    return '/gestor/dashboard'
-    case 'TECHNICIAN': return '/tecnico/dashboard'
-    case 'OPERATOR':   return '/operador/dashboard'
-    default:           return '/login'
+    case 'SUPER_ADMIN': return '/admin/plantas'
+    case 'MANAGER':     return '/gestor/dashboard'
+    case 'TECHNICIAN':  return '/tecnico/dashboard'
+    case 'OPERATOR':    return '/operador/dashboard'
+    default:            return '/login'
   }
 }
 

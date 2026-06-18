@@ -3,15 +3,15 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { ShiftForm } from './shift-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function AbrirTurnoPage() {
   const session = await auth()
   if (!session) redirect('/login')
 
   const shifts = await prisma.shift.findMany({
-    where:   { tenant_id: TENANT_ID, is_active: true },
+    where:   { tenant_id: (await getTenantId()), is_active: true },
     select:  { id: true, name: true, start_time: true, end_time: true },
     orderBy: { name: 'asc' },
   })

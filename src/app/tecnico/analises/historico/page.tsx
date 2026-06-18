@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { AnalysisChart } from './analysis-chart'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 const DEFAULT_DAYS = 30
 const MAX_DAYS = 90
 
@@ -20,7 +20,7 @@ export default async function HistoricoPage({
   const days = daysParam === '90' ? MAX_DAYS : DEFAULT_DAYS
 
   const parameters = await prisma.qualityParameter.findMany({
-    where:   { tenant_id: TENANT_ID, is_active: true },
+    where:   { tenant_id: (await getTenantId()), is_active: true },
     select:  { id: true, name: true, unit: true, min_limit: true, max_limit: true },
     orderBy: { name: 'asc' },
   })
@@ -33,7 +33,7 @@ export default async function HistoricoPage({
   const dataPoints = selectedParam
     ? await prisma.analysis.findMany({
         where: {
-          tenant_id:    TENANT_ID,
+          tenant_id:    (await getTenantId()),
           parameter_id: selectedParam.id,
           collected_at: { gte: since },
         },

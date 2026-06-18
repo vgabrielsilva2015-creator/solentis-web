@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { calcularEstoqueAtual, estaAbaixoMinimo, formatarQuantidade } from '@/lib/stock-utils'
 import Link from 'next/link'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function ProdutosQuimicosPage() {
   const products = await prisma.chemicalProduct.findMany({
-    where:   { tenant_id: TENANT_ID },
+    where:   { tenant_id: (await getTenantId()) },
     orderBy: { name: 'asc' },
     include: {
       entries: { select: { quantity: true } },

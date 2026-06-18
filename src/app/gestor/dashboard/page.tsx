@@ -1,320 +1,286 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { NonConformChart } from './nonconform-chart'
+import { getTenantId } from '@/lib/tenant'
+import { KpiCard } from '@/components/ui/kpi-card'
+import { StatusHeatmap, HeatmapPoint, PointStatus } from '@/components/ui/status-heatmap'
+import { TrendChart, TrendChartData } from '@/components/ui/trend-chart'
+import { ParamSelector } from "./param-selector"
 
-const TENANT_ID = 'default'
+function calcDelta(current: number, previous: number): number | null {
+  if (previous === 0) return null // Sem histórico para comparar
+  return Math.round(((current - previous) / previous) * 100)
+}
 
-const FEATURES = [
-  { title: 'Usuários',          href: '/gestor/usuarios',              desc: 'Cadastro e gerenciamento de contas',      active: true },
-  { title: 'Parâmetros',        href: '/gestor/parametros',            desc: 'Limites de qualidade e histórico CONAMA', active: true },
-  { title: 'Configurações',     href: '/gestor/metodos',               desc: 'Métodos, categorias, pontos e turnos',    active: true },
-  { title: 'Produtos Químicos', href: '/gestor/produtos-quimicos',     desc: 'Estoque, entradas e movimentação',        active: true },
-  { title: 'Leituras',          href: '/operador/leituras',            desc: 'Registros de campo por turno',            active: true },
-  { title: 'Análises',          href: '/tecnico/analises',             desc: 'Análises laboratoriais',                  active: true },
-  { title: 'Equipamentos',      href: '/tecnico/equipamentos',         desc: 'Cadastro e manutenção preventiva',        active: true },
-  { title: 'Ocorrências',       href: '/tecnico/ocorrencias',          desc: 'Gestão de incidentes e resoluções',       active: true },
-  { title: 'Turnos',            href: '/gestor/turnos/instancias',     desc: 'Histórico e passagens de turno',          active: true },
-]
-
-const SEVERITY_CONFIG = {
-  CRITICAL: { label: 'Crítica',  color: 'text-red-400',    bg: 'bg-red-950/30',    border: 'border-red-800/50'    },
-  HIGH:     { label: 'Alta',     color: 'text-orange-400', bg: 'bg-orange-950/30', border: 'border-orange-800/50' },
-  MEDIUM:   { label: 'Média',    color: 'text-amber-400',  bg: 'bg-amber-950/30',  border: 'border-amber-800/50'  },
-  LOW:      { label: 'Baixa',    color: 'text-slate-300',  bg: 'bg-slate-800/50',  border: 'border-slate-700'     },
-} as const
+function formatDateDisplay(d: Date) {
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
 
 export default async function GestorDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ dias?: string }>
+  searchParams: Promise<{ dias?: string; paramId?: string }>
 }) {
-  const { dias: diasParam } = await searchParams
-  const diasValidos = [7, 30, 90] as const
+  const tenant_id = await getTenantId()
+  const { dias: diasParam, paramId } = await searchParams
+  
+  const diasValidos = [1, 7, 30] as const
   type Dias = typeof diasValidos[number]
-  const diasNum = diasValidos.includes(Number(diasParam) as Dias)
-    ? (Number(diasParam) as Dias)
-    : 30
+  const diasNum = diasValidos.includes(Number(diasParam) as Dias) ? (Number(diasParam) as Dias) : 7
 
-  const now   = new Date()
+  const now = new Date()
   const today = new Date(now)
   today.setHours(0, 0, 0, 0)
+  
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
   const periodoInicio = new Date(now.getTime() - diasNum * 24 * 60 * 60 * 1000)
+  const periodoAnteriorInicio = new Date(periodoInicio.getTime() - diasNum * 24 * 60 * 60 * 1000)
+  
+  // Limite de 24h para o Heatmap (mesmo que filtro global seja 7d)
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-  // ── KPIs ─────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1. DADOS DOS KPIs (Paralelizados)
+  // ─────────────────────────────────────────────────────────────────────────────
   const [
-    activeUsersCount,
-    nonConformOpenCount,
-    openOccurrencesCount,
-    overduePreventic,
-    criticalCorrectivas,
-    overdueOccurrences,
-    occurrencesBySeverityRaw,
-    nonConformByParamRaw,
-    parameterNames,
-    chemicalProducts,
+    // KPI 1: Leituras
+    readingsToday,
+    readingsYesterday,
+    // KPI 2: Ocorrências
+    openOccurrences,
+    // KPI 3: SLA
+    slaAtRisk,
+    // KPI 4: Conformidade
+    totalChecksCurrent,
+    nonConformChecksCurrent,
+    totalChecksPrev,
+    nonConformChecksPrev,
+    
+    // Sparkline de Leituras (últimos 7 dias - agregação feita no JS por conta de restrições do SQLite)
+    readingsLast7Days,
   ] = await Promise.all([
-    // Usuários ativos
-    prisma.user.count({ where: { tenant_id: TENANT_ID, is_active: true } }),
-
-    // Não-conformidades abertas (n.c. sem aprovação)
-    prisma.analysis.count({
-      where: { tenant_id: TENANT_ID, is_non_conformant: true, approved_by: null },
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: today } } }),
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: yesterday, lt: today } } }),
+    
+    prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+    
+    prisma.occurrence.count({ 
+      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, deadline: { lt: new Date(now.getTime() + 2 * 60 * 60 * 1000) } } 
     }),
 
-    // Ocorrências abertas (total)
-    prisma.occurrence.count({
-      where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-    }),
-
-    // Alertas: preventivas vencidas
-    prisma.preventiveMaintenance.count({
-      where: {
-        tenant_id:      TENANT_ID,
-        status:         'SCHEDULED',
-        scheduled_date: { lt: today },
-        equipment:      { is_active: true },
-      },
-    }),
-
-    // Alertas: corretivas HIGH/CRITICAL em andamento
-    prisma.correctiveMaintenance.count({
-      where: {
-        tenant_id: TENANT_ID,
-        status:    'IN_PROGRESS',
-        priority:  { in: ['HIGH', 'CRITICAL'] },
-      },
-    }),
-
-    // Alertas: ocorrências com prazo vencido
-    prisma.occurrence.count({
-      where: {
-        tenant_id: TENANT_ID,
-        status:    { in: ['OPEN', 'IN_PROGRESS'] },
-        deadline:  { lt: now },
-      },
-    }),
-
-    // Ocorrências abertas por severidade
-    prisma.occurrence.groupBy({
-      by:    ['severity'],
-      where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-      _count: { id: true },
-    }),
-
-    // Não-conformidades por parâmetro (período selecionado)
-    prisma.analysis.groupBy({
-      by:    ['parameter_id'],
-      where: {
-        tenant_id:       TENANT_ID,
-        is_non_conformant: true,
-        collected_at:    { gte: periodoInicio },
-      },
-      _count:   { id: true },
-      orderBy:  { _count: { id: 'desc' } },
-      take:     8,
-    }),
-
-    // Nomes dos parâmetros (para o gráfico)
-    prisma.qualityParameter.findMany({
-      where:  { tenant_id: TENANT_ID },
-      select: { id: true, name: true },
-    }),
-
-    // Estoque abaixo do mínimo (calculado + físico)
-    prisma.chemicalProduct.findMany({
-      where:  { tenant_id: TENANT_ID, is_active: true },
-      select: {
-        min_stock: true,
-        entries:   { select: { quantity: true } },
-        exits:     { select: { quantity: true } },
-        counts:    { select: { counted_quantity: true }, orderBy: { counted_at: 'desc' }, take: 1 },
-      },
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoInicio } } }),
+    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoInicio } } }),
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio } } }),
+    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio } } }),
+    
+    prisma.reading.findMany({
+      where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+      select: { created_at: true }
     }),
   ])
 
-  // Estoque baixo: calculado < min OU físico < min
-  const lowStockCount = chemicalProducts.filter((p) => {
-    const calc   = p.entries.reduce((s, e) => s + e.quantity, 0) - p.exits.reduce((s, e) => s + e.quantity, 0)
-    const fisico = p.counts[0]?.counted_quantity ?? null
-    return calc < p.min_stock || (fisico !== null && fisico < p.min_stock)
-  }).length
+  // Sparkline Aggregation
+  const sparklineData = Array(7).fill(0)
+  readingsLast7Days.forEach(r => {
+    const diffTime = Math.abs(now.getTime() - r.created_at.getTime())
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    if (diffDays >= 0 && diffDays < 7) {
+      sparklineData[6 - diffDays] += 1
+    }
+  })
 
-  // Mapa de nomes de parâmetro para o gráfico
-  const paramMap = new Map(parameterNames.map((p) => [p.id, p.name]))
-  const nonConformChartData = nonConformByParamRaw.map((g) => ({
-    paramName: paramMap.get(g.parameter_id) ?? g.parameter_id,
-    count:     g._count.id,
-  }))
+  // Cálculos Conformidade
+  const confCurrent = totalChecksCurrent > 0 ? ((totalChecksCurrent - nonConformChecksCurrent) / totalChecksCurrent) * 100 : null
+  const confPrev = totalChecksPrev > 0 ? ((totalChecksPrev - nonConformChecksPrev) / totalChecksPrev) * 100 : null
+  const confDelta = (confCurrent !== null && confPrev !== null) ? Math.round(confCurrent - confPrev) : null
 
-  // Mapa de contagem por severidade
-  const sevMap = new Map(occurrencesBySeverityRaw.map((g) => [g.severity, g._count.id]))
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2. DADOS DO HEATMAP & OCORRÊNCIAS CRÍTICAS
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [collectionPointsRaw, criticalOccurrences] = await Promise.all([
+    prisma.collectionPoint.findMany({
+      where: { tenant_id, is_active: true },
+      select: {
+        id: true,
+        name: true,
+        readings: {
+          where: { created_at: { gte: last24h } },
+          select: { is_non_conformant: true },
+        },
+      },
+    }),
+    prisma.occurrence.findMany({
+      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      orderBy: { deadline: 'asc' },
+      take: 6,
+      include: { reporter: { select: { name: true } } }
+    }),
+  ])
 
+  const heatmapPoints: HeatmapPoint[] = collectionPointsRaw.map(cp => {
+    const hasNonConform = cp.readings.some(r => r.is_non_conformant)
+    const hasAnyReadings = cp.readings.length > 0
+    let status: PointStatus = 'OK'
+    if (hasNonConform) status = 'DANGER'
+    else if (!hasAnyReadings) status = 'WARNING' // Atenção se não mediu nas últimas 24h
+    return { id: cp.id, name: cp.name, status }
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3. DADOS DO GRÁFICO DE TENDÊNCIAS
+  // ─────────────────────────────────────────────────────────────────────────────
+  const parameters = await prisma.qualityParameter.findMany({
+    where: { tenant_id, is_active: true },
+    select: { id: true, name: true, unit: true },
+  })
+  
+  const selectedParam = parameters.find(p => p.id === paramId) || parameters[0]
+  let trendData: TrendChartData[] = []
+  
+  if (selectedParam) {
+    const analysesForChart = await prisma.analysis.findMany({
+      where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h } },
+      orderBy: { collected_at: 'asc' },
+      select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true }
+    })
+    
+    trendData = analysesForChart.map(a => ({
+      time: formatDateDisplay(a.collected_at),
+      value: a.value,
+      minLimit: a.min_limit_applied,
+      maxLimit: a.max_limit_applied
+    }))
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDERIZAÇÃO DA PÁGINA
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <main className="px-6 py-8 space-y-8 max-w-5xl">
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-slate-400">Visão geral do sistema.</p>
+    <main className="px-6 py-8 space-y-8 max-w-7xl mx-auto">
+      
+      {/* HEADER & FILTROS GLOBAIS */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-100">Visão Geral</h1>
+          <p className="text-sm text-slate-400">Status operacional e alertas em tempo real.</p>
+        </div>
+        
+        <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-800">
+          {[1, 7, 30].map(d => (
+            <Link
+              key={d}
+              href={`/gestor/dashboard?dias=${d}${paramId ? `&paramId=${paramId}` : ''}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                diasNum === d 
+                  ? 'bg-slate-700 text-slate-100 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              {d === 1 ? '24h' : `${d}d`}
+            </Link>
+          ))}
+        </div>
       </div>
 
-      {/* ── Seção 1: KPI Cards ──────────────────────────────────────────────── */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Usuários ativos',
-            value: activeUsersCount,
-            href:  '/gestor/usuarios',
-            alert: false,
-            color: 'text-slate-100',
-          },
-          {
-            label: 'Não-conform. em aberto',
-            value: nonConformOpenCount,
-            href:  '#',
-            alert: nonConformOpenCount > 0,
-            color: nonConformOpenCount > 0 ? 'text-red-400' : 'text-slate-100',
-          },
-          {
-            label: 'Ocorrências abertas',
-            value: openOccurrencesCount,
-            href:  '#',
-            alert: openOccurrencesCount > 0,
-            color: openOccurrencesCount > 0 ? 'text-amber-400' : 'text-slate-100',
-          },
-          {
-            label: 'Estoque abaixo do mínimo',
-            value: lowStockCount,
-            href:  '/gestor/produtos-quimicos',
-            alert: lowStockCount > 0,
-            color: lowStockCount > 0 ? 'text-red-400' : 'text-slate-100',
-          },
-        ].map((kpi) => (
-          <Link
-            key={kpi.label}
-            href={kpi.href}
-            className={[
-              'rounded-xl border p-4 hover:opacity-90 transition-opacity',
-              kpi.alert ? 'border-red-900/50 bg-red-950/10' : 'border-slate-700 bg-slate-900',
-            ].join(' ')}
-          >
-            <p className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-snug">{kpi.label}</p>
-          </Link>
-        ))}
+      {/* LINHA 1: KPIs */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard 
+          title="Leituras Hoje"
+          value={readingsToday}
+          delta={calcDelta(readingsToday, readingsYesterday)}
+          deltaLabel="vs ontem"
+          href="/gestor/leituras"
+          sparklineData={sparklineData}
+        />
+        <KpiCard 
+          title="Ocorrências Abertas"
+          value={openOccurrences}
+          href="/gestor/ocorrencias"
+          alert={openOccurrences > 0}
+        />
+        <KpiCard 
+          title="SLA em Risco (< 2h)"
+          value={slaAtRisk}
+          href="/gestor/ocorrencias"
+          alert={slaAtRisk > 0}
+        />
+        <KpiCard 
+          title="Conformidade CONAMA"
+          value={confCurrent !== null ? `${confCurrent.toFixed(1)}%` : '—'}
+          delta={confDelta}
+          deltaLabel={`vs ${diasNum}d anteriores`}
+        />
       </section>
 
-      {/* ── Seção 2: Alertas operacionais ───────────────────────────────────── */}
-      {(overduePreventic > 0 || criticalCorrectivas > 0 || overdueOccurrences > 0) && (
-        <section className="space-y-2">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wide">Alertas</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {overduePreventic > 0 && (
-              <Link
-                href="/tecnico/equipamentos"
-                className="flex items-center gap-3 rounded-xl border border-red-800/50 bg-red-950/20 px-4 py-3 hover:bg-red-950/30 transition-colors"
-              >
-                <span className="text-2xl font-bold text-red-400">{overduePreventic}</span>
-                <span className="text-xs text-red-300 leading-snug">Preventiva(s) vencida(s)</span>
-              </Link>
+      {/* LINHA 2: HEATMAP E OCORRÊNCIAS CRÍTICAS */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Status dos Pontos de Coleta (24h)</h2>
+          <StatusHeatmap points={heatmapPoints} />
+        </div>
+        
+        <div className="space-y-4">
+          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Ocorrências Críticas</h2>
+          <div className="flex flex-col gap-2">
+            {criticalOccurrences.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+                Nenhuma ocorrência crítica aberta.
+              </div>
+            ) : (
+              criticalOccurrences.map(occ => {
+                const isOverdue = occ.deadline < now
+                const color = occ.severity === 'CRITICAL' ? 'border-status-critical/50' : 'border-status-danger/50'
+                const badgeBg = occ.severity === 'CRITICAL' ? 'bg-status-critical/20 text-status-critical' : 'bg-status-danger/20 text-status-danger'
+                
+                return (
+                  <Link 
+                    key={occ.id} 
+                    href={`/gestor/ocorrencias`}
+                    className={`flex flex-col gap-1 p-3 rounded-lg border bg-slate-900/50 hover:bg-slate-800 transition-colors ${color}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-200 truncate pr-2">{occ.description}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeBg}`}>
+                        {occ.severity}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-[10px] text-slate-500">{occ.reporter?.name || 'Sistema'}</span>
+                      <span className={`text-[10px] font-mono ${isOverdue ? 'text-status-critical font-bold' : 'text-slate-400'}`}>
+                        ⏱ {isOverdue ? 'VENCIDO' : formatDateDisplay(occ.deadline)}
+                      </span>
+                    </div>
+                  </Link>
+                )
+              })
             )}
-            {criticalCorrectivas > 0 && (
-              <Link
-                href="/tecnico/equipamentos"
-                className="flex items-center gap-3 rounded-xl border border-orange-800/50 bg-orange-950/20 px-4 py-3 hover:bg-orange-950/30 transition-colors"
-              >
-                <span className="text-2xl font-bold text-orange-400">{criticalCorrectivas}</span>
-                <span className="text-xs text-orange-300 leading-snug">Corretiva(s) crítica(s)</span>
-              </Link>
-            )}
-            {overdueOccurrences > 0 && (
-              <Link
-                href="#"
-                className="flex items-center gap-3 rounded-xl border border-red-800/50 bg-red-950/20 px-4 py-3 hover:bg-red-950/30 transition-colors animate-pulse"
-              >
-                <span className="text-2xl font-bold text-red-400">{overdueOccurrences}</span>
-                <span className="text-xs text-red-300 leading-snug">Ocorrência(s) com prazo vencido</span>
-              </Link>
-            )}
+          </div>
+        </div>
+      </section>
+
+      {/* LINHA 3: TENDÊNCIA DE PARÂMETROS */}
+      {parameters.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Tendência por Parâmetro (24h)</h2>
+            <ParamSelector 
+              parameters={parameters} 
+              defaultValue={selectedParam?.id} 
+              diasNum={diasNum} 
+            />
+          </div>
+          
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+            <TrendChart 
+              data={trendData} 
+              parameterName={selectedParam?.name || ''} 
+              unit={selectedParam?.unit || ''} 
+            />
           </div>
         </section>
       )}
 
-      {/* ── Seção 3: Gráficos ───────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Não-conformidades por parâmetro */}
-        <div className="rounded-xl border border-slate-700 bg-slate-900 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-slate-300">Não-conformidades por parâmetro</h2>
-            <div className="flex gap-1">
-              {([7, 30, 90] as const).map((d) => (
-                <Link
-                  key={d}
-                  href={`/gestor/dashboard?dias=${d}`}
-                  className={[
-                    'rounded px-2 py-0.5 text-xs transition-colors',
-                    diasNum === d
-                      ? 'bg-slate-700 text-slate-100'
-                      : 'text-slate-500 hover:text-slate-300',
-                  ].join(' ')}
-                >
-                  {d}d
-                </Link>
-              ))}
-            </div>
-          </div>
-          <NonConformChart data={nonConformChartData} />
-        </div>
-
-        {/* Ocorrências abertas por severidade */}
-        <div className="rounded-xl border border-slate-700 bg-slate-900 p-5">
-          <h2 className="text-sm font-medium text-slate-300 mb-4">Ocorrências abertas por severidade</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((sev) => {
-              const cfg   = SEVERITY_CONFIG[sev]
-              const count = sevMap.get(sev) ?? 0
-              return (
-                <div
-                  key={sev}
-                  className={`rounded-xl border ${cfg.border} ${cfg.bg} p-4`}
-                >
-                  <p className={`text-2xl font-bold ${cfg.color}`}>{count}</p>
-                  <p className="text-xs text-slate-500 mt-1">{cfg.label}</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Seção 4: Navegação ──────────────────────────────────────────────── */}
-      <section>
-        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wide mb-3">Módulos</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className={`space-y-2 rounded-xl border bg-slate-900 p-5 ${
-                f.active ? 'border-slate-700' : 'border-slate-800 opacity-60'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-slate-200">{f.title}</h3>
-                {!f.active && (
-                  <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500">
-                    Em breve
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500">{f.desc}</p>
-              {f.active && f.href !== '#' && (
-                <Link href={f.href} className="mt-1 block text-xs text-emerald-400 hover:text-emerald-300">
-                  Acessar →
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
     </main>
   )
 }

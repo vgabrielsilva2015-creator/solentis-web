@@ -4,12 +4,14 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
 
 async function requireManager() {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') throw new Error('Acesso não autorizado')
+  if (!session || session.user.role !== 'MANAGER') redirect('/login')
   return session
 }
 
@@ -44,7 +46,7 @@ export async function atualizarPrazos(
 
   // Resolver o ID do usuário logado para updated_by
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: 'default', email: session.user.email! } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
     select: { id: true },
   })
   if (!user) return { error: 'Sessão inválida.' }

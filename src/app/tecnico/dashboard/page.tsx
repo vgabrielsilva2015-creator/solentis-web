@@ -2,8 +2,8 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function TecnicoDashboard() {
   const session = await auth()
@@ -17,7 +17,7 @@ export default async function TecnicoDashboard() {
       // Preventivas vencidas
       prisma.preventiveMaintenance.count({
         where: {
-          tenant_id:      TENANT_ID,
+          tenant_id:      (await getTenantId()),
           status:         'SCHEDULED',
           scheduled_date: { lt: today },
           equipment:      { is_active: true },
@@ -25,15 +25,15 @@ export default async function TecnicoDashboard() {
       }),
       // Análises pendentes de aprovação (qualquer)
       prisma.analysis.count({
-        where: { tenant_id: TENANT_ID, approved_by: null },
+        where: { tenant_id: (await getTenantId()), approved_by: null },
       }),
       // Corretivas em andamento
       prisma.correctiveMaintenance.count({
-        where: { tenant_id: TENANT_ID, status: 'IN_PROGRESS' },
+        where: { tenant_id: (await getTenantId()), status: 'IN_PROGRESS' },
       }),
       // Não-conformidades em aberto (n.c. ainda sem aprovação)
       prisma.analysis.count({
-        where: { tenant_id: TENANT_ID, is_non_conformant: true, approved_by: null },
+        where: { tenant_id: (await getTenantId()), is_non_conformant: true, approved_by: null },
       }),
     ])
 

@@ -125,10 +125,9 @@ export function TaskCard({
               Concluir
             </Button>
             <form action={pularTarefa.bind(null, task.id)}>
-              <Button
-                type="submit"
+              <Button type="submit"
                 className="h-12 border border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700 text-sm px-5"
-              >
+               disabled={isPending}>
                 Pular
               </Button>
             </form>

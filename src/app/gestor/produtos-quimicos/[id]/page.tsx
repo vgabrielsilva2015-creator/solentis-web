@@ -10,8 +10,8 @@ import {
 import { EditForm } from './edit-form'
 import { ToggleButton } from './toggle-button'
 import { BackButton } from '@/components/back-button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 type Movement =
   | { tipo: 'entrada';  date: Date; qty: number; supplier: string | null; invoice: string | null; notes: string | null; recorder: string }
@@ -22,7 +22,7 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
   const { id } = await params
 
   const product = await prisma.chemicalProduct.findFirst({
-    where: { id, tenant_id: TENANT_ID },
+    where: { id, tenant_id: (await getTenantId()) },
     include: {
       entries: { orderBy: { received_at: 'desc' }, include: { recorder: { select: { name: true } } } },
       exits:   { orderBy: { used_at:     'desc' }, include: { recorder: { select: { name: true } } } },

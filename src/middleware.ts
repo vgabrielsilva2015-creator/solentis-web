@@ -35,7 +35,13 @@ export default auth((req) => {
   // Verifica permissão por prefixo de rota
   for (const [prefix, requiredRole] of Object.entries(ROLE_PREFIXES)) {
     if (pathname.startsWith(prefix)) {
-      if (session.user.role !== requiredRole && session.user.role !== 'MANAGER') {
+      if (session.user.role === 'SUPER_ADMIN') {
+        break // Super Admin tem acesso a tudo
+      }
+      if (session.user.role !== requiredRole) {
+        return NextResponse.redirect(new URL('/acesso-negado', req.url))
+      }
+      if (requiredRole === 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
         return NextResponse.redirect(new URL('/acesso-negado', req.url))
       }
       break

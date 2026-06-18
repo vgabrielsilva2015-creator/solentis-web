@@ -3,12 +3,13 @@
 
 // ─── Identidade ───────────────────────────────────────────────────────────────
 
-export type Role = 'OPERATOR' | 'TECHNICIAN' | 'MANAGER'
+export type Role = 'OPERATOR' | 'TECHNICIAN' | 'MANAGER' | 'SUPER_ADMIN'
 
 export const ROLES = {
-  OPERATOR:   'OPERATOR',
-  TECHNICIAN: 'TECHNICIAN',
-  MANAGER:    'MANAGER',
+  OPERATOR:    'OPERATOR',
+  TECHNICIAN:  'TECHNICIAN',
+  MANAGER:     'MANAGER',
+  SUPER_ADMIN: 'SUPER_ADMIN',
 } as const satisfies Record<Role, Role>
 
 // ─── Operação ─────────────────────────────────────────────────────────────────

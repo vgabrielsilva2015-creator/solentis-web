@@ -3,8 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import path from 'path'
 import fs from 'fs/promises'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export async function GET(
   _req: NextRequest,
@@ -20,7 +20,7 @@ export async function GET(
   const photo = await prisma.occurrencePhoto.findFirst({
     where: {
       occurrence_id: id,
-      tenant_id:     TENANT_ID,
+      tenant_id:     (await getTenantId()),
     },
     select: { filename: true, mime_type: true },
   })

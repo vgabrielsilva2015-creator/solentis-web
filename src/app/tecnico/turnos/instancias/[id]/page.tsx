@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { TecnicoTaskForm } from './tecnico-task-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function TecnicoInstanciaDetalhePage({
   params,
@@ -17,8 +17,7 @@ export default async function TecnicoInstanciaDetalhePage({
   const { id } = await params
 
   const [instance, operators] = await Promise.all([
-    prisma.shiftInstance.findUnique({
-      where: { id },
+    prisma.shiftInstance.findFirst({ where: { id, tenant_id: (await getTenantId()) },
       include: {
         shift:  { select: { name: true, start_time: true, end_time: true } },
         opener: { select: { name: true } },
@@ -32,13 +31,13 @@ export default async function TecnicoInstanciaDetalhePage({
       },
     }),
     prisma.user.findMany({
-      where:   { tenant_id: TENANT_ID, role: 'OPERATOR', is_active: true },
+      where:   { tenant_id: (await getTenantId()), role: 'OPERATOR', is_active: true },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
 
-  if (!instance || instance.tenant_id !== TENANT_ID) redirect('/tecnico/turnos/instancias')
+  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/tecnico/turnos/instancias')
 
   const done    = instance.shift_tasks.filter((t) => t.status === 'DONE').length
   const pending = instance.shift_tasks.filter((t) => t.status === 'PENDING').length

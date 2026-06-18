@@ -2,15 +2,15 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function OperadorDashboard() {
   const session = await auth()
   if (!session) redirect('/login')
 
   const userRecord = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email: session.user.email! } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
     select: { id: true },
   })
 
@@ -22,7 +22,7 @@ export default async function OperadorDashboard() {
       userRecord
         ? prisma.occurrence.count({
             where: {
-              tenant_id:   TENANT_ID,
+              tenant_id:   (await getTenantId()),
               reported_by: userRecord.id,
               status:      { in: ['OPEN', 'IN_PROGRESS'] },
             },
@@ -32,7 +32,7 @@ export default async function OperadorDashboard() {
       userRecord
         ? prisma.shiftHandover.count({
             where: {
-              tenant_id:        TENANT_ID,
+              tenant_id:        (await getTenantId()),
               status:           'PENDING',
               outgoing_user_id: { not: userRecord.id },
               shift_instance:   { date: today, status: 'HANDOVER_PENDING' },
@@ -43,7 +43,7 @@ export default async function OperadorDashboard() {
       // Produtos com estoque calculado abaixo do mínimo
       (async () => {
         const products = await prisma.chemicalProduct.findMany({
-          where:  { tenant_id: TENANT_ID, is_active: true },
+          where:  { tenant_id: (await getTenantId()), is_active: true },
           select: { min_stock: true, entries: { select: { quantity: true } }, exits: { select: { quantity: true } } },
         })
         return products.filter((p) => {
@@ -57,7 +57,7 @@ export default async function OperadorDashboard() {
       userRecord
         ? prisma.reading.count({
             where: {
-              tenant_id:   TENANT_ID,
+              tenant_id:   (await getTenantId()),
               recorded_by: userRecord.id,
               recorded_at: { gte: today },
             },
@@ -67,7 +67,7 @@ export default async function OperadorDashboard() {
       // Turno ativo aberto por este operador
       userRecord
         ? prisma.shiftInstance.findFirst({
-            where:   { tenant_id: TENANT_ID, opened_by: userRecord.id, status: 'OPEN' },
+            where:   { tenant_id: (await getTenantId()), opened_by: userRecord.id, status: 'OPEN' },
             include: { shift: { select: { name: true, start_time: true, end_time: true } } },
             orderBy: { opened_at: 'desc' },
           })
@@ -77,7 +77,7 @@ export default async function OperadorDashboard() {
       userRecord
         ? prisma.shiftTask.count({
             where: {
-              tenant_id:      TENANT_ID,
+              tenant_id:      (await getTenantId()),
               status:         'PENDING',
               shift_instance: { opened_by: userRecord.id, status: 'OPEN' },
               OR: [{ assigned_to_id: userRecord.id }, { assigned_to_id: null }],

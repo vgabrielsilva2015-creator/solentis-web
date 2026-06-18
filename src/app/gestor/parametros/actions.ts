@@ -6,12 +6,12 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') throw new Error('Acesso não autorizado')
+  if (!session || session.user.role !== 'MANAGER') redirect('/login')
   return session
 }
 
@@ -44,7 +44,7 @@ export type ParametroFormState = {
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where: { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -76,7 +76,7 @@ export async function criarParametro(
   const created = await prisma.$transaction(async (tx) => {
     const param = await tx.qualityParameter.create({
       data: {
-        tenant_id:       TENANT_ID,
+        tenant_id:       (await getTenantId()),
         name:            parsed.data.name,
         unit:            parsed.data.unit,
         min_limit:       parsed.data.min_limit,
@@ -125,8 +125,7 @@ export async function editarParametro(
   }
 
   const [current, userId] = await Promise.all([
-    prisma.qualityParameter.findUnique({
-      where:  { id: parametroId },
+    prisma.qualityParameter.findFirst({ where: { id: parametroId , tenant_id: (await getTenantId()) },
       select: { name: true, unit: true, min_limit: true, max_limit: true, effective_date: true },
     }),
     resolveUserId(session.user.email!),
@@ -158,9 +157,7 @@ export async function editarParametro(
       })
     }
 
-    await tx.qualityParameter.update({
-      where: { id: parametroId },
-      data: {
+    await tx.qualityParameter.updateMany({ where: { id: parametroId , tenant_id: (await getTenantId()) }, data: {
         name:            parsed.data.name,
         unit:            parsed.data.unit,
         min_limit:       parsed.data.min_limit,
@@ -193,8 +190,7 @@ export async function toggleAtivoParametro(
   const session = await requireManager()
 
   const [param, userId] = await Promise.all([
-    prisma.qualityParameter.findUnique({
-      where:  { id: parametroId },
+    prisma.qualityParameter.findFirst({ where: { id: parametroId , tenant_id: (await getTenantId()) },
       select: { is_active: true },
     }),
     resolveUserId(session.user.email!),
@@ -202,9 +198,7 @@ export async function toggleAtivoParametro(
   if (!param) return { error: 'Parâmetro não encontrado.' }
 
   await prisma.$transaction(async (tx) => {
-    await tx.qualityParameter.update({
-      where: { id: parametroId },
-      data:  { is_active: !param.is_active },
+    await tx.qualityParameter.updateMany({ where: { id: parametroId , tenant_id: (await getTenantId()) }, data:  { is_active: !param.is_active },
     })
     await logAudit(tx, {
       userId,

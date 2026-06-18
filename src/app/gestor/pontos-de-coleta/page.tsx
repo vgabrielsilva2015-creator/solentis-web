@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function PontosDeColetaPage({
   searchParams,
@@ -11,7 +12,7 @@ export default async function PontosDeColetaPage({
   const search = q?.trim() ?? ''
 
   const pontos = await prisma.collectionPoint.findMany({
-    where: { tenant_id: 'default', ...(search ? { name: { contains: search } } : {}) },
+    where: { tenant_id: (await getTenantId()), ...(search ? { name: { contains: search } } : {}) },
     orderBy: { name: 'asc' },
   })
 

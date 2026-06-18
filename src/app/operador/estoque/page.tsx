@@ -3,15 +3,15 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { calcularEstoqueAtual, estaAbaixoMinimo, formatarQuantidade } from '@/lib/stock-utils'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function OperadorEstoquePage() {
   const session = await auth()
   if (!session) redirect('/login')
 
   const products = await prisma.chemicalProduct.findMany({
-    where:   { tenant_id: TENANT_ID, is_active: true },
+    where:   { tenant_id: (await getTenantId()), is_active: true },
     orderBy: { name: 'asc' },
     include: {
       entries: { select: { quantity: true } },

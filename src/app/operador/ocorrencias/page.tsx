@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 const PAGE_SIZE  = 20
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -47,13 +47,13 @@ export default async function OcorrenciasOperadorPage({
   const skip = (page - 1) * PAGE_SIZE
 
   const userId = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email: session.user.email! } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
     select: { id: true },
   })
 
   if (!userId) redirect('/login')
 
-  const where = { tenant_id: TENANT_ID, reported_by: userId.id }
+  const where = { tenant_id: (await getTenantId()), reported_by: userId.id }
 
   const [ocorrencias, total] = await Promise.all([
     prisma.occurrence.findMany({

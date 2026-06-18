@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { TecnicoBottomNav } from '@/components/tecnico/bottom-nav'
+import { TopNav } from '@/components/ui/top-nav'
 
 export default async function TecnicoLayout({
   children,
@@ -33,6 +34,8 @@ export default async function TecnicoLayout({
           </div>
         </div>
       </header>
+
+      <TopNav />
 
       {/* Conteúdo — pb-16 para não ficar atrás da bottom nav */}
       <div className="pb-16">

@@ -7,22 +7,23 @@ import { revalidatePath } from 'next/cache'
 import path from 'path'
 import fs from 'fs/promises'
 import { logAudit } from '@/lib/audit'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID      = 'default'
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 async function requireAuthenticated() {
   const session = await auth()
   if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -110,7 +111,7 @@ export async function registrarOcorrencia(
   await prisma.$transaction(async (tx) => {
     const occurrence = await tx.occurrence.create({
       data: {
-        tenant_id:   TENANT_ID,
+        tenant_id:   (await getTenantId()),
         description: parsed.data.description,
         severity:    parsed.data.severity,
         status:      'OPEN',
@@ -122,7 +123,7 @@ export async function registrarOcorrencia(
     if (photoPayload) {
       await tx.occurrencePhoto.create({
         data: {
-          tenant_id:     TENANT_ID,
+          tenant_id:     (await getTenantId()),
           occurrence_id: occurrence.id,
           filename:      photoPayload.filename,
           original_name: photoPayload.original_name,

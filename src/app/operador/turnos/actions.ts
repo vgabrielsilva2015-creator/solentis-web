@@ -8,8 +8,9 @@ import path from 'path'
 import fs from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { isMimeTypeValido } from '@/lib/occurrence-utils'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID       = 'default'
 const MAX_PHOTOS_TASK = 3
 const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
 
@@ -18,14 +19,14 @@ const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
 async function requireOperator() {
   const session = await auth()
   if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -114,7 +115,7 @@ export async function abrirTurno(
 
   // Verifica que o turno configurado existe e pertence ao tenant
   const shift = await prisma.shift.findFirst({
-    where:  { id: parsed.data.shift_id, tenant_id: TENANT_ID, is_active: true },
+    where:  { id: parsed.data.shift_id, tenant_id: (await getTenantId()), is_active: true },
     select: { id: true },
   })
   if (!shift) return { error: 'Turno não encontrado.' }
@@ -123,7 +124,7 @@ export async function abrirTurno(
   const result = await prisma.$transaction(async (tx) => {
     const existing = await tx.shiftInstance.findFirst({
       where: {
-        tenant_id: TENANT_ID,
+        tenant_id: (await getTenantId()),
         shift_id:  parsed.data.shift_id,
         date:      today,
         status:    { in: ['OPEN', 'HANDOVER_PENDING'] },
@@ -136,7 +137,7 @@ export async function abrirTurno(
     // Se existe instância pré-agendada (SCHEDULED), promove para OPEN
     const scheduled = await tx.shiftInstance.findFirst({
       where: {
-        tenant_id: TENANT_ID,
+        tenant_id: (await getTenantId()),
         shift_id:  parsed.data.shift_id,
         date:      today,
         status:    'SCHEDULED',
@@ -144,9 +145,7 @@ export async function abrirTurno(
     })
 
     if (scheduled) {
-      await tx.shiftInstance.update({
-        where: { id: scheduled.id },
-        data: {
+      await tx.shiftInstance.updateMany({ where: { id: scheduled.id , tenant_id: (await getTenantId()) }, data: {
           opened_by: userId,
           opened_at: new Date(),
           status:    'OPEN',
@@ -155,7 +154,7 @@ export async function abrirTurno(
     } else {
       await tx.shiftInstance.create({
         data: {
-          tenant_id: TENANT_ID,
+          tenant_id: (await getTenantId()),
           shift_id:  parsed.data.shift_id,
           date:      today,
           opened_by: userId,
@@ -193,27 +192,26 @@ export async function iniciarPassagem(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  const instance = await prisma.shiftInstance.findUnique({
-    where:   { id: instanceId },
+  const instance = await prisma.shiftInstance.findFirst({ where: { id: instanceId , tenant_id: (await getTenantId()) },
     include: {
       shift:    { select: { handover_timeout_minutes: true } },
       handover: { select: { id: true } },
     },
   })
-  if (!instance || instance.tenant_id !== TENANT_ID) return { error: 'Turno não encontrado.' }
+  if (!instance || instance.tenant_id !== (await getTenantId())) return { error: 'Turno não encontrado.' }
   if (instance.status !== 'OPEN')    return { error: 'Este turno não está aberto.' }
   if (instance.handover)             return { error: 'A passagem já foi iniciada.' }
 
   // Auto-captura do checklist: leituras, ocorrências abertas e tarefas pendentes
   const [readingsCount, openOccurrencesCount, pendingTasks] = await Promise.all([
     prisma.reading.count({
-      where: { tenant_id: TENANT_ID, shift_instance_id: instanceId },
+      where: { tenant_id: (await getTenantId()), shift_instance_id: instanceId },
     }),
     prisma.occurrence.count({
-      where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      where: { tenant_id: (await getTenantId()), status: { in: ['OPEN', 'IN_PROGRESS'] } },
     }),
     prisma.shiftTask.findMany({
-      where:  { tenant_id: TENANT_ID, shift_instance_id: instanceId, status: 'PENDING' },
+      where:  { tenant_id: (await getTenantId()), shift_instance_id: instanceId, status: 'PENDING' },
       select: { title: true },
     }),
   ])
@@ -234,7 +232,7 @@ export async function iniciarPassagem(
   await prisma.$transaction(async (tx) => {
     await tx.shiftHandover.create({
       data: {
-        tenant_id:             TENANT_ID,
+        tenant_id:             (await getTenantId()),
         shift_instance_id:     instanceId,
         outgoing_user_id:      userId,
         checklist_data:        checklistData,
@@ -244,9 +242,7 @@ export async function iniciarPassagem(
         status:                'PENDING',
       },
     })
-    await tx.shiftInstance.update({
-      where: { id: instanceId },
-      data:  { status: 'HANDOVER_PENDING' },
+    await tx.shiftInstance.updateMany({ where: { id: instanceId , tenant_id: (await getTenantId()) }, data:  { status: 'HANDOVER_PENDING' },
     })
   })
 
@@ -274,11 +270,10 @@ export async function confirmarPassagem(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  const handover = await prisma.shiftHandover.findUnique({
-    where:   { id: handoverId },
+  const handover = await prisma.shiftHandover.findFirst({ where: { id: handoverId , tenant_id: (await getTenantId()) },
     include: { shift_instance: { select: { id: true, tenant_id: true } } },
   })
-  if (!handover || handover.shift_instance.tenant_id !== TENANT_ID) {
+  if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) {
     return { error: 'Passagem não encontrada.' }
   }
   if (handover.status !== 'PENDING') {
@@ -292,18 +287,14 @@ export async function confirmarPassagem(
   const now = new Date()
 
   await prisma.$transaction(async (tx) => {
-    await tx.shiftHandover.update({
-      where: { id: handoverId },
-      data: {
+    await tx.shiftHandover.updateMany({ where: { id: handoverId , tenant_id: (await getTenantId()) }, data: {
         status:                'CONFIRMED',
         confirmed_at:          now,
         incoming_user_id:      userId,
         incoming_observations: parsed.data.incoming_observations,
       },
     })
-    await tx.shiftInstance.update({
-      where: { id: handover.shift_instance.id },
-      data:  { status: 'CLOSED', closed_at: now },
+    await tx.shiftInstance.updateMany({ where: { id: handover.shift_instance.id , tenant_id: (await getTenantId()) }, data:  { status: 'CLOSED', closed_at: now },
     })
   })
 
@@ -332,7 +323,7 @@ export async function concluirTarefa(
   if (!userId) return { error: 'Sessão inválida.' }
 
   const task = await prisma.shiftTask.findFirst({
-    where:   { id: taskId, tenant_id: TENANT_ID },
+    where:   { id: taskId, tenant_id: (await getTenantId()) },
     include: {
       shift_instance: { select: { status: true } },
       photos:         { select: { id: true } },
@@ -367,9 +358,7 @@ export async function concluirTarefa(
 
   const now = new Date()
   await prisma.$transaction(async (tx) => {
-    await tx.shiftTask.update({
-      where: { id: taskId },
-      data:  {
+    await tx.shiftTask.updateMany({ where: { id: taskId , tenant_id: (await getTenantId()) }, data:  {
         status:           'DONE',
         completed_at:     now,
         completed_by:     userId,
@@ -377,9 +366,10 @@ export async function concluirTarefa(
       },
     })
     if (photoRecords.length > 0) {
+      const tenantId = await getTenantId()
       await tx.shiftTaskPhoto.createMany({
         data: photoRecords.map((p) => ({
-          tenant_id:     TENANT_ID,
+          tenant_id:     tenantId,
           task_id:       taskId,
           filename:      p.filename,
           original_name: p.original_name,
@@ -404,14 +394,12 @@ export async function pularTarefa(taskId: string): Promise<void> {
   if (session.user.role !== 'OPERATOR') return
 
   const task = await prisma.shiftTask.findFirst({
-    where:   { id: taskId, tenant_id: TENANT_ID, status: 'PENDING' },
+    where:   { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
     include: { shift_instance: { select: { status: true } } },
   })
   if (!task || task.shift_instance.status === 'CLOSED') return
 
-  await prisma.shiftTask.update({
-    where: { id: taskId },
-    data:  { status: 'SKIPPED' },
+  await prisma.shiftTask.updateMany({ where: { id: taskId , tenant_id: (await getTenantId()) }, data:  { status: 'SKIPPED' },
   })
   revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
   revalidatePath('/operador/turnos')

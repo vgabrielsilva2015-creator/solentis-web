@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,6 +42,7 @@ model Tenant {
   chemical_stock_entries  ChemicalStockEntry[]
   chemical_stock_exits    ChemicalStockExit[]
   chemical_stock_counts   ChemicalStockCount[]
+  parameter_aliases       ParameterAlias[]
 
   @@map("tenants")
 }
@@ -60,9 +62,9 @@ model User {
   created_by           String?
 
   // — identidade
-  tenant        Tenant  @relation(fields: [tenant_id], references: [id])
-  creator       User?   @relation("CreatedBy", fields: [created_by], references: [id])
-  created_users User[]  @relation("CreatedBy")
+  tenant        Tenant    @relation(fields: [tenant_id], references: [id])
+  creator       User?     @relation("CreatedBy", fields: [created_by], references: [id])
+  created_users User[]    @relation("CreatedBy")
   sessions      Session[]
 
   // — configuração (1 FK por model → sem nome de relação)
@@ -80,16 +82,16 @@ model User {
   audit_logs             AuditLog[]
 
   // — relações nomeadas (múltiplas FKs do mesmo model apontando para User)
-  analyses_recorded       Analysis[]      @relation("AnalysisRecorder")
-  analyses_approved       Analysis[]      @relation("AnalysisApprover")
-  occurrences_reported    Occurrence[]    @relation("OccurrenceReporter")
-  occurrences_responsible Occurrence[]    @relation("OccurrenceResponsible")
-  occurrences_resolved    Occurrence[]    @relation("OccurrenceResolver")
-  handovers_outgoing      ShiftHandover[] @relation("HandoverOutgoing")
-  handovers_incoming      ShiftHandover[] @relation("HandoverIncoming")
-  tasks_assigned          ShiftTask[]     @relation("TaskAssignee")
-  tasks_created           ShiftTask[]     @relation("TaskCreator")
-  tasks_completed         ShiftTask[]     @relation("TaskCompleter")
+  analyses_recorded       Analysis[]           @relation("AnalysisRecorder")
+  analyses_approved       Analysis[]           @relation("AnalysisApprover")
+  occurrences_reported    Occurrence[]         @relation("OccurrenceReporter")
+  occurrences_responsible Occurrence[]         @relation("OccurrenceResponsible")
+  occurrences_resolved    Occurrence[]         @relation("OccurrenceResolver")
+  handovers_outgoing      ShiftHandover[]      @relation("HandoverOutgoing")
+  handovers_incoming      ShiftHandover[]      @relation("HandoverIncoming")
+  tasks_assigned          ShiftTask[]          @relation("TaskAssignee")
+  tasks_created           ShiftTask[]          @relation("TaskCreator")
+  tasks_completed         ShiftTask[]          @relation("TaskCompleter")
   task_photos_uploaded    ShiftTaskPhoto[]
   chemical_products       ChemicalProduct[]
   chemical_stock_entries  ChemicalStockEntry[]
@@ -155,6 +157,7 @@ model QualityParameter {
   readings Reading[]
   analyses Analysis[]
   history  ParameterHistory[]
+  aliases  ParameterAlias[]
 
   @@index([tenant_id, is_active])
   @@index([created_at])
@@ -181,11 +184,26 @@ model ParameterHistory {
   @@map("parameter_history")
 }
 
+model ParameterAlias {
+  id           String   @id @default(cuid())
+  tenant_id    String
+  alias        String
+  parameter_id String
+  created_at   DateTime @default(now())
+
+  tenant    Tenant           @relation(fields: [tenant_id], references: [id])
+  parameter QualityParameter @relation(fields: [parameter_id], references: [id])
+
+  @@unique([tenant_id, alias])
+  @@map("parameter_aliases")
+}
+
 model AnalysisMethod {
   id          String   @id @default(cuid())
   tenant_id   String
   name        String
   description String?
+  pop_content String?
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 
@@ -309,7 +327,7 @@ model ShiftInstance {
 }
 
 model Reading {
-  id                  String    @id @default(cuid())
+  id                  String   @id @default(cuid())
   tenant_id           String
   collection_point_id String
   parameter_id        String?
@@ -318,11 +336,11 @@ model Reading {
   unit                String?
   notes               String?
   is_non_conformant   Boolean?
-  origin              String    @default("MANUAL")
-  metadata_origin     String?   // JSON serializado: {device_id, topic, qos} — reservado para sensores (v2.0)
+  origin              String   @default("MANUAL")
+  metadata_origin     String? // JSON serializado: {device_id, topic, qos} — reservado para sensores (v2.0)
   recorded_by         String
   recorded_at         DateTime
-  created_at          DateTime  @default(now())
+  created_at          DateTime @default(now())
 
   tenant           Tenant            @relation(fields: [tenant_id], references: [id])
   collection_point CollectionPoint   @relation(fields: [collection_point_id], references: [id])
@@ -353,7 +371,7 @@ model Analysis {
   approved_by         String?
   approved_at         DateTime?
   origin              String    @default("MANUAL")
-  metadata_origin     String?   // JSON serializado — reservado para sensores (v2.0)
+  metadata_origin     String? // JSON serializado — reservado para sensores (v2.0)
   collected_at        DateTime
   recorded_by         String
   created_at          DateTime  @default(now())
@@ -420,24 +438,24 @@ model CorrectiveMaintenance {
 }
 
 model Occurrence {
-  id             String    @id @default(cuid())
-  tenant_id      String
-  description    String
-  severity       String
-  status         String    @default("OPEN")
-  deadline          DateTime
-  resolved_at       DateTime?
-  resolved_by       String?
-  resolution_notes  String?
-  responsible_id    String?
-  reported_by       String
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  tenant_id        String
+  description      String
+  severity         String
+  status           String    @default("OPEN")
+  deadline         DateTime
+  resolved_at      DateTime?
+  resolved_by      String?
+  resolution_notes String?
+  responsible_id   String?
+  reported_by      String
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
 
-  tenant      Tenant          @relation(fields: [tenant_id], references: [id])
-  reporter    User            @relation("OccurrenceReporter",    fields: [reported_by],    references: [id])
-  responsible User?           @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
-  resolver    User?           @relation("OccurrenceResolver",    fields: [resolved_by],    references: [id])
+  tenant      Tenant            @relation(fields: [tenant_id], references: [id])
+  reporter    User              @relation("OccurrenceReporter", fields: [reported_by], references: [id])
+  responsible User?             @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
+  resolver    User?             @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
   photos      OccurrencePhoto[]
 
   @@index([tenant_id, severity, status])
@@ -475,7 +493,7 @@ model ShiftHandover {
   shift_instance_id     String    @unique
   outgoing_user_id      String
   incoming_user_id      String?
-  checklist_data        String    // JSON serializado: {readings_done, open_occurrences, pending_items}
+  checklist_data        String // JSON serializado: {readings_done, open_occurrences, pending_items}
   outgoing_observations String?
   handover_at           DateTime
   timeout_at            DateTime
@@ -507,11 +525,11 @@ model ShiftTask {
   completion_notes  String?
   status            String    @default("PENDING")
 
-  tenant         Tenant          @relation(fields: [tenant_id], references: [id])
-  shift_instance ShiftInstance   @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
-  assignee       User?           @relation("TaskAssignee", fields: [assigned_to_id], references: [id])
-  creator        User            @relation("TaskCreator", fields: [created_by], references: [id])
-  completer      User?           @relation("TaskCompleter", fields: [completed_by], references: [id])
+  tenant         Tenant           @relation(fields: [tenant_id], references: [id])
+  shift_instance ShiftInstance    @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
+  assignee       User?            @relation("TaskAssignee", fields: [assigned_to_id], references: [id])
+  creator        User             @relation("TaskCreator", fields: [created_by], references: [id])
+  completer      User?            @relation("TaskCompleter", fields: [completed_by], references: [id])
   photos         ShiftTaskPhoto[]
 
   @@index([shift_instance_id, status])
@@ -632,8 +650,8 @@ model AuditLog {
   table_name    String
   record_id     String
   action        String
-  before        String?   // JSON serializado — estado anterior do registro (null em CREATE)
-  after         String?   // JSON serializado — estado posterior do registro (null em DELETE)
+  before        String? // JSON serializado — estado anterior do registro (null em CREATE)
+  after         String? // JSON serializado — estado posterior do registro (null em DELETE)
   ip_address    String?
   justification String?
   timestamp     DateTime @default(now())

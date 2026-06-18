@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function MetodosPage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function MetodosPage({
 
   const metodos = await prisma.analysisMethod.findMany({
     where: {
-      tenant_id: 'default',
+      tenant_id: (await getTenantId()),
       ...(search ? { name: { contains: search } } : {}),
     },
     orderBy: { name: 'asc' },

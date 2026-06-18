@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { ReadingForm } from './reading-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function NovaLeituraPage() {
   const session = await auth()
@@ -12,12 +12,12 @@ export default async function NovaLeituraPage() {
 
   const [collectionPoints, parameters] = await Promise.all([
     prisma.collectionPoint.findMany({
-      where:   { tenant_id: TENANT_ID, is_active: true },
+      where:   { tenant_id: (await getTenantId()), is_active: true },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
     prisma.qualityParameter.findMany({
-      where:   { tenant_id: TENANT_ID, is_active: true },
+      where:   { tenant_id: (await getTenantId()), is_active: true },
       select:  { id: true, name: true, unit: true, min_limit: true, max_limit: true },
       orderBy: { name: 'asc' },
     }),

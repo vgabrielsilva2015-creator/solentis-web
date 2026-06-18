@@ -5,8 +5,8 @@ import { notFound } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { calcularEstoqueAtual, formatarQuantidade } from '@/lib/stock-utils'
 import { CountForm } from './count-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function ContagemPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -15,7 +15,7 @@ export default async function ContagemPage({ params }: { params: Promise<{ id: s
   const { id } = await params
 
   const product = await prisma.chemicalProduct.findFirst({
-    where:   { id, tenant_id: TENANT_ID, is_active: true },
+    where:   { id, tenant_id: (await getTenantId()), is_active: true },
     include: {
       entries: { select: { quantity: true } },
       exits:   { select: { quantity: true } },

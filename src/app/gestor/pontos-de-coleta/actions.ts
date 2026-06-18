@@ -5,12 +5,12 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') throw new Error('Acesso não autorizado')
+  if (!session || session.user.role !== 'MANAGER') redirect('/login')
 }
 
 const nullable = (v: unknown) => (v === '' || v == null ? null : String(v))
@@ -44,7 +44,7 @@ export async function criarPonto(
 
   await prisma.collectionPoint.create({
     data: {
-      tenant_id:   TENANT_ID,
+      tenant_id:   (await getTenantId()),
       name:        parsed.data.name,
       location:    parsed.data.location,
       description: parsed.data.description,
@@ -72,9 +72,7 @@ export async function editarPonto(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  await prisma.collectionPoint.update({
-    where: { id: pontoId },
-    data:  { name: parsed.data.name, location: parsed.data.location, description: parsed.data.description },
+  await prisma.collectionPoint.updateMany({ where: { id: pontoId , tenant_id: (await getTenantId()) }, data:  { name: parsed.data.name, location: parsed.data.location, description: parsed.data.description },
   })
 
   revalidatePath('/gestor/pontos-de-coleta')
@@ -84,9 +82,9 @@ export async function editarPonto(
 
 export async function toggleAtivoPonto(id: string): Promise<{ error?: string }> {
   await requireManager()
-  const ponto = await prisma.collectionPoint.findUnique({ where: { id }, select: { is_active: true } })
+  const ponto = await prisma.collectionPoint.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
   if (!ponto) return { error: 'Ponto de coleta não encontrado.' }
-  await prisma.collectionPoint.update({ where: { id }, data: { is_active: !ponto.is_active } })
+  await prisma.collectionPoint.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !ponto.is_active } })
   revalidatePath('/gestor/pontos-de-coleta')
   revalidatePath(`/gestor/pontos-de-coleta/${id}`)
   return {}

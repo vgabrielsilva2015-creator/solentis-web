@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { HandoverForm } from './handover-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function PassagemPage({
   params,
@@ -16,8 +16,7 @@ export default async function PassagemPage({
 
   const { id } = await params
 
-  const instance = await prisma.shiftInstance.findUnique({
-    where: { id },
+  const instance = await prisma.shiftInstance.findFirst({ where: { id, tenant_id: (await getTenantId()) },
     include: {
       shift:   { select: { name: true, start_time: true, end_time: true } },
       opener:  { select: { name: true } },
@@ -30,16 +29,16 @@ export default async function PassagemPage({
     },
   })
 
-  if (!instance || instance.tenant_id !== TENANT_ID) redirect('/operador/turnos')
+  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/operador/turnos')
   if (instance.status !== 'OPEN')  redirect('/operador/turnos')
   if (instance.handover)           redirect('/operador/turnos')
 
   const [openOccurrencesCount, pendingTasksCount] = await Promise.all([
     prisma.occurrence.count({
-      where: { tenant_id: TENANT_ID, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      where: { tenant_id: (await getTenantId()), status: { in: ['OPEN', 'IN_PROGRESS'] } },
     }),
     prisma.shiftTask.count({
-      where: { tenant_id: TENANT_ID, shift_instance_id: id, status: 'PENDING' },
+      where: { tenant_id: (await getTenantId()), shift_instance_id: id, status: 'PENDING' },
     }),
   ])
 

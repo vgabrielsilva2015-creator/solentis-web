@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { GestorSidebar } from '@/components/gestor/sidebar'
+import { TopNav } from '@/components/ui/top-nav'
 
 export default async function GestorLayout({
   children,
@@ -31,6 +32,8 @@ export default async function GestorLayout({
           </div>
         </div>
       </header>
+
+      <TopNav />
 
       <div className="flex flex-1">
         {/* Sidebar (visível apenas em telas lg+) */}

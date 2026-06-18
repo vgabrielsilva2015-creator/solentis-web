@@ -5,20 +5,21 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { logAudit } from '@/lib/audit'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
   if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -67,11 +68,10 @@ export async function editarPassagem(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  const handover = await prisma.shiftHandover.findUnique({
-    where:   { id: handoverId },
+  const handover = await prisma.shiftHandover.findFirst({ where: { id: handoverId , tenant_id: (await getTenantId()) },
     include: { shift_instance: { select: { tenant_id: true } } },
   })
-  if (!handover || handover.shift_instance.tenant_id !== TENANT_ID) {
+  if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) {
     return { error: 'Passagem não encontrada.' }
   }
   if (handover.status !== 'CONFIRMED') {
@@ -79,9 +79,7 @@ export async function editarPassagem(
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.shiftHandover.update({
-      where: { id: handoverId },
-      data: {
+    await tx.shiftHandover.updateMany({ where: { id: handoverId , tenant_id: (await getTenantId()) }, data: {
         outgoing_observations: parsed.data.outgoing_observations,
         incoming_observations: parsed.data.incoming_observations,
       },
@@ -133,7 +131,7 @@ export async function preAgendarTurno(
   if (!userId) return { error: 'Sessão inválida.' }
 
   const shift = await prisma.shift.findFirst({
-    where:  { id: parsed.data.shift_id, tenant_id: TENANT_ID, is_active: true },
+    where:  { id: parsed.data.shift_id, tenant_id: (await getTenantId()), is_active: true },
     select: { id: true },
   })
   if (!shift) return { error: 'Turno não encontrado.' }
@@ -143,7 +141,7 @@ export async function preAgendarTurno(
   // Verifica duplicado
   const existing = await prisma.shiftInstance.findFirst({
     where: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       shift_id:  parsed.data.shift_id,
       date:      targetDate,
     },
@@ -154,7 +152,7 @@ export async function preAgendarTurno(
 
   const instance = await prisma.shiftInstance.create({
     data: {
-      tenant_id: TENANT_ID,
+      tenant_id: (await getTenantId()),
       shift_id:  parsed.data.shift_id,
       date:      targetDate,
       opened_by: userId,

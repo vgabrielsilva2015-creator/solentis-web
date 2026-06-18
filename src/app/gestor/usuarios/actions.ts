@@ -8,20 +8,20 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
   if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -73,7 +73,7 @@ export async function criarUsuario(
     await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
-          tenant_id:            TENANT_ID,
+          tenant_id:            (await getTenantId()),
           name:                 parsed.data.name,
           email:                parsed.data.email,
           role:                 parsed.data.role,
@@ -121,8 +121,7 @@ export async function editarUsuario(
   }
 
   const [current, managerId] = await Promise.all([
-    prisma.user.findUnique({
-      where:  { id: userId },
+    prisma.user.findFirst({ where: { id: userId , tenant_id: (await getTenantId()) },
       select: { name: true, email: true, role: true },
     }),
     resolveUserId(session.user.email!),
@@ -131,9 +130,7 @@ export async function editarUsuario(
 
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
+      await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
       })
       await logAudit(tx, {
         userId:    managerId,
@@ -163,15 +160,13 @@ export async function toggleAtivo(
   const session = await requireManager()
 
   const [user, managerId] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { is_active: true } }),
+    prisma.user.findFirst({ where: { id: userId , tenant_id: (await getTenantId()) }, select: { is_active: true } }),
     resolveUserId(session.user.email!),
   ])
   if (!user) return { error: 'Usuário não encontrado.' }
 
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
-      data:  { is_active: !user.is_active },
+    await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { is_active: !user.is_active },
     })
     await logAudit(tx, {
       userId:    managerId,
@@ -196,7 +191,7 @@ export async function resetarSenha(
   const session = await requireManager()
 
   const [user, managerId] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+    prisma.user.findFirst({ where: { id: userId , tenant_id: (await getTenantId()) }, select: { id: true } }),
     resolveUserId(session.user.email!),
   ])
   if (!user) return { error: 'Usuário não encontrado.' }
@@ -205,9 +200,7 @@ export async function resetarSenha(
   const passwordHash = await hashPassword(tempPassword)
 
   await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
-      data:  { password_hash: passwordHash, must_change_password: true },
+    await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { password_hash: passwordHash, must_change_password: true },
     })
     await logAudit(tx, {
       userId:    managerId,

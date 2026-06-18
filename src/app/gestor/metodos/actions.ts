@@ -6,17 +6,21 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 async function requireManager() {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') throw new Error('Acesso não autorizado')
+  if (!session || session.user.role !== 'MANAGER') redirect('/login')
 }
 
 const MetodoSchema = z.object({
   name:        z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   description: z.preprocess(
+    (v) => (v === '' || v == null ? null : String(v)),
+    z.string().nullable(),
+  ),
+  pop_content: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
   ),
@@ -37,6 +41,7 @@ export async function criarMetodo(
   const parsed = MetodoSchema.safeParse({
     name:        formData.get('name'),
     description: formData.get('description'),
+    pop_content: formData.get('pop_content'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -45,9 +50,10 @@ export async function criarMetodo(
   try {
     await prisma.analysisMethod.create({
       data: {
-        tenant_id:   TENANT_ID,
+        tenant_id:   (await getTenantId()),
         name:        parsed.data.name,
         description: parsed.data.description,
+        pop_content: parsed.data.pop_content,
         is_active:   true,
       },
     })
@@ -72,17 +78,17 @@ export async function editarMetodo(
   const parsed = MetodoSchema.safeParse({
     name:        formData.get('name'),
     description: formData.get('description'),
+    pop_content: formData.get('pop_content'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
   try {
-    await prisma.analysisMethod.update({
-      where: { id: metodoId },
-      data: {
+    await prisma.analysisMethod.updateMany({ where: { id: metodoId , tenant_id: (await getTenantId()) }, data: {
         name:        parsed.data.name,
         description: parsed.data.description,
+        pop_content: parsed.data.pop_content,
       },
     })
   } catch (e) {
@@ -102,15 +108,12 @@ export async function toggleAtivoMetodo(
 ): Promise<{ error?: string }> {
   await requireManager()
 
-  const metodo = await prisma.analysisMethod.findUnique({
-    where:  { id: metodoId },
+  const metodo = await prisma.analysisMethod.findFirst({ where: { id: metodoId , tenant_id: (await getTenantId()) },
     select: { is_active: true },
   })
   if (!metodo) return { error: 'Método não encontrado.' }
 
-  await prisma.analysisMethod.update({
-    where: { id: metodoId },
-    data:  { is_active: !metodo.is_active },
+  await prisma.analysisMethod.updateMany({ where: { id: metodoId , tenant_id: (await getTenantId()) }, data:  { is_active: !metodo.is_active },
   })
 
   revalidatePath('/gestor/metodos')

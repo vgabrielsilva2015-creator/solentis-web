@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { EditHandoverForm } from './edit-handover-form'
 import { TaskForm } from './task-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 const STATUS_LABEL: Record<string, string> = {
   SCHEDULED:        'Agendado',
@@ -41,8 +41,7 @@ export default async function InstanciaDetalhePage({
   const { id } = await params
 
   const [instance, operators] = await Promise.all([
-    prisma.shiftInstance.findUnique({
-      where: { id },
+    prisma.shiftInstance.findFirst({ where: { id, tenant_id: (await getTenantId()) },
       include: {
         shift:  { select: { name: true, start_time: true, end_time: true } },
         opener: { select: { name: true } },
@@ -63,13 +62,13 @@ export default async function InstanciaDetalhePage({
       },
     }),
     prisma.user.findMany({
-      where:   { tenant_id: TENANT_ID, role: 'OPERATOR', is_active: true },
+      where:   { tenant_id: (await getTenantId()), role: 'OPERATOR', is_active: true },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
   ])
 
-  if (!instance || instance.tenant_id !== TENANT_ID) redirect('/gestor/turnos/instancias')
+  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/gestor/turnos/instancias')
 
   const h = instance.handover
 

@@ -11,7 +11,7 @@ const DRAFT_KEY = 'analysis_draft'
 
 type CollectionPoint = { id: string; name: string }
 type Parameter = { id: string; name: string; unit: string; min_limit: number | null; max_limit: number | null }
-type Method = { id: string; name: string }
+type Method = { id: string; name: string; pop_content?: string | null }
 
 type Props = {
   collectionPoints: CollectionPoint[]
@@ -95,6 +95,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
   }, [state.success, router])
 
   const selectedParam = parameters.find((p) => p.id === parameterId) ?? null
+  const selectedMethod = methods.find((m) => m.id === methodId) ?? null
 
   // Verificação de não-conformidade em tempo real
   const nonConformant: boolean | null = (() => {
@@ -190,6 +191,12 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
           </select>
           {state.fieldErrors?.method_id && (
             <p className="text-xs text-red-400">{state.fieldErrors.method_id[0]}</p>
+          )}
+          {selectedMethod?.pop_content && (
+            <div className="mt-2 rounded-md border border-blue-900/50 bg-blue-950/20 p-4">
+              <h4 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Instrução de Trabalho (POP)</h4>
+              <p className="text-sm text-slate-300 whitespace-pre-wrap">{selectedMethod.pop_content}</p>
+            </div>
           )}
         </div>
 

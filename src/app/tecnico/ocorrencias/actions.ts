@@ -5,20 +5,21 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { logAudit } from '@/lib/audit'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireTechnicianOrManager() {
   const session = await auth()
   if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -53,8 +54,7 @@ export async function resolverOcorrencia(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  const occurrence = await prisma.occurrence.findUnique({
-    where:  { id: ocorrenciaId },
+  const occurrence = await prisma.occurrence.findFirst({ where: { id: ocorrenciaId , tenant_id: (await getTenantId()) },
     select: { status: true, severity: true },
   })
   if (!occurrence)                        return { error: 'Ocorrência não encontrada.' }
@@ -62,9 +62,7 @@ export async function resolverOcorrencia(
 
   const now = new Date()
   await prisma.$transaction(async (tx) => {
-    await tx.occurrence.update({
-      where: { id: ocorrenciaId },
-      data: {
+    await tx.occurrence.updateMany({ where: { id: ocorrenciaId , tenant_id: (await getTenantId()) }, data: {
         status:           'RESOLVED',
         resolved_at:      now,
         resolved_by:      userId,

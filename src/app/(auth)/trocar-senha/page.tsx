@@ -5,6 +5,7 @@ import { Eye, EyeOff, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { trocarSenhaAction, type TrocarSenhaState } from './actions'
+import { SignOutButton } from '@/components/sign-out-button'
 
 const initialState: TrocarSenhaState = {}
 
@@ -134,6 +135,10 @@ export default function TrocarSenhaPage() {
             {isPending ? 'Salvando…' : 'Salvar nova senha'}
           </Button>
         </form>
+      </div>
+
+      <div className="flex justify-center">
+        <SignOutButton />
       </div>
 
       <p className="text-center text-xs text-slate-600">

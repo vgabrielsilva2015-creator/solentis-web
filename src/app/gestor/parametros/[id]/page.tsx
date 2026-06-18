@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { EditParametroForm } from './edit-form'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function EditarParametroPage({
   params,
@@ -9,8 +10,7 @@ export default async function EditarParametroPage({
 }) {
   const { id } = await params
 
-  const parametro = await prisma.qualityParameter.findUnique({
-    where: { id },
+  const parametro = await prisma.qualityParameter.findFirst({ where: { id, tenant_id: (await getTenantId()) },
     select: {
       id: true, name: true, unit: true,
       min_limit: true, max_limit: true,

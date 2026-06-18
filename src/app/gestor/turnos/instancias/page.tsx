@@ -1,8 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 const STATUS_LABEL: Record<string, string> = {
   SCHEDULED:        'Agendado',
@@ -40,7 +40,7 @@ export default async function InstanciasTurnosPage({
   const skip  = (page - 1) * take
 
   const where = {
-    tenant_id: TENANT_ID,
+    tenant_id: (await getTenantId()),
     ...(status ? { status } : {}),
   }
 

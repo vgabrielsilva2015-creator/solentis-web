@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { TecnicoEntryForm } from './entry-form'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function TecnicoEntradaPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -14,7 +14,7 @@ export default async function TecnicoEntradaPage({ params }: { params: Promise<{
   const { id } = await params
 
   const product = await prisma.chemicalProduct.findFirst({
-    where: { id, tenant_id: TENANT_ID, is_active: true },
+    where: { id, tenant_id: (await getTenantId()), is_active: true },
     select: { id: true, name: true, unit: true },
   })
 

@@ -2,8 +2,8 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 const PAGE_SIZE  = 20
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -37,7 +37,7 @@ export default async function OcorrenciasTecnicoPage({
   const showAll   = statusFilter === 'all'
 
   const where = {
-    tenant_id: TENANT_ID,
+    tenant_id: (await getTenantId()),
     ...(showAll ? {} : { status: { in: ['OPEN', 'IN_PROGRESS'] } }),
   }
 

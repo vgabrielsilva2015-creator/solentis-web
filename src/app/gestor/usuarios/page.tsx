@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
 const ROLE_LABELS: Record<string, string> = {
   MANAGER:    'Gestor',
@@ -32,7 +33,7 @@ export default async function UsuariosPage({
 
   const users = await prisma.user.findMany({
     where: {
-      tenant_id: 'default',
+      tenant_id: (await getTenantId()),
       ...(search
         ? { OR: [{ name: { contains: search } }, { email: { contains: search } }] }
         : {}),

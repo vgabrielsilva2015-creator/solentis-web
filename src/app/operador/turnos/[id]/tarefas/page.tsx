@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { TaskCard } from './task-card'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 
 export default async function TarefasDoTurnoPage({
   params,
@@ -16,8 +16,7 @@ export default async function TarefasDoTurnoPage({
 
   const { id } = await params
 
-  const instance = await prisma.shiftInstance.findUnique({
-    where: { id },
+  const instance = await prisma.shiftInstance.findFirst({ where: { id, tenant_id: (await getTenantId()) },
     include: {
       shift:      { select: { name: true, start_time: true, end_time: true } },
       shift_tasks: {
@@ -32,7 +31,7 @@ export default async function TarefasDoTurnoPage({
     },
   })
 
-  if (!instance || instance.tenant_id !== TENANT_ID) redirect('/operador/turnos')
+  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/operador/turnos')
 
   const total   = instance.shift_tasks.length
   const done    = instance.shift_tasks.filter((t) => t.status === 'DONE').length

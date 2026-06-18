@@ -5,20 +5,21 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
 
-const TENANT_ID = 'default'
 
 async function requireTechnicianOrManager() {
   const session = await auth()
   if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    throw new Error('Acesso não autorizado')
+    redirect('/login')
   }
   return session
 }
 
 async function resolveUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: TENANT_ID, email } },
+    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
     select: { id: true },
   })
   return user?.id ?? null
@@ -114,7 +115,7 @@ export async function criarEquipamento(
   await prisma.$transaction(async (tx) => {
     const equipment = await tx.equipment.create({
       data: {
-        tenant_id:                 TENANT_ID,
+        tenant_id:                 (await getTenantId()),
         name:                      parsed.data.name,
         category_id:               parsed.data.category_id,
         serial_number:             parsed.data.serial_number,
@@ -130,7 +131,7 @@ export async function criarEquipamento(
 
     await tx.preventiveMaintenance.create({
       data: {
-        tenant_id:      TENANT_ID,
+        tenant_id:      (await getTenantId()),
         equipment_id:   equipment.id,
         scheduled_date: firstScheduledDate,
         status:         'SCHEDULED',
@@ -164,15 +165,12 @@ export async function editarEquipamento(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const equipment = await prisma.equipment.findUnique({
-    where:  { id: equipamentoId },
+  const equipment = await prisma.equipment.findFirst({ where: { id: equipamentoId , tenant_id: (await getTenantId()) },
     select: { id: true },
   })
   if (!equipment) return { error: 'Equipamento não encontrado.' }
 
-  await prisma.equipment.update({
-    where: { id: equipamentoId },
-    data: {
+  await prisma.equipment.updateMany({ where: { id: equipamentoId , tenant_id: (await getTenantId()) }, data: {
       name:                      parsed.data.name,
       category_id:               parsed.data.category_id,
       serial_number:             parsed.data.serial_number,
@@ -196,15 +194,12 @@ export async function toggleAtivoEquipamento(
 ): Promise<{ error?: string }> {
   await requireTechnicianOrManager()
 
-  const equipment = await prisma.equipment.findUnique({
-    where:  { id: equipamentoId },
+  const equipment = await prisma.equipment.findFirst({ where: { id: equipamentoId , tenant_id: (await getTenantId()) },
     select: { is_active: true },
   })
   if (!equipment) return { error: 'Equipamento não encontrado.' }
 
-  await prisma.equipment.update({
-    where: { id: equipamentoId },
-    data:  { is_active: !equipment.is_active },
+  await prisma.equipment.updateMany({ where: { id: equipamentoId , tenant_id: (await getTenantId()) }, data:  { is_active: !equipment.is_active },
   })
 
   revalidatePath('/tecnico/equipamentos')
@@ -222,8 +217,7 @@ export async function concluirPreventiva(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  const preventiva = await prisma.preventiveMaintenance.findUnique({
-    where:   { id: preventivaId },
+  const preventiva = await prisma.preventiveMaintenance.findFirst({ where: { id: preventivaId , tenant_id: (await getTenantId()) },
     include: { equipment: { select: { id: true, preventive_frequency_days: true } } },
   })
   if (!preventiva)                    return { error: 'Preventiva não encontrada.' }
@@ -233,9 +227,7 @@ export async function concluirPreventiva(
   const nextScheduledDate = addDays(completedDate, preventiva.equipment.preventive_frequency_days)
 
   await prisma.$transaction(async (tx) => {
-    await tx.preventiveMaintenance.update({
-      where: { id: preventivaId },
-      data: {
+    await tx.preventiveMaintenance.updateMany({ where: { id: preventivaId , tenant_id: (await getTenantId()) }, data: {
         status:         'COMPLETED',
         completed_date: completedDate,
         completed_by:   userId,
@@ -244,7 +236,7 @@ export async function concluirPreventiva(
 
     await tx.preventiveMaintenance.create({
       data: {
-        tenant_id:      TENANT_ID,
+        tenant_id:      (await getTenantId()),
         equipment_id:   preventiva.equipment.id,
         scheduled_date: nextScheduledDate,
         status:         'SCHEDULED',
@@ -282,7 +274,7 @@ export async function registrarCorretiva(
 
   await prisma.correctiveMaintenance.create({
     data: {
-      tenant_id:      TENANT_ID,
+      tenant_id:      (await getTenantId()),
       equipment_id:   equipamentoId,
       description:    parsed.data.description,
       responsible_id: userId,        // auto-preenche com o usuário logado
@@ -306,16 +298,13 @@ export async function atualizarStatusCorretiva(
 ): Promise<{ error?: string }> {
   await requireTechnicianOrManager()
 
-  const corretiva = await prisma.correctiveMaintenance.findUnique({
-    where:  { id: corretivaId },
+  const corretiva = await prisma.correctiveMaintenance.findFirst({ where: { id: corretivaId , tenant_id: (await getTenantId()) },
     select: { status: true, equipment_id: true },
   })
   if (!corretiva)                      return { error: 'Corretiva não encontrada.' }
   if (corretiva.status !== 'IN_PROGRESS') return { error: 'Corretiva já encerrada.' }
 
-  await prisma.correctiveMaintenance.update({
-    where: { id: corretivaId },
-    data: {
+  await prisma.correctiveMaintenance.updateMany({ where: { id: corretivaId , tenant_id: (await getTenantId()) }, data: {
       status,
       end_date: status === 'COMPLETED' ? new Date() : undefined,
     },

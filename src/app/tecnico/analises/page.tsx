@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ApproveButton } from './approve-button'
+import { getTenantId } from '@/lib/tenant'
 
-const TENANT_ID = 'default'
 const PAGE_SIZE = 20
 
 function formatDatetime(d: Date): string {
@@ -29,7 +29,7 @@ export default async function AnalisesPage({
 
   const [analyses, total] = await Promise.all([
     prisma.analysis.findMany({
-      where:   { tenant_id: TENANT_ID },
+      where:   { tenant_id: (await getTenantId()) },
       include: {
         collection_point: { select: { name: true } },
         parameter:        { select: { name: true } },
@@ -40,7 +40,7 @@ export default async function AnalisesPage({
       take:    PAGE_SIZE,
       skip,
     }),
-    prisma.analysis.count({ where: { tenant_id: TENANT_ID } }),
+    prisma.analysis.count({ where: { tenant_id: (await getTenantId()) } }),
   ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
 
 function formatLimit(value: number | null): string {
   if (value === null) return '—'
@@ -21,7 +22,7 @@ export default async function ParametrosPage({
 
   const params = await prisma.qualityParameter.findMany({
     where: {
-      tenant_id: 'default',
+      tenant_id: (await getTenantId()),
       ...(search ? { name: { contains: search } } : {}),
     },
     orderBy: { name: 'asc' },
