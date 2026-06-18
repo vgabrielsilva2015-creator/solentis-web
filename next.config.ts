@@ -6,7 +6,6 @@ const withPWA = withPWAInit({
   // Desativa o PWA no modo de desenvolvimento para não bugar o cache local (F5)
   disable: process.env.NODE_ENV === "development",
   register: true,
-  skipWaiting: true,
 });
 
 const nextConfig: NextConfig = {
