@@ -4,38 +4,46 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   LayoutDashboard, 
+  Users,
   Settings, 
-  Activity, 
-  Droplet,
+  Microscope,
+  Tags,
+  MapPin,
+  Clock,
+  CalendarDays,
+  Timer,
+  FlaskConical,
   UploadCloud,
+  FileCheck2,
   AlertTriangle,
-  FileText
+  ScrollText,
+  ShieldAlert
 } from 'lucide-react'
 
 type NavItem =
-  | { type: 'link'; label: string; href: string; excludePrefix?: string }
+  | { type: 'link'; label: string; href: string; excludePrefix?: string; icon: React.ReactNode }
   | { type: 'section'; label: string }
 
 const NAV: NavItem[] = [
-  { type: 'link',    label: 'Dashboard',           href: '/gestor/dashboard' },
-  { type: 'link',    label: 'Usuários',             href: '/gestor/usuarios' },
+  { type: 'link',    label: 'Dashboard',           href: '/gestor/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+  { type: 'link',    label: 'Usuários',             href: '/gestor/usuarios', icon: <Users className="w-4 h-4" /> },
   { type: 'section', label: 'Configurações' },
-  { type: 'link',    label: 'Parâmetros',           href: '/gestor/parametros' },
-  { type: 'link',    label: 'Métodos de Análise',   href: '/gestor/metodos' },
-  { type: 'link',    label: 'Categorias',           href: '/gestor/categorias' },
-  { type: 'link',    label: 'Pontos de Coleta',     href: '/gestor/pontos-de-coleta' },
-  { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/instancias' },
-  { type: 'link',    label: 'Instâncias de Turno',  href: '/gestor/turnos/instancias' },
-  { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia' },
+  { type: 'link',    label: 'Parâmetros',           href: '/gestor/parametros', icon: <Settings className="w-4 h-4" /> },
+  { type: 'link',    label: 'Métodos de Análise',   href: '/gestor/metodos', icon: <Microscope className="w-4 h-4" /> },
+  { type: 'link',    label: 'Categorias',           href: '/gestor/categorias', icon: <Tags className="w-4 h-4" /> },
+  { type: 'link',    label: 'Pontos de Coleta',     href: '/gestor/pontos-de-coleta', icon: <MapPin className="w-4 h-4" /> },
+  { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/instancias', icon: <Clock className="w-4 h-4" /> },
+  { type: 'link',    label: 'Instâncias de Turno',  href: '/gestor/turnos/instancias', icon: <CalendarDays className="w-4 h-4" /> },
+  { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia', icon: <Timer className="w-4 h-4" /> },
   { type: 'section', label: 'Estoque' },
-  { type: 'link',    label: 'Produtos Químicos',   href: '/gestor/produtos-quimicos' },
+  { type: 'link',    label: 'Produtos Químicos',   href: '/gestor/produtos-quimicos', icon: <FlaskConical className="w-4 h-4" /> },
   { type: 'section', label: 'Operação' },
-  { type: 'link',    label: 'Importar Laudo (IA)',  href: '/gestor/laudos/importar' },
-  { type: 'link',    label: 'Leituras Realizadas',  href: '/gestor/leituras' },
-  { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias' },
-  { type: 'link',    label: 'Relatórios (Auditoria)', href: '/gestor/relatorios' },
+  { type: 'link',    label: 'Importar Laudo (IA)',  href: '/gestor/laudos/importar', icon: <UploadCloud className="w-4 h-4" /> },
+  { type: 'link',    label: 'Leituras Realizadas',  href: '/gestor/leituras', icon: <FileCheck2 className="w-4 h-4" /> },
+  { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias', icon: <AlertTriangle className="w-4 h-4" /> },
+  { type: 'link',    label: 'Relatórios (Auditoria)', href: '/gestor/relatorios', icon: <ScrollText className="w-4 h-4" /> },
   { type: 'section', label: 'Sistema' },
-  { type: 'link',    label: 'Auditoria',            href: '/gestor/auditoria' },
+  { type: 'link',    label: 'Auditoria Global',     href: '/gestor/auditoria', icon: <ShieldAlert className="w-4 h-4" /> },
 ]
 
 export function GestorSidebar() {
@@ -61,12 +69,13 @@ export function GestorSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-md px-3 py-2 text-sm transition-colors ${
+            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
               isActive
-                ? 'bg-slate-800 font-medium text-slate-100'
+                ? 'bg-emerald-600/20 font-medium text-emerald-300 border border-emerald-500/20'
                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
             }`}
           >
+            {item.icon}
             {item.label}
           </Link>
         )
