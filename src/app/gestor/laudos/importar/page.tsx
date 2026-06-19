@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { extractDataFromPDF, getMappingContext, saveMappedReadings, createParameterFromImport } from './actions'
-import { UploadCloud, FileText, CheckCircle, AlertCircle, Loader2, FileCheck2, Plus } from 'lucide-react'
+import { UploadCloud, FileText, CheckCircle, AlertCircle, Loader2, FileCheck2, Plus, RotateCcw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import stringSimilarity from 'string-similarity'
 
@@ -63,9 +63,9 @@ export default function ImportLaudoPage() {
     for (let i = 0; i < currentQueue.length; i++) {
       if (currentQueue[i].status !== 'pending') continue;
 
-      // Delay between PDFs (skip first one)
+      // Delay between PDFs (skip first one) — 5s para respeitar rate limit da API gratuita
       if (i > 0) {
-        await delay(3000)
+        await delay(5000)
       }
 
       // Update status to extracting
@@ -142,6 +142,63 @@ export default function ImportLaudoPage() {
 
   const updateFileItem = (id: string, updates: Partial<FileItem>) => {
     setFilesQueue(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item))
+  }
+
+  const retryFile = async (fileItem: FileItem) => {
+    updateFileItem(fileItem.id, { status: 'extracting', error: undefined })
+
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.readAsDataURL(fileItem.file)
+      })
+
+      const result = await extractDataFromPDF(base64, fileItem.file.type)
+      if (result.success) {
+        const data = result.data
+        let mPoint = ''
+        let mDate = data.dataColeta || new Date().toISOString().split('T')[0]
+        
+        if (data.pontoColeta) {
+          const foundPoint = context.points.find(p => 
+            p.name.toLowerCase().includes(data.pontoColeta.toLowerCase()) ||
+            data.pontoColeta.toLowerCase().includes(p.name.toLowerCase())
+          )
+          if (foundPoint) mPoint = foundPoint.id
+        }
+
+        const mParams: Record<number, string> = {}
+        data.parametros.forEach((p: any, idx: number) => {
+          const nomeStr = p.nomeExtraido.trim()
+          const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
+          if (foundAlias) { mParams[idx] = foundAlias.parameter_id; return }
+          const exactParam = context.parameters.find(param => param.name.toLowerCase() === nomeStr.toLowerCase())
+          if (exactParam) { mParams[idx] = exactParam.id; return }
+          if (context.parameters.length > 0) {
+            const paramNames = context.parameters.map(param => param.name)
+            const match = stringSimilarity.findBestMatch(nomeStr, paramNames)
+            if (match.bestMatch.rating > 0.5) {
+              mParams[idx] = context.parameters[match.bestMatchIndex].id
+            }
+          }
+        })
+
+        updateFileItem(fileItem.id, { status: 'success', data, mappedPoint: mPoint, mappedDate: mDate, mappedParams: mParams })
+      } else {
+        updateFileItem(fileItem.id, { status: 'error', error: result.error })
+      }
+    } catch (err: any) {
+      updateFileItem(fileItem.id, { status: 'error', error: err.message })
+    }
+  }
+
+  const retryAllFailed = async () => {
+    const failedFiles = filesQueue.filter(f => f.status === 'error')
+    for (let i = 0; i < failedFiles.length; i++) {
+      if (i > 0) await delay(5000)
+      await retryFile(failedFiles[i])
+    }
   }
 
   const handleCreateParam = async (fileId: string, paramIdx: number, name: string, unit: string) => {
@@ -291,8 +348,16 @@ export default function ImportLaudoPage() {
                         </div>
                       )}
                       {item.status === 'error' && (
-                        <div className="flex items-center gap-2 text-red-500 text-xs font-mono max-w-[300px] truncate" title={item.error}>
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {item.error}
+                        <div className="flex items-center gap-2">
+                          <div className="text-red-500 text-xs font-mono max-w-[250px] truncate flex items-center gap-1" title={item.error}>
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {item.error}
+                          </div>
+                          <button 
+                            onClick={() => retryFile(item)}
+                            className="shrink-0 flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Tentar
+                          </button>
                         </div>
                       )}
                     </div>
@@ -300,11 +365,21 @@ export default function ImportLaudoPage() {
                 ))}
               </ul>
               
-              {!isProcessing && successfulFiles.length > 0 && (
-                <div className="p-4 bg-slate-950/30 flex justify-end">
-                  <button onClick={() => setStep(2)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
-                    Continuar para Mapeamento ({successfulFiles.length}) →
-                  </button>
+              {!isProcessing && (successfulFiles.length > 0 || filesQueue.some(f => f.status === 'error')) && (
+                <div className="p-4 bg-slate-950/30 flex justify-between items-center">
+                  {filesQueue.some(f => f.status === 'error') && (
+                    <button 
+                      onClick={retryAllFailed} 
+                      className="flex items-center gap-2 text-sm text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" /> Reprocessar Falhos ({filesQueue.filter(f => f.status === 'error').length})
+                    </button>
+                  )}
+                  {successfulFiles.length > 0 && (
+                    <button onClick={() => setStep(2)} className="ml-auto bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2">
+                      Continuar para Mapeamento ({successfulFiles.length}) →
+                    </button>
+                  )}
                 </div>
               )}
             </div>

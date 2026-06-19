@@ -34,8 +34,8 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
 `
 
   const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-pro']
-  const MAX_RETRIES = 2
-  const BASE_DELAY_MS = 2000
+  const MAX_RETRIES = 3
+  const BASE_DELAY_MS = 3000
   let lastError: any = null
 
   for (const modelName of modelsToTry) {
@@ -53,15 +53,21 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
         return { success: true, data: JSON.parse(cleaned), usedModel: modelName }
       } catch (err: any) {
         lastError = err
-        const errorMsg = err.message || ''
-        console.warn(`[GEMINI] Modelo ${modelName}, tentativa ${attempt + 1}/${MAX_RETRIES} falhou: ${errorMsg}`)
+        const errorMsg = (err.message || '').toLowerCase()
+        console.warn(`[GEMINI] Modelo ${modelName}, tentativa ${attempt + 1}/${MAX_RETRIES} falhou: ${err.message}`)
 
-        // Se for erro 429 (rate limit) ou 503 (overloaded), esperar com backoff antes de tentar de novo
-        const isRetryable = errorMsg.includes('429') || errorMsg.includes('503') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('overloaded')
+        // Detectar erros retryable de forma mais abrangente
+        const isRetryable = errorMsg.includes('429') 
+          || errorMsg.includes('503') 
+          || errorMsg.includes('resource_exhausted') 
+          || errorMsg.includes('overloaded')
+          || errorMsg.includes('quota')
+          || errorMsg.includes('too many')
+          || errorMsg.includes('rate')
         
         if (isRetryable && attempt < MAX_RETRIES - 1) {
-          const waitTime = BASE_DELAY_MS * Math.pow(2, attempt) // 2s, 4s
-          console.log(`[GEMINI] Aguardando ${waitTime}ms antes de retry...`)
+          const waitTime = BASE_DELAY_MS * Math.pow(2, attempt) // 3s, 6s, 12s
+          console.log(`[GEMINI] Rate limit detectado. Aguardando ${waitTime}ms antes de retry...`)
           await delay(waitTime)
         } else if (!isRetryable) {
           // Se não for retryable (ex: modelo não existe), pular direto para o próximo modelo
@@ -71,12 +77,9 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
     }
   }
 
-  // Formatar mensagem de erro amigável
-  const friendlyError = lastError?.message?.includes('429') || lastError?.message?.includes('RESOURCE_EXHAUSTED')
-    ? 'Limite de requisições da API atingido. Tente novamente em alguns minutos.'
-    : lastError?.message?.includes('not found') || lastError?.message?.includes('not supported')
-    ? 'Nenhum modelo de IA compatível encontrado na chave API configurada.'
-    : lastError?.message || 'Falha ao processar o PDF com a Inteligência Artificial.'
+  // Sempre incluir o erro real para facilitar debug
+  const rawError = lastError?.message || 'Erro desconhecido'
+  const friendlyError = `Falha ao processar PDF. Erro: ${rawError.substring(0, 150)}`
 
   console.error('Erro em todos os modelos da IA:', lastError)
   return { success: false, error: friendlyError }
