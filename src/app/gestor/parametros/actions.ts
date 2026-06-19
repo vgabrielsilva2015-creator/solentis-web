@@ -31,6 +31,14 @@ const ParametroSchema = z.object({
     z.string().nullable(),
   ),
   effective_date: z.string().min(1, 'Informe a data de vigência'),
+  default_method_name: z.preprocess(
+    (v) => (v === '' || v == null ? null : String(v)),
+    z.string().nullable(),
+  ),
+  collection_points: z.preprocess(
+    (v) => (v === '' || v == null ? null : String(v)),
+    z.string().nullable(),
+  ),
 }).refine(
   (d) => d.min_limit === null || d.max_limit === null || d.min_limit < d.max_limit,
   { message: 'Limite mínimo deve ser menor que o máximo', path: ['max_limit'] },
@@ -64,19 +72,45 @@ export async function criarParametro(
     min_limit:       formData.get('min_limit'),
     max_limit:       formData.get('max_limit'),
     legal_reference: formData.get('legal_reference'),
-    effective_date:  formData.get('effective_date'),
+    default_method_name: formData.get('default_method_name'),
+    collection_points: formData.get('collection_points'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  const tenantId = await getTenantId()
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
   const created = await prisma.$transaction(async (tx) => {
+    let methodId = null
+    if (parsed.data.default_method_name) {
+      const methodName = parsed.data.default_method_name.trim()
+      let method = await tx.analysisMethod.findUnique({
+        where: { tenant_id_name: { tenant_id: tenantId, name: methodName } }
+      })
+      if (!method) {
+        method = await tx.analysisMethod.create({ data: { tenant_id: tenantId, name: methodName } })
+      }
+      methodId = method.id
+    }
+
+    const cpNames = parsed.data.collection_points ? parsed.data.collection_points.split(',').map(s => s.trim()).filter(Boolean) : []
+    const cpIds = []
+    for (const cpName of cpNames) {
+      let cp = await tx.collectionPoint.findFirst({
+        where: { tenant_id: tenantId, name: { equals: cpName, mode: 'insensitive' } }
+      })
+      if (!cp) {
+        cp = await tx.collectionPoint.create({ data: { tenant_id: tenantId, name: cpName } })
+      }
+      cpIds.push(cp.id)
+    }
+
     const param = await tx.qualityParameter.create({
       data: {
-        tenant_id:       (await getTenantId()),
+        tenant_id:       tenantId,
         name:            parsed.data.name,
         unit:            parsed.data.unit,
         min_limit:       parsed.data.min_limit,
@@ -85,6 +119,10 @@ export async function criarParametro(
         effective_date:  new Date(parsed.data.effective_date + 'T00:00:00.000Z'),
         is_active:       true,
         created_by:      userId,
+        default_method_id: methodId,
+        collection_points: {
+          connect: cpIds.map(id => ({ id }))
+        }
       },
       select: { id: true },
     })
@@ -118,14 +156,16 @@ export async function editarParametro(
     min_limit:       formData.get('min_limit'),
     max_limit:       formData.get('max_limit'),
     legal_reference: formData.get('legal_reference'),
-    effective_date:  formData.get('effective_date'),
+    default_method_name: formData.get('default_method_name'),
+    collection_points: formData.get('collection_points'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  const tenantId = await getTenantId()
   const [current, userId] = await Promise.all([
-    prisma.qualityParameter.findFirst({ where: { id: parametroId , tenant_id: (await getTenantId()) },
+    prisma.qualityParameter.findFirst({ where: { id: parametroId , tenant_id: tenantId },
       select: { name: true, unit: true, min_limit: true, max_limit: true, effective_date: true },
     }),
     resolveUserId(session.user.email!),
@@ -142,6 +182,30 @@ export async function editarParametro(
     current.effective_date.getTime() !== newDate.getTime()
 
   await prisma.$transaction(async (tx) => {
+    let methodId = null
+    if (parsed.data.default_method_name) {
+      const methodName = parsed.data.default_method_name.trim()
+      let method = await tx.analysisMethod.findUnique({
+        where: { tenant_id_name: { tenant_id: tenantId, name: methodName } }
+      })
+      if (!method) {
+        method = await tx.analysisMethod.create({ data: { tenant_id: tenantId, name: methodName } })
+      }
+      methodId = method.id
+    }
+
+    const cpNames = parsed.data.collection_points ? parsed.data.collection_points.split(',').map(s => s.trim()).filter(Boolean) : []
+    const cpIds = []
+    for (const cpName of cpNames) {
+      let cp = await tx.collectionPoint.findFirst({
+        where: { tenant_id: tenantId, name: { equals: cpName, mode: 'insensitive' } }
+      })
+      if (!cp) {
+        cp = await tx.collectionPoint.create({ data: { tenant_id: tenantId, name: cpName } })
+      }
+      cpIds.push(cp.id)
+    }
+
     if (limitsChanged) {
       await tx.parameterHistory.create({
         data: {
@@ -157,13 +221,19 @@ export async function editarParametro(
       })
     }
 
-    await tx.qualityParameter.updateMany({ where: { id: parametroId , tenant_id: (await getTenantId()) }, data: {
+    await tx.qualityParameter.update({ 
+      where: { id: parametroId }, 
+      data: {
         name:            parsed.data.name,
         unit:            parsed.data.unit,
         min_limit:       parsed.data.min_limit,
         max_limit:       parsed.data.max_limit,
         legal_reference: parsed.data.legal_reference,
         effective_date:  newDate,
+        default_method_id: methodId,
+        collection_points: {
+          set: cpIds.map(id => ({ id }))
+        }
       },
     })
 

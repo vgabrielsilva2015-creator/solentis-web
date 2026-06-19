@@ -37,7 +37,6 @@ async function resolveUserId(email: string): Promise<string | null> {
 const AnaliseSchema = z.object({
   collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
   parameter_id:        z.string().min(1, 'Selecione o parâmetro'),
-  method_id:           z.string().min(1, 'Selecione o método de análise'),
   value: z.preprocess(
     (v) => {
       if (v === '' || v == null) return null
@@ -71,7 +70,6 @@ export async function registrarAnalise(
   const parsed = AnaliseSchema.safeParse({
     collection_point_id: formData.get('collection_point_id'),
     parameter_id:        formData.get('parameter_id'),
-    method_id:           formData.get('method_id'),
     value:               formData.get('value'),
     report_text:         formData.get('report_text'),
     laboratory_type:     formData.get('laboratory_type'),
@@ -84,10 +82,8 @@ export async function registrarAnalise(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
-  // Busca os limites vigentes do parâmetro no momento da coleta.
-  // Esses limites são capturados como snapshot imutável — rastreabilidade legal (CONAMA 430/2011).
   const param = await prisma.qualityParameter.findFirst({ where: { id: parsed.data.parameter_id , tenant_id: (await getTenantId()) },
-    select: { min_limit: true, max_limit: true, unit: true },
+    select: { min_limit: true, max_limit: true, unit: true, default_method_id: true },
   })
   if (!param) return { error: 'Parâmetro não encontrado.' }
 
@@ -99,7 +95,7 @@ export async function registrarAnalise(
       tenant_id:           (await getTenantId()),
       collection_point_id: parsed.data.collection_point_id,
       parameter_id:        parsed.data.parameter_id,
-      method_id:           parsed.data.method_id,
+      method_id:           param.default_method_id,
       value:               parsed.data.value,
       unit:                param.unit,
       min_limit_applied:   param.min_limit,   // snapshot imutável

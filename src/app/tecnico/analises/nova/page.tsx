@@ -18,7 +18,7 @@ export default async function NovaAnalisePage() {
     }),
     prisma.qualityParameter.findMany({
       where:   { tenant_id: (await getTenantId()), is_active: true },
-      select:  { id: true, name: true, unit: true, min_limit: true, max_limit: true },
+      select:  { id: true, name: true, unit: true, min_limit: true, max_limit: true, default_method_id: true },
       orderBy: { name: 'asc' },
     }),
     prisma.analysisMethod.findMany({

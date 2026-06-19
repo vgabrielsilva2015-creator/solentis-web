@@ -62,7 +62,11 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
   }
 
   return (
-    <div className="h-72 w-full">
+    <div className="h-72 w-full flex flex-col">
+      <div className="flex justify-end gap-3 px-2 text-[10px] text-slate-400 mb-1">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-slate-300 bg-slate-900 inline-block" /> Análise Interna</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border border-blue-400 bg-blue-500 inline-block" /> Laudo Externo</span>
+      </div>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-800)" vertical={false} />
@@ -131,7 +135,22 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
             dataKey="value"
             stroke="var(--color-slate-300)"
             strokeWidth={2}
-            dot={{ r: 3, fill: 'var(--color-slate-900)', strokeWidth: 2 }}
+            dot={(props: any) => {
+              const { cx, cy, payload } = props
+              if (!cx || !cy) return <g key={`dot-${props.key}`} />
+              const isExternal = payload.laboratoryType === 'EXTERNAL'
+              return (
+                <circle
+                  key={`dot-${props.key}`}
+                  cx={cx}
+                  cy={cy}
+                  r={isExternal ? 5 : 3}
+                  fill={isExternal ? '#3b82f6' : 'var(--color-slate-900)'}
+                  stroke={isExternal ? '#60a5fa' : 'var(--color-slate-300)'}
+                  strokeWidth={2}
+                />
+              )
+            }}
             activeDot={{ r: 5, fill: 'var(--color-accent)' }}
           />
         </LineChart>

@@ -10,7 +10,7 @@ import { registrarAnalise, type AnaliseFormState } from '../actions'
 const DRAFT_KEY = 'analysis_draft'
 
 type CollectionPoint = { id: string; name: string }
-type Parameter = { id: string; name: string; unit: string; min_limit: number | null; max_limit: number | null }
+type Parameter = { id: string; name: string; unit: string; min_limit: number | null; max_limit: number | null; default_method_id?: string | null }
 type Method = { id: string; name: string; pop_content?: string | null }
 
 type Props = {
@@ -176,33 +176,13 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
           )}
         </div>
 
-        {/* ── Método de análise ─────────────────────────────────────────── */}
-        <div className="space-y-1.5">
-          <label htmlFor="method_id" className="text-sm font-medium text-slate-300">
-            Método de análise
-          </label>
-          <select
-            id="method_id" name="method_id"
-            value={methodId}
-            onChange={(e) => setMethodId(e.target.value)}
-            disabled={isPending} required
-            className={SELECT_CLS}
-          >
-            <option value="">Selecione o método…</option>
-            {methods.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-          {state.fieldErrors?.method_id && (
-            <p className="text-xs text-red-400">{state.fieldErrors.method_id[0]}</p>
-          )}
-          {selectedMethod?.pop_content && (
-            <div className="mt-2 rounded-md border border-blue-900/50 bg-blue-950/20 p-4">
-              <h4 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Instrução de Trabalho (POP)</h4>
-              <p className="text-sm text-slate-300 whitespace-pre-wrap">{selectedMethod.pop_content}</p>
-            </div>
-          )}
-        </div>
+        {/* ── POP ─────────────────────────────────────────────────────────── */}
+        {selectedParam?.default_method_id && methods.find(m => m.id === selectedParam.default_method_id)?.pop_content && (
+          <div className="rounded-md border border-blue-900/50 bg-blue-950/20 p-4">
+            <h4 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Instrução de Trabalho (POP)</h4>
+            <p className="text-sm text-slate-300 whitespace-pre-wrap">{methods.find(m => m.id === selectedParam.default_method_id)?.pop_content}</p>
+          </div>
+        )}
 
         {/* ── Valor medido ──────────────────────────────────────────────── */}
         <div className="space-y-1.5">

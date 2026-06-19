@@ -164,14 +164,17 @@ model QualityParameter {
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
   created_by      String
+  default_method_id String?
 
   tenant  Tenant @relation(fields: [tenant_id], references: [id])
   creator User   @relation(fields: [created_by], references: [id])
+  method  AnalysisMethod? @relation(fields: [default_method_id], references: [id])
 
   readings Reading[]
   analyses Analysis[]
   history  ParameterHistory[]
   aliases  ParameterAlias[]
+  collection_points CollectionPoint[]
 
   @@index([tenant_id, is_active])
   @@index([created_at])
@@ -223,7 +226,7 @@ model AnalysisMethod {
 
   tenant            Tenant            @relation(fields: [tenant_id], references: [id])
   analyses          Analysis[]
-  collection_points CollectionPoint[]
+  quality_parameters QualityParameter[]
 
   @@unique([tenant_id, name])
   @@map("analysis_methods")
@@ -250,17 +253,15 @@ model CollectionPoint {
   name        String
   location    String?
   description String?
-  method_id   String?
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 
   tenant   Tenant          @relation(fields: [tenant_id], references: [id])
-  method   AnalysisMethod? @relation(fields: [method_id], references: [id])
   readings Reading[]
   analyses Analysis[]
+  parameters QualityParameter[]
 
   @@index([tenant_id])
-  @@index([method_id])
   @@map("collection_points")
 }
 
@@ -397,7 +398,7 @@ model Analysis {
   tenant_id           String
   collection_point_id String
   parameter_id        String
-  method_id           String
+  method_id           String?
   value               Float
   unit                String
   min_limit_applied   Float?
@@ -416,7 +417,7 @@ model Analysis {
   tenant           Tenant           @relation(fields: [tenant_id], references: [id])
   collection_point CollectionPoint  @relation(fields: [collection_point_id], references: [id])
   parameter        QualityParameter @relation(fields: [parameter_id], references: [id])
-  method           AnalysisMethod   @relation(fields: [method_id], references: [id])
+  method           AnalysisMethod?  @relation(fields: [method_id], references: [id])
   recorder         User             @relation("AnalysisRecorder", fields: [recorded_by], references: [id])
   approver         User?            @relation("AnalysisApprover", fields: [approved_by], references: [id])
 

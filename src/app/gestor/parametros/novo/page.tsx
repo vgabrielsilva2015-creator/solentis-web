@@ -108,6 +108,32 @@ export default function NovoParametroPage() {
               )}
             </div>
 
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="default_method_name" className="text-sm font-medium text-slate-300">
+                  Método Padrão <span className="font-normal text-slate-500">(opcional)</span>
+                </label>
+                <Input
+                  id="default_method_name" name="default_method_name" type="text"
+                  placeholder="Ex: SM 4500-H+ B"
+                  disabled={isPending}
+                  className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="collection_points" className="text-sm font-medium text-slate-300">
+                  Pontos de Coleta <span className="font-normal text-slate-500">(opcional)</span>
+                </label>
+                <Input
+                  id="collection_points" name="collection_points" type="text"
+                  placeholder="Separe por vírgula (ex: Tanque 1, Entrada)"
+                  disabled={isPending}
+                  className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                />
+              </div>
+            </div>
+
             {state.error && (
               <p className="rounded-md border border-red-800/50 bg-red-950/40 px-3 py-2 text-sm text-red-400">
                 {state.error}

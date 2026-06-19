@@ -15,6 +15,8 @@ export default async function EditarParametroPage({
       id: true, name: true, unit: true,
       min_limit: true, max_limit: true,
       legal_reference: true, effective_date: true, is_active: true,
+      method: { select: { name: true } },
+      collection_points: { select: { name: true } }
     },
   })
 
