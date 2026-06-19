@@ -120,3 +120,33 @@ export async function toggleAtivoMetodo(
   revalidatePath(`/gestor/metodos/${metodoId}`)
   return {}
 }
+
+export async function criarPontoMetodo(methodId: string, name: string) {
+  await requireManager()
+  const tenant_id = await getTenantId()
+  await prisma.collectionPoint.create({
+    data: {
+      tenant_id,
+      name,
+      method_id: methodId,
+      is_active: true,
+    }
+  })
+  revalidatePath(`/gestor/metodos/${methodId}`)
+}
+
+export async function removerPontoMetodo(pointId: string) {
+  await requireManager()
+  const tenant_id = await getTenantId()
+  const point = await prisma.collectionPoint.findFirst({
+    where: { id: pointId, tenant_id }
+  })
+  if (!point) return
+  
+  await prisma.collectionPoint.deleteMany({
+    where: { id: pointId, tenant_id }
+  })
+  if (point.method_id) {
+    revalidatePath(`/gestor/metodos/${point.method_id}`)
+  }
+}

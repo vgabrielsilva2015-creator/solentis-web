@@ -60,6 +60,13 @@ export default async function AnalisesPage({
                 Histórico
               </Button>
             </Link>
+            {session.user.role === 'MANAGER' && (
+              <Link href="/gestor/metodos">
+                <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs h-8">
+                  Config. Analíticas
+                </Button>
+              </Link>
+            )}
             {session.user.role === 'TECHNICIAN' && (
               <Link href="/tecnico/analises/nova">
                 <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">

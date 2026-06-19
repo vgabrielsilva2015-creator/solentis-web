@@ -7,7 +7,7 @@ export default async function EditarMetodoPage({ params }: { params: Promise<{ i
   const { id } = await params
   const metodo = await prisma.analysisMethod.findFirst({
     where: { id, tenant_id: (await getTenantId()) },
-    select: { id: true, name: true, description: true, pop_content: true, is_active: true },
+    select: { id: true, name: true, description: true, pop_content: true, is_active: true, collection_points: true },
   })
   if (!metodo) notFound()
   return <EditMetodoForm metodo={metodo} />

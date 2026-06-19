@@ -5,6 +5,7 @@ import { SignOutButton } from '@/components/sign-out-button'
 import { TecnicoBottomNav } from '@/components/tecnico/bottom-nav'
 import { TopNav } from '@/components/ui/top-nav'
 import { Logo } from '@/components/logo'
+import { PushManager } from '@/components/push-manager'
 
 export default async function TecnicoLayout({
   children,
@@ -28,9 +29,10 @@ export default async function TecnicoLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm text-slate-400">
+            <span className="text-sm text-slate-400">
               {session.user.name ?? session.user.email}
             </span>
+            <PushManager />
             <SignOutButton />
           </div>
         </div>

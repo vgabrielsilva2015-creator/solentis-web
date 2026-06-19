@@ -104,3 +104,30 @@ export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> 
   revalidatePath(`/gestor/turnos/${id}`)
   return {}
 }
+
+export async function toggleDaySchedule(shiftId: string, days_of_week: number[]) {
+  await requireManager()
+  const tenant_id = await getTenantId()
+
+  const schedule = await prisma.shiftSchedule.findFirst({
+    where: { shift_id: shiftId, tenant_id }
+  })
+
+  if (schedule) {
+    await prisma.shiftSchedule.update({
+      where: { id: schedule.id },
+      data: { days_of_week }
+    })
+  } else {
+    await prisma.shiftSchedule.create({
+      data: {
+        tenant_id,
+        shift_id: shiftId,
+        days_of_week,
+        is_active: true
+      }
+    })
+  }
+
+  revalidatePath(`/gestor/turnos/${shiftId}`)
+}

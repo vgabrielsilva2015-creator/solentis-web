@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { getTenantId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
+import { sendPushToRole } from '@/lib/push-actions'
 
 
 async function requireTechnician() {
@@ -49,6 +50,7 @@ const AnaliseSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(5000, 'Laudo deve ter no máximo 5000 caracteres').nullable(),
   ),
+  laboratory_type: z.enum(['INTERNAL', 'EXTERNAL']).default('INTERNAL'),
   collected_at: z.string().min(1, 'Informe a data/hora da coleta'),
 })
 
@@ -72,6 +74,7 @@ export async function registrarAnalise(
     method_id:           formData.get('method_id'),
     value:               formData.get('value'),
     report_text:         formData.get('report_text'),
+    laboratory_type:     formData.get('laboratory_type'),
     collected_at:        formData.get('collected_at'),
   })
   if (!parsed.success) {
@@ -102,6 +105,7 @@ export async function registrarAnalise(
       min_limit_applied:   param.min_limit,   // snapshot imutável
       max_limit_applied:   param.max_limit,   // snapshot imutável
       report_text:         parsed.data.report_text,
+      laboratory_type:     parsed.data.laboratory_type,
       is_non_conformant:   isNonConformant,
       approved_by:         null,
       approved_at:         null,
@@ -111,6 +115,20 @@ export async function registrarAnalise(
       recorded_by:         userId,
     },
   })
+
+  // Enviar notificações push
+  try {
+    const tenantId = await getTenantId()
+    const payload = {
+      title: 'Nova Análise Registrada',
+      body: `O parâmetro ${param.unit ? 'foi' : 'foi'} medido: ${parsed.data.value} ${param.unit}`,
+      url: '/gestor/analises'
+    }
+    await sendPushToRole(tenantId, 'MANAGER', payload)
+    await sendPushToRole(tenantId, 'OPERATOR', { ...payload, url: '/operador/dashboard' })
+  } catch (err) {
+    console.error('Falha ao enviar push', err)
+  }
 
   revalidatePath('/tecnico/analises')
   return { success: true }

@@ -18,6 +18,7 @@ export interface TrendChartData {
   value: number
   minLimit: number | null
   maxLimit: number | null
+  laboratoryType?: string
 }
 
 interface TrendChartProps {
@@ -84,7 +85,10 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
             contentStyle={{ backgroundColor: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)', borderRadius: '8px' }}
             itemStyle={{ color: 'var(--color-slate-200)', fontWeight: 500 }}
             labelStyle={{ color: 'var(--color-slate-400)', marginBottom: '4px' }}
-            formatter={(val: any) => [`${val} ${unit}`, parameterName]}
+            formatter={(val: any, name: any, props: any) => {
+              const labType = props.payload.laboratoryType === 'EXTERNAL' ? '(Externo)' : '(Interno)'
+              return [`${val} ${unit} ${labType}`, parameterName]
+            }}
           />
 
           {/* Cenário 1: Tem Min e Max (ex: pH) -> Faixa Permitida é Cinza entre eles */}

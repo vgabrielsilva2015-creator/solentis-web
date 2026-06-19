@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { BackButton } from '@/components/back-button'
 import { Input } from '@/components/ui/input'
 import { editarMetodo, toggleAtivoMetodo, type MetodoFormState } from '../actions'
+import { CollectionPointsSection } from './collection-points-section'
 
-type Metodo = { id: string; name: string; description: string | null; pop_content: string | null; is_active: boolean }
+type Metodo = { id: string; name: string; description: string | null; pop_content: string | null; is_active: boolean; collection_points?: { id: string; name: string; location: string | null }[] }
 
 const initialState: MetodoFormState = {}
 
@@ -77,6 +78,8 @@ export function EditMetodoForm({ metodo }: { metodo: Metodo }) {
           </Button>
         </form>
       </div>
+
+      <CollectionPointsSection methodId={metodo.id} points={metodo.collection_points || []} />
 
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4">
         <h2 className="text-base font-medium text-slate-200">Ações</h2>

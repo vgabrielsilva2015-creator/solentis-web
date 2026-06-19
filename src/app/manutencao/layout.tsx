@@ -2,19 +2,19 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
-import { GestorSidebar } from '@/components/gestor/sidebar'
+import { ManutencaoSidebar } from '@/components/manutencao/sidebar'
 import { TopNav } from '@/components/ui/top-nav'
 import { MobileNav } from '@/components/mobile-nav'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
 
-export default async function GestorLayout({
+export default async function ManutencaoLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/acesso-negado')
+  if (!session || session.user.role !== 'MAINTENANCE') redirect('/acesso-negado')
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -22,10 +22,10 @@ export default async function GestorLayout({
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <MobileNav><GestorSidebar /></MobileNav>
-            <Link href="/gestor/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
-            <span className="rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
-              Gestor
+            <MobileNav><ManutencaoSidebar /></MobileNav>
+            <Link href="/manutencao/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
+            <span className="rounded-full bg-blue-900/60 px-2.5 py-0.5 text-xs font-medium text-blue-400">
+              Manutenção
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -43,7 +43,7 @@ export default async function GestorLayout({
       <div className="flex flex-1">
         {/* Sidebar (visível apenas em telas lg+) */}
         <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-900/50">
-          <GestorSidebar />
+          <ManutencaoSidebar />
         </aside>
 
         {/* Conteúdo das páginas */}

@@ -5,6 +5,7 @@ import { SignOutButton } from '@/components/sign-out-button'
 import { OperadorBottomNav } from '@/components/operador/bottom-nav'
 import { TopNav } from '@/components/ui/top-nav'
 import { Logo } from '@/components/logo'
+import { PushManager } from '@/components/push-manager'
 
 export default async function OperadorLayout({
   children,
@@ -31,6 +32,7 @@ export default async function OperadorLayout({
             <span className="hidden sm:block text-sm text-slate-400">
               {session.user.name ?? session.user.email}
             </span>
+            <PushManager />
             <SignOutButton />
           </div>
         </div>

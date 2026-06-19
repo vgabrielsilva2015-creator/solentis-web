@@ -118,6 +118,24 @@ export default async function GestorDashboard({
     }),
   ])
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3. CONSUMO QUÍMICO
+  // ─────────────────────────────────────────────────────────────────────────────
+  const chemicalExitsRaw = await prisma.chemicalStockExit.findMany({
+    where: { tenant_id, used_at: { gte: periodoInicio } },
+    include: { product: { select: { name: true, unit: true } } }
+  })
+  
+  const chemicalConsumptionMap = new Map<string, { name: string, unit: string, total: number }>()
+  chemicalExitsRaw.forEach(exit => {
+    const key = exit.product_id
+    if (!chemicalConsumptionMap.has(key)) {
+      chemicalConsumptionMap.set(key, { name: exit.product.name, unit: exit.product.unit, total: 0 })
+    }
+    chemicalConsumptionMap.get(key)!.total += exit.quantity
+  })
+  const chemicalConsumptionData = Array.from(chemicalConsumptionMap.values()).sort((a, b) => b.total - a.total)
+
   const heatmapPoints: HeatmapPoint[] = collectionPointsRaw.map(cp => {
     const hasNonConform = cp.readings.some(r => r.is_non_conformant)
     const hasAnyReadings = cp.readings.length > 0
@@ -142,14 +160,15 @@ export default async function GestorDashboard({
     const analysesForChart = await prisma.analysis.findMany({
       where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h } },
       orderBy: { collected_at: 'asc' },
-      select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true }
+      select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true, laboratory_type: true }
     })
     
     trendData = analysesForChart.map(a => ({
       time: formatDateDisplay(a.collected_at),
       value: a.value,
       minLimit: a.min_limit_applied,
-      maxLimit: a.max_limit_applied
+      maxLimit: a.max_limit_applied,
+      laboratoryType: a.laboratory_type
     }))
   }
 
@@ -280,6 +299,29 @@ export default async function GestorDashboard({
           </div>
         </section>
       )}
+
+      {/* LINHA 4: CONSUMO QUÍMICO */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+          Consumo de Produtos Químicos ({diasNum === 1 ? 'Últimas 24h' : `Últimos ${diasNum} dias`})
+        </h2>
+        {chemicalConsumptionData.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            Nenhum registro de consumo no período.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {chemicalConsumptionData.map(item => (
+              <div key={item.name} className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col justify-between">
+                <p className="text-sm text-slate-400 mb-2 truncate" title={item.name}>{item.name}</p>
+                <p className="text-2xl font-semibold text-slate-100">
+                  {item.total.toFixed(2)} <span className="text-sm text-slate-500 font-normal">{item.unit}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
     </main>
   )

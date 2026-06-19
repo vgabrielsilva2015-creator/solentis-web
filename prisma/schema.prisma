@@ -35,6 +35,7 @@ model Tenant {
   occurrences             Occurrence[]
   occurrence_photos       OccurrencePhoto[]
   shift_instances         ShiftInstance[]
+  shift_schedules         ShiftSchedule[]
   shift_handovers         ShiftHandover[]
   shift_tasks             ShiftTask[]
   shift_task_photos       ShiftTaskPhoto[]
@@ -71,6 +72,7 @@ model User {
   quality_parameters        QualityParameter[]
   severity_defaults_updated OccurrenceSeverityDefault[]
   parameter_histories       ParameterHistory[]
+  push_subscriptions        PushSubscription[]
 
   // — operação (1 FK por model → sem nome de relação)
   equipment              Equipment[]
@@ -131,6 +133,18 @@ model Session {
 
   @@index([user_id])
   @@map("sessions")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  user_id   String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("push_subscriptions")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -207,8 +221,9 @@ model AnalysisMethod {
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 
-  tenant   Tenant     @relation(fields: [tenant_id], references: [id])
-  analyses Analysis[]
+  tenant            Tenant            @relation(fields: [tenant_id], references: [id])
+  analyses          Analysis[]
+  collection_points CollectionPoint[]
 
   @@unique([tenant_id, name])
   @@map("analysis_methods")
@@ -235,14 +250,17 @@ model CollectionPoint {
   name        String
   location    String?
   description String?
+  method_id   String?
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 
-  tenant   Tenant     @relation(fields: [tenant_id], references: [id])
+  tenant   Tenant          @relation(fields: [tenant_id], references: [id])
+  method   AnalysisMethod? @relation(fields: [method_id], references: [id])
   readings Reading[]
   analyses Analysis[]
 
   @@index([tenant_id])
+  @@index([method_id])
   @@map("collection_points")
 }
 
@@ -259,9 +277,27 @@ model Shift {
 
   tenant          Tenant          @relation(fields: [tenant_id], references: [id])
   shift_instances ShiftInstance[]
+  schedules       ShiftSchedule[]
 
   @@index([tenant_id])
   @@map("shifts")
+}
+
+model ShiftSchedule {
+  id           String   @id @default(cuid())
+  tenant_id    String
+  shift_id     String
+  days_of_week Int[]    // e.g. [1, 2, 3, 4, 5] for Mon-Fri
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+  shift  Shift  @relation(fields: [shift_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@index([shift_id, is_active])
+  @@map("shift_schedules")
 }
 
 // 4 linhas fixas (uma por severidade) — PK é o próprio severity; sem tenant_id (global)
@@ -367,6 +403,7 @@ model Analysis {
   min_limit_applied   Float?
   max_limit_applied   Float?
   report_text         String?
+  laboratory_type     String    @default("INTERNAL") // INTERNAL or EXTERNAL
   is_non_conformant   Boolean
   approved_by         String?
   approved_at         DateTime?

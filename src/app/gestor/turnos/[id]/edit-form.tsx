@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button'
 import { BackButton } from '@/components/back-button'
 import { Input } from '@/components/ui/input'
 import { editarTurno, toggleAtivoTurno, type TurnoFormState } from '../actions'
+import { ShiftScheduleSection } from './shift-schedule-section'
 
 type Turno = {
   id: string; name: string; start_time: string; end_time: string
   crosses_midnight: boolean; handover_timeout_minutes: number; is_active: boolean
+  schedules?: { id: string; days_of_week: number[]; is_active: boolean }[]
 }
 
 const initialState: TurnoFormState = {}
@@ -89,6 +91,8 @@ export function EditTurnoForm({ turno }: { turno: Turno }) {
           </Button>
         </form>
       </div>
+
+      <ShiftScheduleSection shiftId={turno.id} schedule={turno.schedules?.[0]} />
 
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
         <h2 className="text-base font-medium text-slate-200 mb-4">Ações</h2>

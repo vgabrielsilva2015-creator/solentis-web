@@ -25,6 +25,7 @@ type Draft = {
   method_id:           string
   value:               string
   report_text:         string
+  laboratory_type:     string
   collected_at:        string
 }
 
@@ -49,6 +50,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
   const [methodId, setMethodId]                   = useState('')
   const [valueStr, setValueStr]                   = useState('')
   const [reportText, setReportText]               = useState('')
+  const [laboratoryType, setLaboratoryType]       = useState('INTERNAL')
   const [collectedAt, setCollectedAt]             = useState('')
 
   // ── Carregar rascunho do localStorage na montagem ──────────────────────────
@@ -62,6 +64,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
         setMethodId(d.method_id ?? '')
         setValueStr(d.value ?? '')
         setReportText(d.report_text ?? '')
+        setLaboratoryType(d.laboratory_type ?? 'INTERNAL')
         setCollectedAt(d.collected_at ?? formatDatetimeLocal(new Date()))
       } catch {
         setCollectedAt(formatDatetimeLocal(new Date()))
@@ -81,10 +84,11 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
       method_id:           methodId,
       value:               valueStr,
       report_text:         reportText,
+      laboratory_type:     laboratoryType,
       collected_at:        collectedAt,
     }
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-  }, [mounted, collectionPointId, parameterId, methodId, valueStr, reportText, collectedAt])
+  }, [mounted, collectionPointId, parameterId, methodId, valueStr, reportText, laboratoryType, collectedAt])
 
   // ── Limpar rascunho e redirecionar após sucesso ────────────────────────────
   useEffect(() => {
@@ -253,6 +257,26 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
           />
           {state.fieldErrors?.collected_at && (
             <p className="text-xs text-red-400">{state.fieldErrors.collected_at[0]}</p>
+          )}
+        </div>
+
+        {/* ── Tipo de Laboratório ─────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          <label htmlFor="laboratory_type" className="text-sm font-medium text-slate-300">
+            Laboratório
+          </label>
+          <select
+            id="laboratory_type" name="laboratory_type"
+            value={laboratoryType}
+            onChange={(e) => setLaboratoryType(e.target.value)}
+            disabled={isPending} required
+            className={SELECT_CLS}
+          >
+            <option value="INTERNAL">Interno</option>
+            <option value="EXTERNAL">Externo (Terceirizado)</option>
+          </select>
+          {state.fieldErrors?.laboratory_type && (
+            <p className="text-xs text-red-400">{state.fieldErrors.laboratory_type[0]}</p>
           )}
         </div>
 
