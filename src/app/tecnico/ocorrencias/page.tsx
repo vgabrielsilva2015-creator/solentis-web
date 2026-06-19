@@ -100,7 +100,7 @@ export default async function OcorrenciasTecnicoPage({
 
         {/* Lista */}
         {ocorrencias.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center text-sm text-slate-500">
             Nenhuma ocorrência encontrada.
           </div>
         ) : (

@@ -252,7 +252,7 @@ export default async function TurnosPage() {
 
         {/* ─── Sem atividade ─── */}
         {activeInstances.length === 0 && (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center space-y-3">
+          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center space-y-3">
             <p className="text-sm text-slate-500">Nenhum turno ativo hoje.</p>
             <Link href="/operador/turnos/abrir">
               <Button className="bg-slate-100 text-slate-900 hover:bg-white text-sm h-10 px-6">

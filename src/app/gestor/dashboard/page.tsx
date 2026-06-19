@@ -4,6 +4,8 @@ import { getTenantId } from '@/lib/tenant'
 import { KpiCard } from '@/components/ui/kpi-card'
 import { StatusHeatmap, HeatmapPoint, PointStatus } from '@/components/ui/status-heatmap'
 import { TrendChart, TrendChartData } from '@/components/ui/trend-chart'
+import { ConsumptionBarChart } from '@/components/ui/consumption-bar-chart'
+import { OccurrencesPieChart } from '@/components/ui/occurrences-pie-chart'
 import { ParamSelector } from "./param-selector"
 
 function calcDelta(current: number, previous: number): number | null {
@@ -98,7 +100,7 @@ export default async function GestorDashboard({
   // ─────────────────────────────────────────────────────────────────────────────
   // 2. DADOS DO HEATMAP & OCORRÊNCIAS CRÍTICAS
   // ─────────────────────────────────────────────────────────────────────────────
-  const [collectionPointsRaw, criticalOccurrences] = await Promise.all([
+  const [collectionPointsRaw, criticalOccurrences, occurrencesBySeverity] = await Promise.all([
     prisma.collectionPoint.findMany({
       where: { tenant_id, is_active: true },
       select: {
@@ -116,6 +118,12 @@ export default async function GestorDashboard({
       take: 6,
       include: { reporter: { select: { name: true } } }
     }),
+    // Ocorrencias por severidade (todas no periodo)
+    prisma.occurrence.groupBy({
+      by: ['severity'],
+      where: { tenant_id, created_at: { gte: periodoInicio } },
+      _count: { severity: true }
+    })
   ])
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -145,8 +153,28 @@ export default async function GestorDashboard({
     return { id: cp.id, name: cp.name, status }
   })
 
+  // Cores por severidade
+  const severityColors: Record<string, string> = {
+    LOW: '#64748b',       // slate-500
+    MEDIUM: '#f59e0b',    // amber-500
+    HIGH: '#f97316',      // orange-500
+    CRITICAL: '#ef4444'   // red-500
+  }
+  const severityLabels: Record<string, string> = {
+    LOW: 'Baixa',
+    MEDIUM: 'Média',
+    HIGH: 'Alta',
+    CRITICAL: 'Crítica'
+  }
+  
+  const occurrencesPieData = occurrencesBySeverity.map(o => ({
+    name: severityLabels[o.severity] || o.severity,
+    value: o._count.severity,
+    color: severityColors[o.severity] || '#94a3b8'
+  }))
+
   // ─────────────────────────────────────────────────────────────────────────────
-  // 3. DADOS DO GRÁFICO DE TENDÊNCIAS
+  // 4. DADOS DO GRÁFICO DE TENDÊNCIAS
   // ─────────────────────────────────────────────────────────────────────────────
   const parameters = await prisma.qualityParameter.findMany({
     where: { tenant_id, is_active: true },
@@ -276,11 +304,20 @@ export default async function GestorDashboard({
             )}
           </div>
         </div>
+
+        <div className="space-y-4">
+          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            Ocorrências por Severidade ({diasNum === 1 ? '24h' : `${diasNum}d`})
+          </h2>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+            <OccurrencesPieChart data={occurrencesPieData} />
+          </div>
+        </div>
       </section>
 
-      {/* LINHA 3: TENDÊNCIA DE PARÂMETROS */}
+      {/* LINHA 3: TENDÊNCIA DE PARÂMETROS E CONSUMO QUÍMICO */}
       {parameters.length > 0 && (
-        <section className="space-y-4">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Tendência por Parâmetro (24h)</h2>
             <ParamSelector 
@@ -303,24 +340,11 @@ export default async function GestorDashboard({
       {/* LINHA 4: CONSUMO QUÍMICO */}
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-          Consumo de Produtos Químicos ({diasNum === 1 ? 'Últimas 24h' : `Últimos ${diasNum} dias`})
+          Consumo Químico ({diasNum === 1 ? '24h' : `${diasNum}d`})
         </h2>
-        {chemicalConsumptionData.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
-            Nenhum registro de consumo no período.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {chemicalConsumptionData.map(item => (
-              <div key={item.name} className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col justify-between">
-                <p className="text-sm text-slate-400 mb-2 truncate" title={item.name}>{item.name}</p>
-                <p className="text-2xl font-semibold text-slate-100">
-                  {item.total.toFixed(2)} <span className="text-sm text-slate-500 font-normal">{item.unit}</span>
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+          <ConsumptionBarChart data={chemicalConsumptionData} />
+        </div>
       </section>
 
     </main>
