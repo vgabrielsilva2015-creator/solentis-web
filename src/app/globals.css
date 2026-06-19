@@ -11,6 +11,14 @@
   --color-status-danger: var(--color-red-500);
   --color-status-critical: var(--color-red-700);
 
+  /* Auth UI Tokens */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-success: var(--success);
+  --color-alarm: var(--alarm);
+  --color-data: var(--data);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -90,37 +98,46 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Auth UI Tokens (Split Water) */
+  --background: oklch(0.165 0.018 235);
+  --foreground: oklch(0.965 0.008 240);
+  --surface: oklch(0.215 0.020 235);
+  --surface-2: oklch(0.265 0.022 232);
+  --surface-3: oklch(0.315 0.024 230);
+  --primary: oklch(0.80 0.165 78);
+  --primary-foreground: oklch(0.16 0.018 235);
+  --muted-foreground: oklch(0.66 0.015 230);
+  --success: oklch(0.72 0.14 155);
+  --alarm: oklch(0.62 0.20 27);
+  --data: oklch(0.78 0.14 215);
+  --border: oklch(1 0 0 / 6%);
+  --ring: oklch(0.80 0.165 78);
+
+  /* Mapping Shadcn equivalents to maintain rest of app */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --destructive: var(--alarm);
+  --input: oklch(1 0 0 / 10%);
+  
+  /* Retaining some non-colliding Shadcn tokens just in case */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {

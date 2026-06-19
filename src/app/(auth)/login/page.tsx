@@ -1,11 +1,11 @@
 'use client'
 
-import Link from 'next/link'
-import { Logo } from '@/components/logo'
 import { useActionState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { AuthShell } from '@/components/auth/AuthShell'
+import { AuthHeader, AuthFooterLink, FormError } from '@/components/auth/AuthComponents'
+import { PasswordField } from '@/components/auth/PasswordField'
 import { loginAction, type LoginState } from './actions'
+import { ArrowRight, Loader2 } from 'lucide-react'
 
 const initialState: LoginState = {}
 
@@ -13,74 +13,78 @@ export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, initialState)
 
   return (
-    <div className="w-full max-w-sm space-y-6">
-      {/* Logo / título */}
-      <div className="flex flex-col items-center space-y-4">
-        <div className="mb-2">
-          <Logo size="lg" />
-        </div>
-        <div className="text-center space-y-1 mt-2">
-          <p className="text-sm text-slate-400">Sistema de Gestão de ETE</p>
-        </div>
-      </div>
+    <AuthShell tagline="Conformidade ambiental em tempo real.">
+      <AuthHeader title="Entrar" />
 
-      {/* Card do formulário */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-lg space-y-5">
-        <h2 className="text-lg font-semibold text-slate-100">Entrar</h2>
-
-        <form action={formAction} className="space-y-4">
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium text-slate-300">
-              E-mail
-            </label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="seu@email.com"
-              required
-              disabled={isPending}
-              className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium text-slate-300">
-              Senha
-            </label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              required
-              disabled={isPending}
-              className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
-            />
-          </div>
-
-          {/* Mensagem de erro */}
-          {state.error && (
-            <p className="text-sm text-red-400 bg-red-950/40 border border-red-800/50 rounded-md px-3 py-2">
-              {state.error}
-            </p>
-          )}
-
-          <Button
-            type="submit"
+      <form action={formAction} className="space-y-4">
+        <div className="space-y-1.5">
+          <label htmlFor="email" className="block text-xs uppercase tracking-wider text-muted-foreground">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="voce@empresa.com.br"
+            required
             disabled={isPending}
-            className="w-full bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50"
-          >
-            {isPending ? 'Entrando…' : 'Entrar'}
-          </Button>
-        </form>
-      </div>
+            className="w-full h-11 px-3 rounded-[10px] bg-surface-2 border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/50 transition-all"
+          />
+        </div>
 
-      <p className="text-center text-xs text-slate-600">
-        Solentis © {new Date().getFullYear()}
-      </p>
-    </div>
+        <PasswordField
+          id="password"
+          name="password"
+          label="Senha"
+          autoComplete="current-password"
+          placeholder="Sua senha de acesso"
+          required
+          disabled={isPending}
+        />
+
+        <div className="flex items-center gap-2 pt-1">
+          <input 
+            type="checkbox" 
+            id="remember" 
+            name="remember" 
+            className="rounded border-border bg-surface-2 text-primary focus:ring-primary/40"
+          />
+          <label htmlFor="remember" className="text-sm text-muted-foreground">
+            Manter conectado
+          </label>
+        </div>
+
+        <FormError message={state.error} />
+
+        <button
+          type="submit"
+          disabled={isPending}
+          className="group flex w-full h-11 items-center justify-center gap-2 rounded-[10px] bg-primary text-primary-foreground font-medium transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none mt-2"
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Entrando…
+            </>
+          ) : (
+            <>
+              Entrar
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </>
+          )}
+        </button>
+      </form>
+
+      <div className="mt-8 space-y-3">
+        <AuthFooterLink href="/forgot" label="Esqueci minha senha" align="center" />
+        <div className="h-px w-full bg-border" />
+        <AuthFooterLink 
+          href="/signup" 
+          label={<>Não tem conta? <strong className="font-medium text-foreground">Solicitar acesso</strong></>} 
+          align="center" 
+        />
+      </div>
+    </AuthShell>
   )
 }
