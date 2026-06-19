@@ -3,42 +3,18 @@ import { Droplet } from 'lucide-react'
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 select-none ${className}`}>
-      {/* S com Gota (SVG puro com mask transparente verdadeira) */}
-      <svg
-        width="32"
-        height="32"
-        viewBox="0 0 32 32"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="shrink-0"
-      >
-        {/* Definindo a máscara (o que for branco aparece, o que for preto recorta) */}
-        <mask id="droplet-mask">
-          <rect width="32" height="32" fill="white" rx="8" />
-          {/* Gota no canto superior direito pintada de preto para recortar o fundo */}
-          <path
-            d="M24 8C24 8 20.5 12.5 20.5 15C20.5 16.933 22.067 18.5 24 18.5C25.933 18.5 27.5 16.933 27.5 15C27.5 12.5 24 8 24 8Z"
-            fill="black"
-          />
-        </mask>
-
-        {/* Grupo principal com a máscara aplicada */}
-        <g mask="url(#droplet-mask)">
-          <rect width="32" height="32" rx="8" fill="#0ea5e9" />
-          <text
-            x="15"
-            y="25"
-            fontSize="26"
-            fontWeight="900"
-            fontFamily="system-ui, -apple-system, sans-serif"
-            fontStyle="italic"
-            textAnchor="middle"
-            fill="white"
-          >
-            S
-          </text>
-        </g>
-      </svg>
+      <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-sky-600 shrink-0 shadow-sm border border-sky-500/20">
+        <span 
+          className="text-white text-xl font-black italic tracking-tighter z-10" 
+          style={{ paddingRight: '2px', paddingBottom: '1px' }}
+        >
+          S
+        </span>
+        <Droplet 
+          className="absolute w-[14px] h-[14px] text-sky-100 fill-sky-100 top-1 right-1 z-20 drop-shadow-sm" 
+          strokeWidth={1.5} 
+        />
+      </div>
       <span className="text-xl font-bold tracking-tight text-slate-100">
         solentis
       </span>
