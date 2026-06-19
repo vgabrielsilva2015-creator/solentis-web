@@ -6,11 +6,9 @@ import { verifyPassword } from '@/lib/password'
 import {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_ATTEMPTS,
-  SESSION_MAX_AGE_DEFAULT,
   isRateLimited,
-  getSessionMaxAge,
 } from '@/lib/auth-utils'
-import { getTenantId } from '@/lib/tenant'
+import { authConfig } from '@/lib/auth.config'
 
 // ─── Augmentação de tipos do NextAuth ────────────────────────────────────────
 declare module 'next-auth' {
@@ -45,6 +43,7 @@ const loginSchema = z.object({
 
 // ─── Configuração NextAuth ────────────────────────────────────────────────────
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -110,33 +109,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.role               = user.role
-        token.mustChangePassword = user.mustChangePassword
-        token.tenantId           = user.tenantId
-
-        // Timeout de sessão diferente por perfil
-        token.exp = Math.floor(Date.now() / 1000) + getSessionMaxAge(user.role)
-      }
-      return token
-    },
-    session({ session, token }) {
-      session.user.role               = token.role
-      session.user.mustChangePassword = token.mustChangePassword
-      session.user.tenantId           = token.tenantId
-      return session
-    },
-  },
-
-  pages: {
-    signIn: '/login',
-  },
-
-  session: {
-    strategy: 'jwt',
-    maxAge: SESSION_MAX_AGE_DEFAULT,
-  },
 })

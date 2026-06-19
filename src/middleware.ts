@@ -1,6 +1,9 @@
-import { auth } from '@/lib/auth'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/lib/auth.config'
 import { NextRequest, NextResponse } from 'next/server'
 import { ROLE_PREFIXES, getDashboardRoute } from '@/lib/auth-utils'
+
+const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
