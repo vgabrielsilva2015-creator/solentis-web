@@ -16,8 +16,8 @@ export default function LoginPage() {
     <div className="w-full max-w-sm space-y-6">
       {/* Logo / título */}
       <div className="flex flex-col items-center space-y-4">
-        <div className="scale-[1.5] origin-center mb-2">
-          <Logo />
+        <div className="mb-2">
+          <Logo size="lg" />
         </div>
         <div className="text-center space-y-1 mt-2">
           <p className="text-sm text-slate-400">Sistema de Gestão de ETE</p>

@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "../../.gemini"
+		},
+		{
+			"path": "../../.local"
+		},
+		{
+			"path": "../../.ms-ad"
+		},
+		{
+			"path": "../../.antigravity-ide"
+		},
+		{
+			"path": "../../.cache"
+		},
+		{
+			"path": "../../.claude"
+		}
+	]
+}

@@ -2,6 +2,10 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 export async function extractDataFromPDF(base64Data: string, mimeType: string) {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
@@ -29,30 +33,53 @@ Retorne um JSON ESTRITO seguindo este formato:
 Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apenas o objeto JSON válido.
 `
 
-  // Tentativa de fallback de modelos (algumas chaves não tem o 1.5 ativado)
   const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-pro']
+  const MAX_RETRIES = 2
+  const BASE_DELAY_MS = 2000
   let lastError: any = null
 
   for (const modelName of modelsToTry) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName })
-      const result = await model.generateContent([
-        prompt,
-        { inlineData: { data: base64Data, mimeType } }
-      ])
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName })
+        const result = await model.generateContent([
+          prompt,
+          { inlineData: { data: base64Data, mimeType } }
+        ])
 
-      const text = result.response.text()
-      const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-      
-      return { success: true, data: JSON.parse(cleaned), usedModel: modelName }
-    } catch (err: any) {
-      console.warn(`[GEMINI FALLBACK] Modelo ${modelName} falhou:`, err.message)
-      lastError = err
+        const text = result.response.text()
+        const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
+        
+        return { success: true, data: JSON.parse(cleaned), usedModel: modelName }
+      } catch (err: any) {
+        lastError = err
+        const errorMsg = err.message || ''
+        console.warn(`[GEMINI] Modelo ${modelName}, tentativa ${attempt + 1}/${MAX_RETRIES} falhou: ${errorMsg}`)
+
+        // Se for erro 429 (rate limit) ou 503 (overloaded), esperar com backoff antes de tentar de novo
+        const isRetryable = errorMsg.includes('429') || errorMsg.includes('503') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('overloaded')
+        
+        if (isRetryable && attempt < MAX_RETRIES - 1) {
+          const waitTime = BASE_DELAY_MS * Math.pow(2, attempt) // 2s, 4s
+          console.log(`[GEMINI] Aguardando ${waitTime}ms antes de retry...`)
+          await delay(waitTime)
+        } else if (!isRetryable) {
+          // Se não for retryable (ex: modelo não existe), pular direto para o próximo modelo
+          break
+        }
+      }
     }
   }
 
+  // Formatar mensagem de erro amigável
+  const friendlyError = lastError?.message?.includes('429') || lastError?.message?.includes('RESOURCE_EXHAUSTED')
+    ? 'Limite de requisições da API atingido. Tente novamente em alguns minutos.'
+    : lastError?.message?.includes('not found') || lastError?.message?.includes('not supported')
+    ? 'Nenhum modelo de IA compatível encontrado na chave API configurada.'
+    : lastError?.message || 'Falha ao processar o PDF com a Inteligência Artificial.'
+
   console.error('Erro em todos os modelos da IA:', lastError)
-  return { success: false, error: lastError?.message || 'Falha ao processar o PDF com a Inteligência Artificial (Nenhum modelo compatível encontrado na chave API).' }
+  return { success: false, error: friendlyError }
 }
 
 export async function getMappingContext() {
@@ -78,6 +105,49 @@ export async function getMappingContext() {
   })
   
   return { parameters, points, aliases }
+}
+
+export async function createParameterFromImport(data: { name: string; unit: string }) {
+  const { prisma } = await import('@/lib/prisma')
+  const { getTenantId } = await import('@/lib/tenant')
+  const { auth } = await import('@/lib/auth')
+  
+  const session = await auth()
+  if (!session) return { success: false, error: 'Não autorizado.' }
+  
+  const tenantId = await getTenantId()
+  const user = await prisma.user.findUnique({
+    where: { tenant_id_email: { tenant_id: tenantId, email: session.user.email! } },
+    select: { id: true }
+  })
+  if (!user) return { success: false, error: 'Usuário não encontrado.' }
+
+  try {
+    const param = await prisma.qualityParameter.create({
+      data: {
+        tenant_id: tenantId,
+        name: data.name.trim(),
+        unit: data.unit.trim() || 'mg/L',
+        effective_date: new Date(),
+        is_active: true,
+        created_by: user.id,
+      }
+    })
+
+    // Criar alias automático com o nome original do laudo
+    await prisma.parameterAlias.create({
+      data: {
+        tenant_id: tenantId,
+        alias: data.name.trim(),
+        parameter_id: param.id,
+      }
+    })
+
+    return { success: true, parameter: { id: param.id, name: param.name, unit: param.unit } }
+  } catch (err: any) {
+    console.error('Erro ao criar parâmetro:', err)
+    return { success: false, error: err.message }
+  }
 }
 
 export async function saveMappedReadings(data: {
