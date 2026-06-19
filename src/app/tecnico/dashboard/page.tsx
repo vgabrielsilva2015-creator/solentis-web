@@ -42,7 +42,7 @@ export default async function TecnicoDashboard() {
     { title: 'Equipamentos', desc: 'Gerenciar preventivas e corretivas',     href: '/tecnico/equipamentos'      },
     { title: 'Ocorrências',  desc: 'Acompanhar e fechar ocorrências',        href: '/tecnico/ocorrencias'       },
     { title: 'Estoque',      desc: 'Registrar entradas de produtos químicos', href: '/tecnico/estoque'          },
-    { title: 'Turnos',       desc: 'Instâncias de turno ativas',             href: '/tecnico/turnos/instancias' },
+    { title: 'Turnos',       desc: 'Tarefas de turno ativas',             href: '/tecnico/turnos/tarefas' },
   ]
 
   return (
@@ -126,3 +126,4 @@ export default async function TecnicoDashboard() {
     </main>
   )
 }
+

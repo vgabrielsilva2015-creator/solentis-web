@@ -92,7 +92,7 @@ export default async function TecnicoInstanciasPage() {
                         : <span className="text-slate-600">nenhuma pendente</span>
                       }
                     </span>
-                    <Link href={`/tecnico/turnos/instancias/${inst.id}`}>
+                    <Link href={`/tecnico/turnos/tarefas/${inst.id}`}>
                       <Button className="h-8 border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">
                         Gerenciar tarefas
                       </Button>
@@ -107,3 +107,4 @@ export default async function TecnicoInstanciasPage() {
     </main>
   )
 }
+

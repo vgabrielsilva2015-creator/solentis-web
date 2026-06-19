@@ -79,10 +79,10 @@ export default async function InstanciasTurnosPage({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Instâncias de Turno</h1>
+        <h1 className="text-xl font-semibold">Tarefas do Turno</h1>
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500">{total} registro(s)</span>
-          <Link href="/gestor/turnos/instancias/pre-agendar">
+          <Link href="/gestor/turnos/tarefas/pre-agendar">
             <Button className="bg-blue-700 text-white hover:bg-blue-600 text-xs h-8">
               + Pré-agendar
             </Button>
@@ -98,7 +98,7 @@ export default async function InstanciasTurnosPage({
           return (
             <Link
               key={f.value}
-              href={`/gestor/turnos/instancias${params}`}
+              href={`/gestor/turnos/tarefas${params}`}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 isActive
                   ? 'bg-slate-700 text-slate-100'
@@ -121,7 +121,7 @@ export default async function InstanciasTurnosPage({
           {instances.map((inst) => (
             <Link
               key={inst.id}
-              href={`/gestor/turnos/instancias/${inst.id}`}
+              href={`/gestor/turnos/tarefas/${inst.id}`}
               className="block rounded-xl border border-slate-800 bg-slate-900 p-4 hover:bg-slate-800/60 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
@@ -154,7 +154,7 @@ export default async function InstanciasTurnosPage({
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-2 pt-1">
           <Link
-            href={`/gestor/turnos/instancias?${status ? `status=${status}&` : ''}page=${page - 1}`}
+            href={`/gestor/turnos/tarefas?${status ? `status=${status}&` : ''}page=${page - 1}`}
             className={`text-xs px-3 py-1.5 rounded-md border border-slate-700 text-slate-400 hover:bg-slate-800 ${page <= 1 ? 'pointer-events-none opacity-40' : ''}`}
           >
             ← Anterior
@@ -163,7 +163,7 @@ export default async function InstanciasTurnosPage({
             {page} / {totalPages}
           </span>
           <Link
-            href={`/gestor/turnos/instancias?${status ? `status=${status}&` : ''}page=${page + 1}`}
+            href={`/gestor/turnos/tarefas?${status ? `status=${status}&` : ''}page=${page + 1}`}
             className={`text-xs px-3 py-1.5 rounded-md border border-slate-700 text-slate-400 hover:bg-slate-800 ${page >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
           >
             Próximo →
@@ -173,3 +173,4 @@ export default async function InstanciasTurnosPage({
     </div>
   )
 }
+

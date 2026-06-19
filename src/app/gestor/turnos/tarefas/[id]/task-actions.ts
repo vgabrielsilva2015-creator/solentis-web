@@ -73,7 +73,7 @@ export async function atribuirTarefa(
     where:  { id: instanceId, tenant_id: (await getTenantId()) },
     select: { status: true },
   })
-  if (!instance)                    return { error: 'Instância não encontrada.' }
+  if (!instance)                    return { error: 'Tarefa não encontrada.' }
   if (instance.status === 'CLOSED') return { error: 'Não é possível adicionar tarefas a um turno fechado.' }
 
   // Garante que o operador atribuído pertence ao tenant e está ativo
@@ -97,7 +97,7 @@ export async function atribuirTarefa(
     },
   })
 
-  revalidatePath(`/gestor/turnos/instancias/${instanceId}`)
+  revalidatePath(`/gestor/turnos/tarefas/${instanceId}`)
   return { success: true }
 }
 
@@ -114,5 +114,5 @@ export async function removerTarefa(taskId: string): Promise<void> {
   if (!task) return
 
   await prisma.shiftTask.deleteMany({ where: { id: taskId , tenant_id: (await getTenantId()) } })
-  revalidatePath(`/gestor/turnos/instancias/${task.shift_instance_id}`)
+  revalidatePath(`/gestor/turnos/tarefas/${task.shift_instance_id}`)
 }

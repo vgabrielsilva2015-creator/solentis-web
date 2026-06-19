@@ -22,7 +22,7 @@ export function PreAgendarForm({ shifts }: { shifts: Shift[] }) {
 
   useEffect(() => {
     if (state.success && state.instanceId) {
-      router.push(`/gestor/turnos/instancias/${state.instanceId}`)
+      router.push(`/gestor/turnos/tarefas/${state.instanceId}`)
     }
   }, [state.success, state.instanceId, router])
 
@@ -86,3 +86,4 @@ export function PreAgendarForm({ shifts }: { shifts: Shift[] }) {
     </form>
   )
 }
+

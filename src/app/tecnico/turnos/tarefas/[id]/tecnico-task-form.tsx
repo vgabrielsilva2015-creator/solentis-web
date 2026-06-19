@@ -4,7 +4,7 @@ import { useActionState } from 'react'
 import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 // actions ficam no path do Gestor — import compartilhado conforme decisão de arquitetura
-import { atribuirTarefa, removerTarefa, type TaskFormState } from '@/app/gestor/turnos/instancias/[id]/task-actions'
+import { atribuirTarefa, removerTarefa, type TaskFormState } from '@/app/gestor/turnos/tarefas/[id]/task-actions'
 
 const INITIAL: TaskFormState = {}
 

@@ -95,7 +95,7 @@ export async function editarPassagem(
     })
   })
 
-  revalidatePath('/gestor/turnos/instancias')
+  revalidatePath('/gestor/turnos/tarefas')
   return { success: true }
 }
 
@@ -161,6 +161,7 @@ export async function preAgendarTurno(
     },
   })
 
-  revalidatePath('/gestor/turnos/instancias')
+  revalidatePath('/gestor/turnos/tarefas')
   return { success: true, instanceId: instance.id }
 }
+

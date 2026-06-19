@@ -129,20 +129,20 @@ describe('Cenário 5 — Não-conformidade detectada e sinalizada', () => {
 })
 
 // ─── Cenário 6 — Non-MANAGER tenta editar turno fechado → bloqueado ──────────
-// A rota /gestor/turnos/instancias/* exige MANAGER.
+// A rota /gestor/turnos/tarefas/* exige MANAGER.
 // O middleware (ROLE_PREFIXES) bloqueia OPERATOR e TECHNICIAN antes de chegar na action.
 
 describe('Cenário 6 — Acesso por perfil: apenas MANAGER edita passagens de turno', () => {
-  it('OPERATOR é bloqueado em /gestor/turnos/instancias', () => {
-    expect(isRouteAllowedForRole('/gestor/turnos/instancias/abc/editar', 'OPERATOR')).toBe(false)
+  it('OPERATOR é bloqueado em /gestor/turnos/tarefas', () => {
+    expect(isRouteAllowedForRole('/gestor/turnos/tarefas/abc/editar', 'OPERATOR')).toBe(false)
   })
 
-  it('TECHNICIAN é bloqueado em /gestor/turnos/instancias', () => {
-    expect(isRouteAllowedForRole('/gestor/turnos/instancias/abc/editar', 'TECHNICIAN')).toBe(false)
+  it('TECHNICIAN é bloqueado em /gestor/turnos/tarefas', () => {
+    expect(isRouteAllowedForRole('/gestor/turnos/tarefas/abc/editar', 'TECHNICIAN')).toBe(false)
   })
 
-  it('MANAGER acessa /gestor/turnos/instancias', () => {
-    expect(isRouteAllowedForRole('/gestor/turnos/instancias/abc', 'MANAGER')).toBe(true)
+  it('MANAGER acessa /gestor/turnos/tarefas', () => {
+    expect(isRouteAllowedForRole('/gestor/turnos/tarefas/abc', 'MANAGER')).toBe(true)
   })
 })
 
@@ -334,3 +334,4 @@ describe('Cenário 13 — Dado inválido: validação impede corrupção do banc
     expect(r.success).toBe(false)
   })
 })
+

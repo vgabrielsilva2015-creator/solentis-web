@@ -30,8 +30,8 @@ const NAV: NavItem[] = [
   { type: 'section', label: 'Configurações' },
   { type: 'link',    label: 'Parâmetros',           href: '/gestor/parametros', icon: <Settings className="w-4 h-4" /> },
   { type: 'link',    label: 'Categorias',           href: '/gestor/categorias', icon: <Tags className="w-4 h-4" /> },
-  { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/instancias', icon: <Clock className="w-4 h-4" /> },
-  { type: 'link',    label: 'Instâncias de Turno',  href: '/gestor/turnos/instancias', icon: <CalendarDays className="w-4 h-4" /> },
+  { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/tarefas', icon: <Clock className="w-4 h-4" /> },
+  { type: 'link',    label: 'Tarefas do Turno',  href: '/gestor/turnos/tarefas', icon: <CalendarDays className="w-4 h-4" /> },
   { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia', icon: <Timer className="w-4 h-4" /> },
   { type: 'section', label: 'Estoque' },
   { type: 'link',    label: 'Produtos Químicos',   href: '/gestor/produtos-quimicos', icon: <FlaskConical className="w-4 h-4" /> },
@@ -82,3 +82,4 @@ export function GestorSidebar() {
     </nav>
   )
 }
+

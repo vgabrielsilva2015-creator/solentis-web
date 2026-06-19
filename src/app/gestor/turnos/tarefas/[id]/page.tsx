@@ -68,7 +68,7 @@ export default async function InstanciaDetalhePage({
     }),
   ])
 
-  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/gestor/turnos/instancias')
+  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/gestor/turnos/tarefas')
 
   const h = instance.handover
 
@@ -83,7 +83,7 @@ export default async function InstanciaDetalhePage({
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <BackButton href="/gestor/turnos/instancias" label="Instâncias de Turno" />
+      <BackButton href="/gestor/turnos/tarefas" label="Tarefas do Turno" />
       <div className="flex items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
@@ -98,7 +98,7 @@ export default async function InstanciaDetalhePage({
 
       {/* Dados da instância */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
-        <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Instância</p>
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tarefa</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
           <div>
             <span className="text-slate-500">Aberto por</span>

@@ -37,14 +37,14 @@ export default async function TecnicoInstanciaDetalhePage({
     }),
   ])
 
-  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/tecnico/turnos/instancias')
+  if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/tecnico/turnos/tarefas')
 
   const done    = instance.shift_tasks.filter((t) => t.status === 'DONE').length
   const pending = instance.shift_tasks.filter((t) => t.status === 'PENDING').length
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
-        <BackButton href="/tecnico/turnos/instancias" label="Instâncias" />
+        <BackButton href="/tecnico/turnos/tarefas" label="Tarefas" />
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
           <p className="text-xs text-slate-500 mt-0.5">
