@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { OperadorBottomNav } from '@/components/operador/bottom-nav'
 import { TopNav } from '@/components/ui/top-nav'
+import { Logo } from '@/components/logo'
 
 export default async function OperadorLayout({
   children,
@@ -11,17 +12,17 @@ export default async function OperadorLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
+  if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
     redirect('/acesso-negado')
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Barra superior */}
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
         <div className="mx-auto max-w-lg flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Link href="/operador/dashboard" className="text-base font-bold tracking-tight hover:text-slate-300 transition-colors">Solentis</Link>
+            <Link href="/operador/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
             <span className="rounded-full bg-emerald-900/60 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
               Operador
             </span>

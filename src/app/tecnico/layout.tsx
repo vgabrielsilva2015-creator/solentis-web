@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { TecnicoBottomNav } from '@/components/tecnico/bottom-nav'
 import { TopNav } from '@/components/ui/top-nav'
+import { Logo } from '@/components/logo'
 
 export default async function TecnicoLayout({
   children,
@@ -21,7 +22,7 @@ export default async function TecnicoLayout({
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
         <div className="mx-auto max-w-lg flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Link href="/tecnico/dashboard" className="text-base font-bold tracking-tight hover:text-slate-300 transition-colors">Solentis</Link>
+            <Link href="/tecnico/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
             <span className="rounded-full bg-sky-900/60 px-2.5 py-0.5 text-xs font-medium text-sky-400">
               Técnico
             </span>

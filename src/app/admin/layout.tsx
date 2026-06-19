@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { AdminSidebar } from '@/components/admin/sidebar'
 import { MobileNav } from '@/components/mobile-nav'
+import { Logo } from '@/components/logo'
 
 export default async function AdminLayout({
   children,
@@ -20,8 +21,8 @@ export default async function AdminLayout({
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <MobileNav><AdminSidebar /></MobileNav>
-            <Link href="/admin/plantas" className="text-lg font-bold tracking-tight hover:text-slate-300 transition-colors">
-              Solentis
+            <Link href="/admin/plantas" className="transition-opacity hover:opacity-80">
+              <Logo />
             </Link>
             <span className="rounded-full bg-indigo-900/60 px-2.5 py-0.5 text-xs font-medium text-indigo-300 border border-indigo-500/20">
               Super Admin
