@@ -15,10 +15,11 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm space-y-6">
       {/* Logo / título */}
-      <div className="flex flex-col items-center space-y-3">
-        <Logo className="w-12 h-12" />
-        <div className="text-center space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-100">Solentis</h1>
+      <div className="flex flex-col items-center space-y-4">
+        <div className="scale-[1.5] origin-center mb-2">
+          <Logo />
+        </div>
+        <div className="text-center space-y-1 mt-2">
           <p className="text-sm text-slate-400">Sistema de Gestão de ETE</p>
         </div>
       </div>
