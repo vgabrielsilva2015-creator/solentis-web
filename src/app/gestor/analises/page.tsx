@@ -31,7 +31,7 @@ export default async function GestorAnalisesPage({
       include: {
         parameter: true,
         collection_point: true,
-        recorded_by_user: { select: { name: true } },
+        recorder: { select: { name: true } },
       },
       orderBy: { collected_at: 'desc' },
       take,
@@ -90,7 +90,7 @@ export default async function GestorAnalisesPage({
                     {a.laboratory_type === 'EXTERNAL' ? 'Externo' : 'Interno'}
                   </td>
                   <td className="px-4 py-3 text-slate-400">
-                    {a.recorded_by_user?.name ?? '-'}
+                    {a.recorder?.name ?? '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
