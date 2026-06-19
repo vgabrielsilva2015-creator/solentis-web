@@ -3,42 +3,45 @@ import { Droplet } from 'lucide-react'
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-2 select-none ${className}`}>
-      {/* S com Gota (SVG puro usando negative space) */}
+      {/* S com Gota (Vetor Geométrico Puro) */}
       <svg
         width="32"
         height="32"
-        viewBox="0 0 32 32"
+        viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="shrink-0"
       >
-        {/* Definindo a máscara: Tudo que for branco mantém, o que for preto recorta */}
-        <mask id="droplet-mask">
-          <rect width="32" height="32" fill="white" />
-          {/* Gota recortando o S */}
-          <path
-            d="M23 9C23 9 19.5 13.5 19.5 16C19.5 17.933 21.067 19.5 23 19.5C24.933 19.5 26.5 17.933 26.5 16C26.5 13.5 23 9 23 9Z"
-            fill="black"
-          />
-        </mask>
+        <defs>
+          {/* Fundo com gradiente premium */}
+          <linearGradient id="bg-grad" x1="0" y1="0" x2="100" y2="100">
+            <stop stopColor="#0ea5e9" />
+            <stop offset="1" stopColor="#0284c7" />
+          </linearGradient>
+          
+          {/* Máscara: Tudo branco fica visível, gota preta faz o recorte */}
+          <mask id="drop-cutout">
+            <rect width="100" height="100" fill="white" />
+            {/* Gota milimetricamente calculada para ficar dentro da ponta superior direita do S */}
+            <path 
+              d="M75 16 C75 16 67 26 67 32 C67 36.4 70.6 40 75 40 C79.4 40 83 36.4 83 32 C83 26 75 16 75 16 Z" 
+              fill="black" 
+            />
+          </mask>
+        </defs>
 
-        {/* Fundo Azul Intacto */}
-        <rect width="32" height="32" rx="8" fill="#0ea5e9" />
+        {/* Quadrado base */}
+        <rect width="100" height="100" rx="22" fill="url(#bg-grad)" />
         
-        {/* Letra S Branca com a máscara aplicada. A gota preta da máscara fará um furo no 'S', revelando o azul do fundo */}
-        <text
-          x="15"
-          y="25"
-          fontSize="26"
-          fontWeight="900"
-          fontFamily="system-ui, -apple-system, sans-serif"
-          fontStyle="italic"
-          textAnchor="middle"
-          fill="white"
-          mask="url(#droplet-mask)"
-        >
-          S
-        </text>
+        {/* Letra S desenhada matematicamente com a gota recortada na ponta */}
+        <path 
+          d="M 75 30 C 75 10, 25 10, 25 35 C 25 55, 75 45, 75 65 C 75 90, 25 90, 25 70" 
+          stroke="white" 
+          strokeWidth="20" 
+          strokeLinecap="round" 
+          fill="none" 
+          mask="url(#drop-cutout)" 
+        />
       </svg>
       <span className="text-xl font-bold tracking-tight text-slate-100">
         solentis
