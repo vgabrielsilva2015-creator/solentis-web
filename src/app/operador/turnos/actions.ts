@@ -50,10 +50,10 @@ const IniciarPassagemSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
   ),
-  outgoing_observations: z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
-  ),
+  outgoing_observations: z.string().min(5, 'A observação do turno deve ter pelo menos 5 caracteres.'),
+  confirm: z.literal('on', {
+    error: 'É obrigatório confirmar a passagem do turno.'
+  }),
 })
 
 const ConfirmarPassagemSchema = z.object({
@@ -184,6 +184,7 @@ export async function iniciarPassagem(
   const parsed = IniciarPassagemSchema.safeParse({
     pending_items:         formData.get('pending_items'),
     outgoing_observations: formData.get('outgoing_observations'),
+    confirm:               formData.get('confirm'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }

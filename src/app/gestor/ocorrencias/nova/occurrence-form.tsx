@@ -15,10 +15,10 @@ const DEADLINE_LABEL: Record<string, string> = {
   LOW:      '720 horas (30 dias)',
 }
 
-type Draft = { description: string; severity: string }
-const EMPTY_DRAFT: Draft = { description: '', severity: '' }
+type Draft = { description: string; severity: string; category: string; collection_point_id: string }
+const EMPTY_DRAFT: Draft = { description: '', severity: '', category: '', collection_point_id: '' }
 
-export function GestorOccurrenceForm() {
+export function GestorOccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {id: string, name: string, location: string | null}[] }) {
   const router   = useRouter()
   const formRef  = useRef<HTMLFormElement>(null)
   const [state, action, isPending] = useActionState(registrarOcorrencia, INITIAL)
@@ -94,11 +94,57 @@ export function GestorOccurrenceForm() {
           autoComplete="off"
           value={draft.description}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           placeholder="Descreva o que aconteceu de forma clara e objetiva…"
         />
         {state.fieldErrors?.description && (
           <p className="text-xs text-red-400">{state.fieldErrors.description[0]}</p>
+        )}
+      </div>
+
+      {/* Categoria */}
+      <div className="space-y-1.5">
+        <label htmlFor="category" className="text-sm font-medium text-slate-300">
+          Categoria *
+        </label>
+        <select
+          id="category" name="category"
+          value={draft.category}
+          onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Selecione…</option>
+          <option value="VAZAMENTO">Vazamento</option>
+          <option value="QUEBRA">Quebra de Equipamento</option>
+          <option value="FALTA_PRODUTO">Falta de Produto</option>
+          <option value="SEGURANCA">Segurança/Risco</option>
+          <option value="OUTROS">Outros</option>
+        </select>
+        {state.fieldErrors?.category && (
+          <p className="text-xs text-red-400">{state.fieldErrors.category[0]}</p>
+        )}
+      </div>
+
+      {/* Ponto de Coleta (Opcional) */}
+      <div className="space-y-1.5">
+        <label htmlFor="collection_point_id" className="text-sm font-medium text-slate-300">
+          Ponto de Coleta <span className="text-slate-500 font-normal">(opcional)</span>
+        </label>
+        <select
+          id="collection_point_id" name="collection_point_id"
+          value={draft.collection_point_id}
+          onChange={(e) => setDraft((d) => ({ ...d, collection_point_id: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Nenhum específico</option>
+          {collectionPoints.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name} {p.location ? `(${p.location})` : ''}
+            </option>
+          ))}
+        </select>
+        {state.fieldErrors?.collection_point_id && (
+          <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
         )}
       </div>
 
@@ -111,7 +157,7 @@ export function GestorOccurrenceForm() {
           id="severity" name="severity"
           value={draft.severity}
           onChange={(e) => setDraft((d) => ({ ...d, severity: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">Selecione…</option>
           <option value="LOW">Baixa</option>

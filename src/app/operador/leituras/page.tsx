@@ -17,18 +17,25 @@ function formatDatetime(d: Date): string {
 export default async function LeituraListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; filter?: string }>
 }) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, filter } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
+  const where: any = { tenant_id: (await getTenantId()) }
+  if (filter === 'non-conformant') {
+    where.is_non_conformant = true
+  } else if (filter === 'conformant') {
+    where.is_non_conformant = false
+  }
+
   const [readings, total] = await Promise.all([
     prisma.reading.findMany({
-      where:   { tenant_id: (await getTenantId()) },
+      where,
       include: {
         collection_point: { select: { name: true } },
         parameter:        { select: { name: true } },
@@ -37,7 +44,7 @@ export default async function LeituraListPage({
       take:    PAGE_SIZE,
       skip,
     }),
-    prisma.reading.count({ where: { tenant_id: (await getTenantId()) } }),
+    prisma.reading.count({ where }),
   ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -51,9 +58,22 @@ export default async function LeituraListPage({
             <p className="text-xs text-slate-400">{total} registro(s) no total</p>
           </div>
           <Link href="/operador/leituras/nova">
-            <Button className="bg-slate-100 text-slate-900 hover:bg-white">
+            <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
               + Nova
             </Button>
+          </Link>
+        </div>
+
+        {/* Filtros rápidos */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Link href="/operador/leituras" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${!filter ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Todas
+          </Link>
+          <Link href="/operador/leituras?filter=conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'conformant' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Conforme
+          </Link>
+          <Link href="/operador/leituras?filter=non-conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'non-conformant' ? 'bg-red-900/30 text-red-400 border-red-900/50' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Não Conforme
           </Link>
         </div>
 

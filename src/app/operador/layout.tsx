@@ -2,8 +2,10 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
-import { OperadorBottomNav } from '@/components/operador/bottom-nav'
+import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
+import { LayoutDashboard, Droplets, Clock, AlertTriangle, Package } from 'lucide-react'
 import { TopNav } from '@/components/ui/top-nav'
+import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
 
@@ -12,6 +14,14 @@ export default async function OperadorLayout({
 }: {
   children: React.ReactNode
 }) {
+  const NAV_ITEMS: NavItem[] = [
+    { href: '/operador/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+    { href: '/operador/leituras',    label: 'Leituras',    icon: Droplets        },
+    { href: '/operador/turnos',      label: 'Turnos',      icon: Clock           },
+    { href: '/operador/ocorrencias', label: 'Ocorrências', icon: AlertTriangle   },
+    { href: '/operador/estoque',     label: 'Estoque',     icon: Package         },
+  ]
+
   const session = await auth()
   if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
     redirect('/acesso-negado')
@@ -32,6 +42,7 @@ export default async function OperadorLayout({
             <span className="hidden sm:block text-sm text-slate-400">
               {session.user.name ?? session.user.email}
             </span>
+            <NotificationBell />
             <PushManager />
             <SignOutButton />
           </div>
@@ -45,7 +56,7 @@ export default async function OperadorLayout({
         {children}
       </div>
 
-      <OperadorBottomNav />
+      <BottomNav items={NAV_ITEMS} />
     </div>
   )
 }

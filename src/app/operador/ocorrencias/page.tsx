@@ -7,25 +7,7 @@ import { getTenantId } from '@/lib/tenant'
 
 const PAGE_SIZE  = 20
 
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW:      'Baixa',
-  MEDIUM:   'Média',
-  HIGH:     'Alta',
-  CRITICAL: 'Crítica',
-}
-
-const SEVERITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
-  MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
-  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  OPEN:        'Aberta',
-  IN_PROGRESS: 'Em andamento',
-  RESOLVED:    'Resolvida',
-}
+import { SEVERITY_LABEL, SEVERITY_COLOR, OCCURRENCE_STATUS_LABEL } from '@/lib/labels'
 
 function formatDatetime(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -37,12 +19,12 @@ function formatDatetime(d: Date): string {
 export default async function OcorrenciasOperadorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; filter?: string }>
 }) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, filter } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
@@ -53,7 +35,14 @@ export default async function OcorrenciasOperadorPage({
 
   if (!userId) redirect('/login')
 
-  const where = { tenant_id: (await getTenantId()), reported_by: userId.id }
+  const where: any = { tenant_id: (await getTenantId()), reported_by: userId.id }
+  if (filter === 'open') {
+    where.status = { in: ['OPEN', 'IN_PROGRESS'] }
+  } else if (filter === 'resolved') {
+    where.status = 'RESOLVED'
+  } else if (filter === 'high') {
+    where.severity = { in: ['HIGH', 'CRITICAL'] }
+  }
 
   const [ocorrencias, total] = await Promise.all([
     prisma.occurrence.findMany({
@@ -83,6 +72,22 @@ export default async function OcorrenciasOperadorPage({
             <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
               + Nova
             </Button>
+          </Link>
+        </div>
+
+        {/* Filtros rápidos */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Link href="/operador/ocorrencias" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${!filter ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Todas
+          </Link>
+          <Link href="/operador/ocorrencias?filter=open" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'open' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Abertas
+          </Link>
+          <Link href="/operador/ocorrencias?filter=high" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'high' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Alta Prioridade
+          </Link>
+          <Link href="/operador/ocorrencias?filter=resolved" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'resolved' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Resolvidas
           </Link>
         </div>
 
@@ -118,7 +123,7 @@ export default async function OcorrenciasOperadorPage({
                       )}
                     </div>
                     <span className="shrink-0 text-xs text-slate-500">
-                      {STATUS_LABEL[oc.status] ?? oc.status}
+                      {OCCURRENCE_STATUS_LABEL[oc.status] ?? oc.status}
                     </span>
                   </div>
 

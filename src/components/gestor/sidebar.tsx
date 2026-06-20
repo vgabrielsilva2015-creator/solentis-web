@@ -17,7 +17,8 @@ import {
   FileCheck2,
   AlertTriangle,
   ScrollText,
-  ShieldAlert
+  ShieldAlert,
+  Wrench
 } from 'lucide-react'
 
 type NavItem =
@@ -41,6 +42,10 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Laudos Externos',      href: '/gestor/laudos', icon: <UploadCloud className="w-4 h-4" /> },
   { type: 'link',    label: 'Leituras Realizadas',  href: '/gestor/leituras', icon: <FileCheck2 className="w-4 h-4" /> },
   { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias', icon: <AlertTriangle className="w-4 h-4" /> },
+  { type: 'section', label: 'Manutenção' },
+  { type: 'link',    label: 'Preventivas',         href: '/gestor/manutencao/preventivas', icon: <CalendarDays className="w-4 h-4" /> },
+  { type: 'link',    label: 'Corretivas',          href: '/gestor/manutencao/corretivas', icon: <Wrench className="w-4 h-4" /> },
+  { type: 'section', label: 'Governança' },
   { type: 'link',    label: 'Relatórios (Auditoria)', href: '/gestor/relatorios', icon: <ScrollText className="w-4 h-4" /> },
   { type: 'section', label: 'Sistema' },
   { type: 'link',    label: 'Auditoria Global',     href: '/gestor/auditoria', icon: <ShieldAlert className="w-4 h-4" /> },

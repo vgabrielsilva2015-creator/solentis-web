@@ -5,7 +5,8 @@ import { PageHeader } from '@/components/ui/page-header'
 import { formatDateDisplay } from '@/lib/date-utils'
 import { getTenantId } from '@/lib/tenant'
 import Link from 'next/link'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export const metadata = {
   title: 'Análises Registradas | Solentis',
@@ -44,10 +45,18 @@ export default async function GestorAnalisesPage({
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <PageHeader 
-        title="Histórico de Análises" 
-        description="Visualize e edite as análises registradas pelos técnicos."
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader 
+          title="Histórico de Análises" 
+          description="Visualize e edite as análises registradas pelos técnicos."
+        />
+        <Link href={`/api/export?type=analyses`} target="_blank">
+          <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+            <Download className="w-4 h-4 mr-1.5" />
+            Exportar CSV
+          </Button>
+        </Link>
+      </div>
 
       <div className="rounded-md border border-slate-800 bg-slate-900 overflow-hidden">
         <table className="w-full text-left text-sm text-slate-300">

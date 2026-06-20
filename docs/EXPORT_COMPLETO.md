@@ -1,6 +1,73 @@
 # SOLENTIS WEB - EXPORT COMPLETO
 
-Este arquivo contém todo o código fonte relevante do projeto Solentis, exportado em 2026-06-20T12:42:38.040Z.
+Este arquivo contém todo o código fonte relevante do projeto Solentis, exportado em 2026-06-20T13:44:56.288Z.
+
+### `src/app/(auth)/actions.ts`
+```ts
+'use server'
+
+import { prisma } from '@/lib/prisma'
+import { hashPassword } from '@/lib/password'
+
+function encodeToken(email: string) {
+  return Buffer.from(email).toString('base64')
+}
+
+function decodeToken(token: string) {
+  return Buffer.from(token, 'base64').toString('ascii')
+}
+
+export async function sendPasswordResetLink(email: string) {
+  // Simula um atraso de rede
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  const user = await prisma.user.findFirst({
+    where: { email, is_active: true }
+  })
+
+  if (!user) {
+    // Por segurança, não revelamos se o usuário existe, apenas retornamos sucesso
+    return { success: true, token: null }
+  }
+
+  // Gera o link mágico baseado no e-mail
+  const token = encodeToken(user.email)
+  
+  return { success: true, token }
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  if (!token || !newPassword || newPassword.length < 8) {
+    return { error: 'Dados inválidos ou senha muito curta.' }
+  }
+
+  try {
+    const email = decodeToken(token)
+    
+    const user = await prisma.user.findFirst({
+      where: { email, is_active: true }
+    })
+
+    if (!user) {
+      return { error: 'Link inválido ou expirado.' }
+    }
+
+    const hashed = await hashPassword(newPassword)
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password_hash: hashed, must_change_password: false }
+    })
+
+    return { success: true }
+  } catch (err) {
+    return { error: 'Ocorreu um erro ao processar a requisição.' }
+  }
+}
+
+```
 
 ### `src/app/(auth)/forgot/page.tsx`
 ```tsx
@@ -9,25 +76,38 @@ Este arquivo contém todo o código fonte relevante do projeto Solentis, exporta
 import { useState } from 'react'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { AuthHeader, AuthFooterLink, FormError } from '@/components/auth/AuthComponents'
-import { Loader2, MailCheck, ArrowLeft } from 'lucide-react'
+import { Loader2, MailCheck, ArrowLeft, KeyRound } from 'lucide-react'
 import Link from 'next/link'
+import { sendPasswordResetLink } from '../actions'
 
 export default function ForgotPasswordPage() {
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
   const [email, setEmail] = useState('')
+  const [magicToken, setMagicToken] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsPending(true)
     setError('')
     
-    // Mock send email behavior
-    setTimeout(() => {
+    try {
+      const result = await sendPasswordResetLink(email)
       setIsPending(false)
-      setIsSuccess(true)
-    }, 1200)
+      
+      if (!result.success) {
+        setError('Erro ao enviar link.')
+      } else {
+        setIsSuccess(true)
+        if (result.token) {
+          setMagicToken(result.token)
+        }
+      }
+    } catch (err) {
+      setIsPending(false)
+      setError('Erro de conexão.')
+    }
   }
 
   if (isSuccess) {
@@ -44,6 +124,22 @@ export default function ForgotPasswordPage() {
               Enviamos as instruções para <strong className="text-foreground font-medium">{email}</strong>. Verifique sua caixa de entrada e o spam.
             </p>
           </div>
+
+          {magicToken && (
+            <div className="w-full max-w-[280px] p-4 bg-primary/10 border border-primary/20 rounded-xl flex flex-col items-center mt-4">
+              <span className="text-xs text-primary font-medium uppercase tracking-wider mb-2">Ambiente de Testes</span>
+              <p className="text-xs text-foreground text-center mb-4">
+                Como não há provedor de email configurado, utilize o botão abaixo para prosseguir:
+              </p>
+              <Link
+                href={`/reset?token=${magicToken}`}
+                className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:brightness-105 transition-all"
+              >
+                <KeyRound className="w-4 h-4" />
+                Redefinir Senha
+              </Link>
+            </div>
+          )}
 
           <Link 
             href="/login"
@@ -389,6 +485,7 @@ import { AuthHeader, FormError, PasswordStrength } from '@/components/auth/AuthC
 import { PasswordField } from '@/components/auth/PasswordField'
 import { ShieldCheck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { resetPassword } from '../actions'
 
 function ResetContent() {
   const router = useRouter()
@@ -450,14 +547,22 @@ function ResetContent() {
       return
     }
 
-    // Mock reset password behavior
-    setTimeout(() => {
+    try {
+      const result = await resetPassword(token as string, password)
       setIsPending(false)
-      setIsSuccess(true)
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
-    }, 1500)
+
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setIsSuccess(true)
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      }
+    } catch (err) {
+      setIsPending(false)
+      setError('Erro ao se conectar com o servidor.')
+    }
   }
 
   return (
@@ -2166,7 +2271,8 @@ export async function GET(request: Request) {
             shift_id: schedule.shift_id,
             date: targetDate,
             status: 'SCHEDULED' as const,
-            operator_id: null // Fica vazio para o Gestor atribuir ou Operador pegar depois
+            operator_id: null, // Fica vazio para o Gestor atribuir ou Operador pegar depois
+            opened_by: 'CRON'
           })
         }
       }
@@ -3263,6 +3369,9 @@ interface DashboardClientProps {
   dbOccurrencesPieData: { name: string; value: number; color: string }[]
   dbChemicalConsumptionData: { name: string; unit: string; total: number }[]
   dbTrendData: any[]
+  dbFeed: any[]
+  dbMaintenance: any[]
+  dbSla: any[]
   dbParameters: { id: string; name: string; unit: string }[]
   dbSelectedParam: any
   diasNum: number
@@ -3270,50 +3379,6 @@ interface DashboardClientProps {
   pontoId?: string
   activePointName?: string | null
 }
-
-// Mock data values (from reference design)
-const mockPoints = [
-  { key: 'entrada', name: 'Entrada ETE', status: 'crit', ph: 8.9, dqo: 412, trend: [8.2, 8.5, 8.0, 8.8, 9.1, 8.7, 8.9] },
-  { key: 'reator', name: 'Reator Biológico', status: 'warn', ph: 7.2, dqo: 180, trend: [7.6, 7.4, 7.8, 7.2, 7.5, 7.3, 7.2] },
-  { key: 'decantador', name: 'Decantador', status: 'ok', ph: 7.0, dqo: 95, trend: [7.1, 7.0, 7.2, 6.9, 7.0, 7.1, 7.0] },
-  { key: 'saida', name: 'Saída Final', status: 'ok', ph: 7.1, dqo: 33, trend: [7.0, 7.1, 6.9, 7.2, 7.0, 7.1, 7.1] },
-];
-
-const mockTrendData = [7.4, 7.1, 7.6, 6.9, 8.2, 7.0, 7.1];
-
-const mockConsumption = {
-  cloro: [18, 22, 16, 20, 24, 19, 21],
-  sulfato: [40, 38, 44, 36, 42, 39, 41],
-  polimero: [8, 9, 7, 10, 8, 9, 8],
-};
-
-const mockOccurrences = [
-  { t: 'Vazamento de efluente', sev: 'crit', pt: 'Saída Final', ago: 'há 21 min' },
-  { t: 'pH fora da faixa CONAMA', sev: 'crit', pt: 'Entrada ETE', ago: 'há 48 min' },
-  { t: 'Sólidos suspensos elevados', sev: 'high', pt: 'Decantador', ago: 'há 1 h 12' },
-];
-
-const mockFeed = [
-  { time: '16:05', who: 'Sistema', text: 'eficiência de remoção subiu para 92%.', type: 'ok' },
-  { time: '15:42', who: 'Carlos Lima', text: 'dosou 12 kg de Cloro Granulado.', type: 'chem' },
-  { time: '15:18', who: 'Maria Souza', text: 'registrou leitura de pH no Reator Biológico.', type: 'reading' },
-  { time: '15:10', who: 'Sistema', text: 'DQO fora do limite na Saída Final.', type: 'alert' },
-  { time: '14:32', who: 'João Pereira', text: 'abriu o turno da Tarde.', type: 'shift' },
-];
-
-const mockMaintenance = [
-  { name: 'Dosadora de Cloro', days: 2 },
-  { name: 'Bomba de Recirculação', days: 5 },
-  { name: 'Soprador Aerador #2', days: 23 },
-  { name: 'Medidor de Vazão', days: 47 },
-];
-
-const mockSla = [
-  { sev: 'Crítica', avg: 8, meta: 24 },
-  { sev: 'Alta', avg: 40, meta: 72 },
-  { sev: 'Média', avg: 120, meta: 168 },
-  { sev: 'Baixa', avg: 610, meta: 720 },
-];
 
 export function DashboardClient({
   dbReadingsToday,
@@ -3327,6 +3392,9 @@ export function DashboardClient({
   dbOccurrencesPieData,
   dbChemicalConsumptionData,
   dbTrendData,
+  dbFeed,
+  dbMaintenance,
+  dbSla,
   dbParameters,
   dbSelectedParam,
   diasNum,
@@ -3541,62 +3609,25 @@ export function DashboardClient({
   }
 
   const buildConsumption = () => {
-    const W = 680
-    const H = 210
-    const pl = 28
-    const pr = 10
-    const pt = 10
-    const pb = 24
-    const cc = ['var(--brand)', 'var(--dash-consumption-2)', 'var(--dash-consumption-3)']
-    const keys = ['cloro', 'sulfato', 'polimero'] as const
-    const totals = days.map((_, i) => keys.reduce((acc, k) => acc + mockConsumption[k][i], 0))
-    const max = Math.max(...totals) * 1.15
-    const step = (W - pl - pr) / days.length
-    const Y = (v: number) => pt + (1 - v / max) * (H - pt - pb)
-
-    const bars = days.map((d, i) => {
-      const x = pl + i * step + step * 0.27
-      const bw = step * 0.46
-      let acc = 0
-      const segs = keys.map((k, ki) => {
-        const v = mockConsumption[k][i]
-        const y0 = Y(acc)
-        const y1 = Y(acc + v)
-        acc += v
-        return <rect key={ki} x={x} y={y1} width={bw} height={Math.max(0, y0 - y1)} fill={cc[ki]} />
-      })
-      return (
-        <g key={i}>
-          {segs}
-          <text x={x + bw / 2} y={H - 7} textAnchor="middle" fontFamily={F.mono} fontSize={9} fill="var(--txt3)">
-            {d}
-          </text>
-        </g>
-      )
-    })
-
-    const glines = [0, 0.5, 1].map((f, i) => (
-      <line key={i} x1={pl} y1={pt + f * (H - pt - pb)} x2={W - pr} y2={pt + f * (H - pt - pb)} stroke="var(--border)" strokeWidth={1} />
-    ))
-
-    const legend = (
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
-        {['Cloro Granulado', 'Sulfato de Alumínio', 'Polímero Catiônico'].map((l, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: cc[i] }} />
-            <span style={{ fontSize: '11.5px', color: 'var(--txt2)' }}>{l}</span>
-          </div>
-        ))}
-      </div>
-    )
-
+    if (dbChemicalConsumptionData.length === 0) return miniEmpty('Sem consumo registrado no período.')
+    const max = Math.max(...dbChemicalConsumptionData.map(d => d.total))
+    
     return (
-      <div>
-        {legend}
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-          {glines}
-          {bars}
-        </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+        {dbChemicalConsumptionData.slice(0, 5).map((chem, i) => {
+          const pct = max > 0 ? (chem.total / max) * 100 : 0
+          return (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '12px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--txt)' }}>{chem.name}</span>
+                <span style={{ fontFamily: F.mono, color: 'var(--txt2)' }}>{chem.total} {chem.unit}</span>
+              </div>
+              <div style={{ height: '6px', borderRadius: '3px', background: 'var(--s3)', overflow: 'hidden' }}>
+                <div style={{ width: pct + '%', height: '100%', background: 'var(--brand)', borderRadius: '3px' }} />
+              </div>
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -3691,28 +3722,12 @@ export function DashboardClient({
   }
 
   // Active Points depending on selected filter (Option B removed)
-  const activePoints = mockPoints.map((p) => {
-    // Check if status is critically configured
-    const realPoint = dbHeatmapPoints.find((dp) => dp.name.toLowerCase() === p.name.toLowerCase())
-    const status = realPoint
-      ? realPoint.status === 'DANGER'
-        ? 'crit'
-        : realPoint.status === 'WARNING'
-          ? 'warn'
-          : 'ok'
-      : p.status
-    return { ...p, status }
-  })
+  const activePoints = dbHeatmapPoints
 
   const pickPoint = (k: string) => {
     // Navigate and set pontoId in URL search params
     const url = new URL(window.location.href)
-    const realPoint = dbHeatmapPoints.find(dp => dp.name.toLowerCase() === mockPoints.find(m => m.key === k)?.name.toLowerCase())
-    if (realPoint) {
-      url.searchParams.set('pontoId', realPoint.id)
-    } else {
-      url.searchParams.set('pontoId', k)
-    }
+    url.searchParams.set('pontoId', k)
     router.push(url.pathname + url.search)
   }
 
@@ -3723,8 +3738,8 @@ export function DashboardClient({
       const borderStyle = '1px solid var(--border)'
       return (
         <div
-          key={p.key}
-          onClick={() => pickPoint(p.key)}
+          key={p.id}
+          onClick={() => pickPoint(p.id)}
           style={{
             background: 'var(--s2)',
             border: borderStyle,
@@ -3745,13 +3760,12 @@ export function DashboardClient({
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: si.col, marginLeft: 'auto', flexShrink: 0 }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600 }}>pH {p.ph.toFixed(1)}</span>
-            <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)' }}>{p.dqo} mg/L</span>
+            <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)' }}>Ponto de Coleta</span>
           </div>
           {isEmpty ? (
             <div style={{ height: '28px', borderRadius: '6px', border: '1px dashed var(--border2)' }} />
           ) : (
-            <div style={{ height: '28px' }}>{buildSpark(p.trend, si.col)}</div>
+            <div style={{ height: '28px' }} />
           )}
         </div>
       )
@@ -3864,10 +3878,7 @@ export function DashboardClient({
   // Trend Chart Widget
   const renderTrend = () => {
     if (isEmpty) return cardFrame('Tendência por Parâmetro', 'Sem leituras no período', null, emptyState('trend'))
-    let series = mockTrendData
-    if (dbTrendData.length > 0) {
-      series = dbTrendData.map((d) => d.value)
-    }
+    let series = dbTrendData.length > 0 ? dbTrendData.map((d) => d.value) : []
 
     const dropdown = (
       <select
@@ -3941,16 +3952,17 @@ export function DashboardClient({
   // Occurrences Severity donut chart widget
   const renderOccurrencesWidget = () => {
     if (isEmpty) return cardFrame('Ocorrências críticas', 'Severidade alta e crítica', null, miniEmpty('Nenhuma ocorrência aberta no período.'), 'Operação')
-    const list = mockOccurrences.map((o, i) => {
-      const col = o.sev === 'crit' ? 'var(--danger)' : 'var(--warn)'
+    const list = dbCriticalOccurrences.map((o, i) => {
+      const col = o.severity === 'CRITICAL' ? 'var(--danger)' : 'var(--warn)'
+      const ago = 'recente'
       return (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 0', borderTop: '1px solid var(--border)' }}>
           <span style={{ width: '3px', alignSelf: 'stretch', borderRadius: '2px', background: col, flex: 'none' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {o.t}
+              {o.description || 'Sem descrição'}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--txt3)', marginTop: '2px' }}>{o.pt + ' · ' + o.ago}</div>
+            <div style={{ fontSize: '11px', color: 'var(--txt3)', marginTop: '2px' }}>{o.reporter?.name || 'Sistema'} · {ago}</div>
           </div>
           <span
             style={{
@@ -3966,7 +3978,7 @@ export function DashboardClient({
               flex: 'none',
             }}
           >
-            {o.sev === 'crit' ? 'Crítica' : 'Alta'}
+            {o.severity === 'CRITICAL' ? 'Crítica' : 'Alta'}
           </span>
         </div>
       )
@@ -3984,13 +3996,13 @@ export function DashboardClient({
   const renderFeedWidget = () => {
     if (isEmpty) return cardFrame('Atividades recentes', 'Linha do tempo da ETE', null, miniEmpty('Sem atividades registradas hoje.'), 'Tempo real')
     const typeCol = { ok: 'var(--ok)', chem: 'var(--brand)', reading: 'var(--brand)', alert: 'var(--danger)', shift: 'var(--txt3)' }
-    const items = mockFeed.map((it, i) => (
+    const items = dbFeed.map((it, i) => (
       <div key={i} style={{ display: 'flex', gap: '12px' }}>
         <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)', width: '40px', flex: 'none', textAlign: 'right', paddingTop: '1px' }}>
           {it.time}
         </span>
         <div style={{ position: 'relative', width: '14px', flex: 'none', display: 'flex', justifyContent: 'center' }}>
-          {i < mockFeed.length - 1 && <span style={{ position: 'absolute', top: '14px', bottom: '-6px', width: '2px', background: 'var(--border)' }} />}
+          {i < dbFeed.length - 1 && <span style={{ position: 'absolute', top: '14px', bottom: '-6px', width: '2px', background: 'var(--border)' }} />}
           <span
             style={{
               width: '10px',
@@ -4015,7 +4027,9 @@ export function DashboardClient({
 
   // Maintenance Ring Indicator
   const renderMaintenanceWidget = () => {
-    const rows = mockMaintenance.map((m, i) => {
+    if (isEmpty || dbMaintenance.length === 0) return cardFrame('Manutenção preventiva', 'Equipamentos críticos', null, miniEmpty('Sem manutenções pendentes.'), 'Ativos')
+    
+    const rows = dbMaintenance.map((m, i) => {
       const col = m.days < 7 ? 'var(--danger)' : m.days < 30 ? 'var(--warn)' : 'var(--ok)'
       const pct = Math.min(100, (m.days / 60) * 100)
       return (
@@ -4043,9 +4057,9 @@ export function DashboardClient({
 
   // SLA Resolution bar chart widget
   const renderSlaWidget = () => {
-    if (isEmpty) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
+    if (isEmpty || dbSla.length === 0) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
     const sevCol = { Crítica: 'var(--danger)', Alta: 'var(--warn)', Média: 'var(--brand)', Baixa: 'var(--txt3)' }
-    const rows = mockSla.map((s, i) => {
+    const rows = dbSla.map((s, i) => {
       const within = s.avg <= s.meta
       const pct = Math.min(100, (s.avg / s.meta) * 100)
       const col = within ? 'var(--ok)' : 'var(--danger)'
@@ -4054,7 +4068,7 @@ export function DashboardClient({
         <div key={i}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: 600, color: 'var(--txt)' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: sevCol[s.sev as keyof typeof sevCol] }} />
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: sevCol[s.sev as keyof typeof sevCol] || 'var(--txt3)' }} />
               {s.sev}
             </span>
             <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt2)' }}>
@@ -4417,7 +4431,7 @@ export default async function GestorDashboard({
   })
   
   const selectedParam = parameters.find(p => p.id === paramId) || parameters[0]
-  let trendData = []
+  let trendData: any[] = []
   
   if (selectedParam) {
     const analysesForChart = await prisma.analysis.findMany({
@@ -4435,6 +4449,70 @@ export default async function GestorDashboard({
     }))
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5. WIDGETS (FEED, MAINTENANCE, SLA)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [auditFeed, pendingMaintenances, resolvedOccurrences] = await Promise.all([
+    prisma.auditLog.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: 5,
+      include: { user: { select: { name: true } } }
+    }),
+    prisma.preventiveMaintenance.findMany({
+      where: { tenant_id, status: 'SCHEDULED' },
+      orderBy: { scheduled_date: 'asc' },
+      take: 4,
+      include: { equipment: { select: { name: true } } }
+    }),
+    prisma.occurrence.findMany({
+      where: { tenant_id, status: 'RESOLVED', resolved_at: { not: null } },
+      select: { severity: true, created_at: true, resolved_at: true }
+    })
+  ])
+
+  const dbFeed = auditFeed.map(log => {
+    let text = 'registrou uma atividade.'
+    let type = 'ok'
+    if (log.table_name === 'readings') { text = 'registrou uma leitura.'; type = 'reading' }
+    if (log.table_name === 'analyses') { text = 'registrou análise de laboratório.'; type = 'reading' }
+    if (log.table_name === 'occurrences') { text = 'abriu/atualizou uma ocorrência.'; type = 'alert' }
+    if (log.table_name === 'chemical_stock_exits') { text = 'lançou consumo de químicos.'; type = 'chem' }
+    if (log.table_name === 'shift_instances') { text = 'atualizou status de um turno.'; type = 'shift' }
+
+    return {
+      time: formatDateDisplay(log.timestamp),
+      who: log.user ? log.user.name : 'Sistema',
+      text,
+      type
+    }
+  })
+
+  const dbMaintenance = pendingMaintenances.map(m => {
+    const diffTime = m.scheduled_date.getTime() - now.getTime()
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return { name: m.equipment.name, days: days < 0 ? 0 : days }
+  })
+
+  const slaTargets: Record<string, number> = { CRITICAL: 24, HIGH: 72, MEDIUM: 168, LOW: 720 }
+  
+  const slaMap = new Map<string, { totalHours: number, count: number }>()
+  resolvedOccurrences.forEach(o => {
+    if (o.resolved_at) {
+      const hours = (o.resolved_at.getTime() - o.created_at.getTime()) / (1000 * 60 * 60)
+      const data = slaMap.get(o.severity) || { totalHours: 0, count: 0 }
+      data.totalHours += hours
+      data.count += 1
+      slaMap.set(o.severity, data)
+    }
+  })
+
+  const dbSla = Object.keys(slaTargets).map(severity => {
+    const meta = slaTargets[severity]
+    const data = slaMap.get(severity)
+    const avg = data && data.count > 0 ? Math.round(data.totalHours / data.count) : 0
+    return { sev: severityLabels[severity] || severity, avg, meta }
+  })
+
   return (
     <DashboardClient 
       dbReadingsToday={readingsToday}
@@ -4448,6 +4526,9 @@ export default async function GestorDashboard({
       dbOccurrencesPieData={occurrencesPieData}
       dbChemicalConsumptionData={chemicalConsumptionData}
       dbTrendData={trendData}
+      dbFeed={dbFeed}
+      dbMaintenance={dbMaintenance}
+      dbSla={dbSla}
       dbParameters={parameters}
       dbSelectedParam={selectedParam}
       diasNum={diasNum}
@@ -4695,7 +4776,7 @@ export async function saveMappedReadings(data: {
   const matrixName = point?.matrix || null
 
   // Usar fallback de metodo
-  const fallbackMethod = await prisma.analyticalMethod.findFirst({
+  const fallbackMethod = await prisma.analysisMethod.findFirst({
     where: { tenant_id: tenantId }
   })
   
@@ -4725,11 +4806,12 @@ export async function saveMappedReadings(data: {
         await tx.analysis.create({
           data: {
             tenant_id: tenantId,
-            value: r.bruto || String(r.value),
+            value: r.value,
+            raw_value: r.bruto || String(r.value),
             unit: r.unit || param.unit,
             parameter_id: r.parameterId,
             collection_point_id: data.pointId,
-            recorder_id: user.id,
+            recorded_by: user.id,
             collected_at: new Date(data.date),
             is_non_conformant: isNonConformant ?? false,
             is_detected: r.is_detected,
@@ -11247,6 +11329,189 @@ export default function RootLayout({
 
 ```
 
+### `src/app/manutencao/corretivas/page.tsx`
+```tsx
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
+
+const PAGE_SIZE  = 25
+
+const PRIORITY_LABEL: Record<string, string> = {
+  LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
+}
+const PRIORITY_COLOR: Record<string, string> = {
+  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
+  MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
+  HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
+  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
+}
+
+function formatDatetime(d: Date): string {
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  })
+}
+
+export default async function CorretivasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; status?: string }>
+}) {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const { page: pageParam, status: statusFilter } = await searchParams
+  const page    = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const skip    = (page - 1) * PAGE_SIZE
+  const showAll = statusFilter === 'all'
+
+  const where = {
+    tenant_id: (await getTenantId()),
+    ...(showAll ? {} : { status: { in: ['OPEN', 'IN_PROGRESS'] } }),
+  }
+
+  const [corretivas, total] = await Promise.all([
+    prisma.correctiveMaintenance.findMany({
+      where,
+      include: {
+        equipment: { select: { name: true, location: true } },
+        responsible: { select: { name: true } }
+      },
+      orderBy: [{ start_date: 'desc' }],
+      take:    PAGE_SIZE,
+      skip,
+    }),
+    prisma.correctiveMaintenance.count({ where }),
+  ])
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  return (
+    <main className="p-6 max-w-4xl mx-auto space-y-5">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold">Manutenções Corretivas</h1>
+          <p className="text-xs text-slate-400">{total} ordem(ns) de serviço</p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/manutencao/corretivas"
+            className={[
+              'rounded-md border px-3 py-1.5 text-xs flex items-center',
+              !showAll
+                ? 'border-brand/40 bg-brand/10 text-brand'
+                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+            ].join(' ')}
+          >
+            Abertas
+          </Link>
+          <Link
+            href="/manutencao/corretivas?status=all"
+            className={[
+              'rounded-md border px-3 py-1.5 text-xs flex items-center',
+              showAll
+                ? 'border-brand/40 bg-brand/10 text-brand'
+                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+            ].join(' ')}
+          >
+            Todas
+          </Link>
+        </div>
+      </div>
+
+      {/* Tabela */}
+      {corretivas.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center text-sm text-slate-500">
+          Nenhuma manutenção corretiva encontrada.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-800">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-900 text-left text-xs text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3">Equipamento</th>
+                <th className="px-4 py-3">Descrição da Falha</th>
+                <th className="px-4 py-3">Prioridade</th>
+                <th className="px-4 py-3">Abertura</th>
+                <th className="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {corretivas.map((corr) => {
+                return (
+                  <tr key={corr.id} className="bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-slate-200 font-medium">{corr.equipment.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{corr.equipment.location || 'Sem localização'}</p>
+                    </td>
+                    <td className="px-4 py-3 max-w-xs">
+                      <p className="text-slate-200 line-clamp-1">{corr.description}</p>
+                      <p className="text-xs text-slate-600 mt-0.5">Resp: {corr.responsible.name}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded border px-2 py-0.5 text-xs font-medium ${PRIORITY_COLOR[corr.priority || 'LOW'] ?? ''}`}>
+                        {PRIORITY_LABEL[corr.priority || 'LOW'] ?? corr.priority}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {formatDatetime(corr.start_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {corr.status === 'COMPLETED' ? (
+                        <span className="rounded border border-green-900/50 bg-green-950/60 px-2 py-0.5 text-xs font-medium text-green-400">
+                          Concluída
+                        </span>
+                      ) : corr.status === 'IN_PROGRESS' ? (
+                        <span className="rounded border border-amber-900/50 bg-amber-950/60 px-2 py-0.5 text-xs font-medium text-amber-400">
+                          Em Andamento
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500">
+                          Aberta
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-1 text-sm">
+          {page > 1 ? (
+            <Link
+              href={`/manutencao/corretivas?page=${page - 1}${showAll ? '&status=all' : ''}`}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              ← Anterior
+            </Link>
+          ) : <span />}
+          <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+          {page < totalPages ? (
+            <Link
+              href={`/manutencao/corretivas?page=${page + 1}${showAll ? '&status=all' : ''}`}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              Próxima →
+            </Link>
+          ) : <span />}
+        </div>
+      )}
+    </main>
+  )
+}
+
+```
+
 ### `src/app/manutencao/dashboard/page.tsx`
 ```tsx
 import { PageHeader } from '@/components/ui/page-header'
@@ -11429,6 +11694,182 @@ export default async function ManutencaoLayout({
         </div>
       </div>
     </div>
+  )
+}
+
+```
+
+### `src/app/manutencao/preventivas/page.tsx`
+```tsx
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { getTenantId } from '@/lib/tenant'
+
+const PAGE_SIZE  = 25
+
+function formatDatetime(d: Date): string {
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  })
+}
+
+export default async function PreventivasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; status?: string }>
+}) {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const { page: pageParam, status: statusFilter } = await searchParams
+  const page    = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const skip    = (page - 1) * PAGE_SIZE
+  const showAll = statusFilter === 'all'
+
+  const where = {
+    tenant_id: (await getTenantId()),
+    ...(showAll ? {} : { status: { in: ['SCHEDULED', 'IN_PROGRESS'] } }),
+  }
+
+  const [preventivas, total] = await Promise.all([
+    prisma.preventiveMaintenance.findMany({
+      where,
+      include: {
+        equipment: { select: { name: true, location: true } },
+        completer: { select: { name: true } }
+      },
+      orderBy: [{ scheduled_date: 'asc' }],
+      take:    PAGE_SIZE,
+      skip,
+    }),
+    prisma.preventiveMaintenance.count({ where }),
+  ])
+
+  const now        = new Date()
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  return (
+    <main className="p-6 max-w-4xl mx-auto space-y-5">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold">Manutenções Preventivas</h1>
+          <p className="text-xs text-slate-400">{total} registro(s)</p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/manutencao/preventivas"
+            className={[
+              'rounded-md border px-3 py-1.5 text-xs flex items-center',
+              !showAll
+                ? 'border-brand/40 bg-brand/10 text-brand'
+                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+            ].join(' ')}
+          >
+            Pendentes
+          </Link>
+          <Link
+            href="/manutencao/preventivas?status=all"
+            className={[
+              'rounded-md border px-3 py-1.5 text-xs flex items-center',
+              showAll
+                ? 'border-brand/40 bg-brand/10 text-brand'
+                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+            ].join(' ')}
+          >
+            Todas
+          </Link>
+        </div>
+      </div>
+
+      {/* Tabela */}
+      {preventivas.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center text-sm text-slate-500">
+          Nenhuma preventiva agendada.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-800">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-900 text-left text-xs text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-3">Equipamento</th>
+                <th className="px-4 py-3">Agendamento</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Realizada Por</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {preventivas.map((prev) => {
+                const atrasado = prev.status !== 'COMPLETED' && new Date(prev.scheduled_date) < now
+
+                return (
+                  <tr key={prev.id} className="bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-slate-200 font-medium">{prev.equipment.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{prev.equipment.location || 'Sem localização'}</p>
+                    </td>
+                    <td className={`px-4 py-3 ${atrasado ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+                      {formatDatetime(prev.scheduled_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {prev.status === 'COMPLETED' ? (
+                          <span className="rounded border border-green-900/50 bg-green-950/60 px-2 py-0.5 text-xs font-medium text-green-400">
+                            Concluída
+                          </span>
+                        ) : prev.status === 'IN_PROGRESS' ? (
+                          <span className="rounded border border-amber-900/50 bg-amber-950/60 px-2 py-0.5 text-xs font-medium text-amber-400">
+                            Em Andamento
+                          </span>
+                        ) : (
+                          <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+                            Agendada
+                          </span>
+                        )}
+                        {atrasado && (
+                          <span className="rounded border border-red-900/50 bg-red-950/60 px-2 py-0.5 text-xs font-semibold text-red-400 animate-pulse">
+                            ATRASADA
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400">
+                      {prev.completer ? prev.completer.name : '-'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-1 text-sm">
+          {page > 1 ? (
+            <Link
+              href={`/manutencao/preventivas?page=${page - 1}${showAll ? '&status=all' : ''}`}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              ← Anterior
+            </Link>
+          ) : <span />}
+          <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+          {page < totalPages ? (
+            <Link
+              href={`/manutencao/preventivas?page=${page + 1}${showAll ? '&status=all' : ''}`}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              Próxima →
+            </Link>
+          ) : <span />}
+        </div>
+      )}
+    </main>
   )
 }
 
@@ -15439,7 +15880,7 @@ export default async function HistoricoPage({
             <AnalysisChart
               data={dataPoints.map((d) => ({
                 date:            d.collected_at.toISOString(),
-                value:           d.value,
+                value:           d.value ?? 0,
                 isNonConformant: d.is_non_conformant,
               }))}
               unit={selectedParam.unit}
@@ -15931,7 +16372,7 @@ export default async function AnalisesPage({
                 <p className="text-sm text-slate-300">
                   <span className="font-medium">{a.parameter.name}:</span>{' '}
                   {a.value} {a.unit}
-                  <span className="text-slate-600"> · {a.method.name}</span>
+                  <span className="text-slate-600"> · {a.method?.name ?? 'N/A'}</span>
                 </p>
 
                 {/* Limites aplicados (snapshot) */}
@@ -21279,12 +21720,12 @@ export async function subscribeUser(sub: PushSubscription) {
   await prisma.pushSubscription.upsert({
     where: { endpoint: sub.endpoint },
     update: {
-      user_id: session.user.id,
+      user_id: session.user.id as string,
       p256dh,
       auth: authKey
     },
     create: {
-      user_id: session.user.id,
+      user_id: session.user.id as string,
       endpoint: sub.endpoint,
       p256dh,
       auth: authKey
@@ -23884,37 +24325,6 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-```
-
-### `next.config.ts`
-```ts
-import type { NextConfig } from "next";
-import withPWAInit from "@ducanh2912/next-pwa";
-
-const withPWA = withPWAInit({
-  dest: "public",
-  // Desativa o PWA no modo de desenvolvimento para não bugar o cache local (F5)
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-});
-
-const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  experimental: {
-    serverActions: {
-      // Suporta upload de fotos de até 5 MB (+ overhead do multipart)
-      bodySizeLimit: '6mb',
-    },
-  },
-};
-
-export default withPWA(nextConfig);
 
 ```
 

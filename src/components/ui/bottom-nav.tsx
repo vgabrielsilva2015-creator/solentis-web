@@ -2,34 +2,29 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FlaskConical, Wrench, AlertTriangle, Clock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type NavItem = {
+export type NavItem = {
   href:  string
   label: string
   icon:  LucideIcon
 }
 
-const NAV: NavItem[] = [
-  { href: '/tecnico/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/tecnico/analises',     label: 'Análises',     icon: FlaskConical    },
-  { href: '/tecnico/equipamentos', label: 'Equip.',       icon: Wrench          },
-  { href: '/tecnico/ocorrencias',  label: 'Ocorrências',  icon: AlertTriangle   },
-  { href: '/tecnico/turnos/tarefas', label: 'Turnos', icon: Clock           },
-]
+type BottomNavProps = {
+  items: NavItem[]
+}
 
-export function TecnicoBottomNav() {
+export function BottomNav({ items }: BottomNavProps) {
   const pathname = usePathname()
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 bg-slate-900 border-t border-slate-800"
+      className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/60 pb-safe"
       aria-label="Navegação principal"
     >
       <ul className="flex h-14">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/')
           return (
             <li key={href} className="flex flex-1">
@@ -60,4 +55,3 @@ export function TecnicoBottomNav() {
     </nav>
   )
 }
-

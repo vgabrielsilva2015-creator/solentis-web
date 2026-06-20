@@ -47,7 +47,7 @@ export default async function GestorDashboard({
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
   // Filtro por ponto
-  const pointCond = pontoId ? { point_id: pontoId } : {}
+  const pointCond = pontoId ? { collection_point_id: pontoId } : {}
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. DADOS DOS KPIs (Paralelizados)
@@ -271,6 +271,39 @@ export default async function GestorDashboard({
     return { sev: severityLabels[severity] || severity, avg, meta }
   })
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. CÁLCULO DE EFICIÊNCIA (DQO / DBO)
+  // ─────────────────────────────────────────────────────────────────────────────
+  let dbEfficiency = null
+  const dqoParam = parameters.find(p => p.name.toLowerCase().includes('dqo') || p.name.toLowerCase().includes('demanda química'))
+  if (dqoParam) {
+    // Busca média de entrada e saída
+    const inPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('entrada') || p.name.toLowerCase().includes('bruto'))
+    const outPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('saída') || p.name.toLowerCase().includes('tratado') || p.name.toLowerCase().includes('final'))
+    
+    if (inPoint && outPoint) {
+      const inAnalyses = await prisma.analysis.findMany({
+        where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } },
+        select: { value: true }
+      })
+      const outAnalyses = await prisma.analysis.findMany({
+        where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } },
+        select: { value: true }
+      })
+      
+      const inValid = inAnalyses.filter(a => a.value !== null)
+      const outValid = outAnalyses.filter(a => a.value !== null)
+      
+      const inAvg = inValid.length > 0 ? inValid.reduce((s, a) => s + (a.value || 0), 0) / inValid.length : 0
+      const outAvg = outValid.length > 0 ? outValid.reduce((s, a) => s + (a.value || 0), 0) / outValid.length : 0
+      
+      if (inAvg > 0) {
+        const val = Math.max(0, Math.round(((inAvg - outAvg) / inAvg) * 100))
+        dbEfficiency = { in: Math.round(inAvg), out: Math.round(outAvg), val }
+      }
+    }
+  }
+
   return (
     <DashboardClient 
       dbReadingsToday={readingsToday}
@@ -293,6 +326,7 @@ export default async function GestorDashboard({
       paramId={paramId}
       pontoId={pontoId}
       activePointName={activePointName}
+      dbEfficiency={dbEfficiency}
     />
   )
 }

@@ -63,10 +63,8 @@ export default function ImportLaudoPage() {
     for (let i = 0; i < currentQueue.length; i++) {
       if (currentQueue[i].status !== 'pending') continue;
 
-      // Delay between PDFs (skip first one) — 5s para respeitar rate limit da API gratuita
-      if (i > 0) {
-        await delay(5000)
-      }
+      // Process files sequentially without artificial delay
+
 
       // Update status to extracting
       updateFileItem(currentQueue[i].id, { status: 'extracting' })
@@ -200,7 +198,6 @@ export default function ImportLaudoPage() {
   const retryAllFailed = async () => {
     const failedFiles = filesQueue.filter(f => f.status === 'error')
     for (let i = 0; i < failedFiles.length; i++) {
-      if (i > 0) await delay(5000)
       await retryFile(failedFiles[i])
     }
   }

@@ -25,6 +25,7 @@ interface DashboardClientProps {
   paramId?: string
   pontoId?: string
   activePointName?: string | null
+  dbEfficiency: { in: number; out: number; val: number } | null
 }
 
 export function DashboardClient({
@@ -48,6 +49,7 @@ export function DashboardClient({
   paramId,
   pontoId,
   activePointName,
+  dbEfficiency,
 }: DashboardClientProps) {
   const router = useRouter()
   const [period, setPeriod] = useState<string>('7d')
@@ -311,11 +313,10 @@ export function DashboardClient({
   }
 
   const buildDonut = () => {
-    const data = [
-      { v: 2, col: 'var(--danger)', l: 'Crítica' },
-      { v: 1, col: 'var(--warn)', l: 'Alta' },
-    ]
-    const total = 3
+    const data = dbOccurrencesPieData.filter(d => d.value > 0).map(d => ({ v: d.value, col: d.color, l: d.name }))
+    if (data.length === 0) return miniEmpty('Nenhuma ocorrência neste período.')
+    
+    const total = data.reduce((sum, d) => sum + d.v, 0)
     const r = 42
     const cx = 52
     const cy = 52
@@ -568,12 +569,11 @@ export function DashboardClient({
 
   // Efficiency progress widget (Anéis de progresso)
   const renderEfficiency = () => {
-    if (isEmpty) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída para calcular a eficiência.'), 'Performance')
-    const val = 92
+    if (isEmpty || !dbEfficiency) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída suficientes para calcular a eficiência.'), 'Performance')
+    const val = dbEfficiency.val
     const center = (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span style={{ fontFamily: F.sora, fontSize: '26px', fontWeight: 700, color: 'var(--txt)', lineHeight: 1 }}>{val}%</span>
-        <span style={{ fontFamily: F.mono, fontSize: '9px', letterSpacing: '.06em', color: 'var(--ok)', marginTop: '3px' }}>▲ 4 pts</span>
       </div>
     )
     const stat = (l: string, v: string, ok?: boolean) => (
@@ -586,10 +586,10 @@ export function DashboardClient({
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         {buildRing(val, 'var(--brand)', 116, 12, center)}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {stat('Entrada ETE', '412 mg/L')}
-          {stat('Saída Final', '33 mg/L')}
+          {stat('Entrada ETE', `${dbEfficiency.in} mg/L`)}
+          {stat('Saída Final', `${dbEfficiency.out} mg/L`)}
           <div style={{ height: '1px', background: 'var(--border)' }} />
-          {stat('Meta CONAMA', '≤ 120 mg/L ✓', true)}
+          {stat('Meta CONAMA', '≥ 80% ✓', val >= 80)}
         </div>
       </div>
     )
@@ -806,7 +806,7 @@ export function DashboardClient({
         </div>
 
         {/* Row 3: Widgets (Feed, Maintenance, SLA) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px', paddingBottom: '40px' }}>
           {renderFeedWidget()}
           {renderMaintenanceWidget()}
           {renderSlaWidget()}

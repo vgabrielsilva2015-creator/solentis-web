@@ -279,9 +279,10 @@ model CollectionPoint {
   created_at  DateTime @default(now())
 
   tenant     Tenant             @relation(fields: [tenant_id], references: [id])
-  readings   Reading[]
-  analyses   Analysis[]
-  parameters QualityParameter[]
+  readings    Reading[]
+  analyses    Analysis[]
+  parameters  QualityParameter[]
+  occurrences Occurrence[]
 
   @@index([tenant_id])
   @@map("collection_points")
@@ -504,23 +505,26 @@ model CorrectiveMaintenance {
 model Occurrence {
   id               String    @id @default(cuid())
   tenant_id        String
-  description      String
-  severity         String
-  status           String    @default("OPEN")
-  deadline         DateTime
-  resolved_at      DateTime?
-  resolved_by      String?
-  resolution_notes String?
-  responsible_id   String?
-  reported_by      String
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  description         String
+  category            String?   // VAZAMENTO, QUEBRA, FALTA_PRODUTO, OUTROS
+  severity            String
+  status              String    @default("OPEN")
+  deadline            DateTime
+  resolved_at         DateTime?
+  resolved_by         String?
+  resolution_notes    String?
+  responsible_id      String?
+  reported_by         String
+  collection_point_id String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
 
-  tenant      Tenant            @relation(fields: [tenant_id], references: [id])
-  reporter    User              @relation("OccurrenceReporter", fields: [reported_by], references: [id])
-  responsible User?             @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
-  resolver    User?             @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
-  photos      OccurrencePhoto[]
+  tenant              Tenant            @relation(fields: [tenant_id], references: [id])
+  reporter            User              @relation("OccurrenceReporter", fields: [reported_by], references: [id])
+  responsible         User?             @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
+  resolver            User?             @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
+  collection_point    CollectionPoint?  @relation(fields: [collection_point_id], references: [id])
+  photos              OccurrencePhoto[]
 
   @@index([tenant_id, severity, status])
   @@index([deadline])

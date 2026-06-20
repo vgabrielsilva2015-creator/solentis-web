@@ -85,6 +85,13 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
   const recorded_by = await resolveUserId(session.user.email!)
 
+  const novoEstoque = estoqueAtual - quantity
+  if (novoEstoque < 0) {
+    return {
+      error: `Atenção: saída de ${quantity} resulta em estoque negativo (saldo atual é ${estoqueAtual.toFixed(2)}). Operação bloqueada.`,
+    }
+  }
+
   await prisma.chemicalStockExit.create({
     data: {
       tenant_id: (await getTenantId()),
@@ -100,14 +107,6 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   revalidatePath(`/operador/estoque/${product_id}`)
   revalidatePath('/tecnico/estoque')
   revalidatePath(`/tecnico/estoque/${product_id}`)
-
-  const novoEstoque = estoqueAtual - quantity
-  if (novoEstoque < 0) {
-    return {
-      success: true,
-      warning: `Atenção: estoque calculado ficou negativo (${novoEstoque.toFixed(2)}). Verifique se há entradas não registradas ou faça uma contagem física.`,
-    }
-  }
 
   return { success: true }
 }

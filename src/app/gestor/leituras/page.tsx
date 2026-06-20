@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId } from '@/lib/tenant'
+import { Button } from '@/components/ui/button'
+import { Download } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
@@ -49,6 +51,12 @@ export default async function GestorLeiturasPage({
             <h1 className="text-2xl font-bold text-white">Todas as Leituras</h1>
             <p className="text-sm text-slate-400">Histórico completo de registros manuais e inteligência artificial. ({total} registros)</p>
           </div>
+          <Link href={`/api/export?type=readings`} target="_blank">
+            <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+              <Download className="w-4 h-4 mr-1.5" />
+              Exportar CSV
+            </Button>
+          </Link>
         </div>
 
         {/* Tabela de leituras */}

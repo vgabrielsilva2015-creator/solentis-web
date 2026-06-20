@@ -35,16 +35,33 @@ export function HandoverForm({ instanceId }: { instanceId: string }) {
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-slate-300">
-          Observações do turno
-          <span className="ml-1 text-slate-500 font-normal">(opcional)</span>
+          Observações do turno *
         </label>
         <textarea
           name="outgoing_observations"
           rows={3}
-          placeholder="Informações relevantes para o próximo operador"
+          placeholder="Ex: Turno ocorreu sem grandes anormalidades. Atenção ao equipamento X..."
           className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none resize-none"
         />
+        {state.fieldErrors?.outgoing_observations && (
+          <p className="text-xs text-red-400">{state.fieldErrors.outgoing_observations[0]}</p>
+        )}
       </div>
+
+      <div className="flex items-start gap-2 pt-2">
+        <input 
+          type="checkbox" 
+          id="confirm" 
+          name="confirm" 
+          className="mt-1 shrink-0 rounded border-slate-700 bg-slate-800 text-emerald-600 focus:ring-emerald-600 focus:ring-offset-slate-900" 
+        />
+        <label htmlFor="confirm" className="text-sm text-slate-300">
+          Declaro que as informações estão corretas e o turno está pronto para ser repassado. *
+        </label>
+      </div>
+      {state.fieldErrors?.confirm && (
+        <p className="text-xs text-red-400">{state.fieldErrors.confirm[0]}</p>
+      )}
 
       {state.error && (
         <p className="text-xs text-red-400">{state.error}</p>

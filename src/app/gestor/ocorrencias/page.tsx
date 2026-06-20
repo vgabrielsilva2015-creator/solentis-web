@@ -4,18 +4,11 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
+import { Download } from 'lucide-react'
+
+import { SEVERITY_LABEL, SEVERITY_COLOR, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
 
 const PAGE_SIZE  = 25
-
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
-}
-const SEVERITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
-  MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
-  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
-}
 
 function formatDatetime(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -71,6 +64,12 @@ export default async function OcorrenciasGestorPage({
           <Link href="/gestor/ocorrencias/nova">
             <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
               + Nova ocorrência
+            </Button>
+          </Link>
+          <Link href={`/api/export?type=occurrences${showAll ? '&status=all' : ''}`} target="_blank">
+            <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+              <Download className="w-4 h-4 mr-1.5" />
+              Exportar CSV
             </Button>
           </Link>
           <Link
@@ -148,15 +147,9 @@ export default async function OcorrenciasGestorPage({
                       {formatDatetime(oc.deadline)}
                     </td>
                     <td className="px-4 py-3">
-                      {oc.status === 'RESOLVED' ? (
-                        <span className="rounded border border-green-900/50 bg-green-950/60 px-2 py-0.5 text-xs font-medium text-green-400">
-                          Resolvida
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-500">
-                          {oc.status === 'OPEN' ? 'Aberta' : 'Em andamento'}
-                        </span>
-                      )}
+                      <span className={`rounded border px-2 py-0.5 text-xs font-medium ${OCCURRENCE_STATUS_COLOR[oc.status] ?? ''}`}>
+                        {OCCURRENCE_STATUS_LABEL[oc.status] ?? oc.status}
+                      </span>
                     </td>
                   </tr>
                 )

@@ -36,6 +36,8 @@ const OcorrenciaSchema = z.object({
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
     error: 'Selecione a severidade',
   }),
+  category: z.string().min(1, 'Selecione a categoria'),
+  collection_point_id: z.string().optional().or(z.literal('')),
 })
 
 // ─── Form state types ─────────────────────────────────────────────────────────
@@ -57,6 +59,8 @@ export async function registrarOcorrencia(
   const parsed = OcorrenciaSchema.safeParse({
     description: formData.get('description'),
     severity:    formData.get('severity'),
+    category:    formData.get('category'),
+    collection_point_id: formData.get('collection_point_id') || undefined,
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -113,10 +117,12 @@ export async function registrarOcorrencia(
       data: {
         tenant_id:   (await getTenantId()),
         description: parsed.data.description,
+        category:    parsed.data.category,
         severity:    parsed.data.severity,
         status:      'OPEN',
         deadline,
         reported_by: userId,
+        collection_point_id: parsed.data.collection_point_id || null,
       },
     })
 

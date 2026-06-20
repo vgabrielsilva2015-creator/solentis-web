@@ -21,7 +21,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
 
   const [state, action, pending] = useActionState(async (prev: unknown, formData: FormData) => {
     const result = await registrarSaida(prev, formData)
-    if (result?.success && !result?.warning) router.push('/tecnico/estoque')
+    if (result?.success) router.push('/tecnico/estoque')
     return result
   }, null)
 
@@ -53,20 +53,6 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
         </p>
       )}
 
-      {state?.warning && (
-        <div className="rounded-lg bg-amber-900/30 border border-amber-700 px-4 py-3 space-y-3">
-          <p className="text-sm text-amber-300">{state.warning}</p>
-          <button
-            type="button"
-            onClick={() => router.push('/tecnico/estoque')}
-            className="w-full rounded-lg bg-amber-700 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
-          >
-            Entendido — voltar ao estoque
-          </button>
-        </div>
-      )}
-
-      {!state?.warning && (
         <>
           <div className="space-y-1">
             <label className="text-sm text-slate-300">
@@ -130,7 +116,6 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
             </button>
           </div>
         </>
-      )}
     </form>
   )
 }

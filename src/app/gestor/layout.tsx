@@ -8,6 +8,7 @@ import { MobileNav } from '@/components/mobile-nav'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
 import { ThemeToggle } from '@/components/theme-provider'
+import { NotificationBell } from '@/components/ui/notification-bell'
 
 export default async function GestorLayout({
   children,
@@ -34,6 +35,7 @@ export default async function GestorLayout({
               {session.user.name ?? session.user.email}
             </span>
             <ThemeToggle />
+            <NotificationBell />
             <PushManager />
             <SignOutButton />
           </div>

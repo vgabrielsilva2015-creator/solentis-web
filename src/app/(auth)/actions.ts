@@ -12,8 +12,6 @@ function decodeToken(token: string) {
 }
 
 export async function sendPasswordResetLink(email: string) {
-  // Simula um atraso de rede
-  await new Promise(resolve => setTimeout(resolve, 1000))
 
   const user = await prisma.user.findFirst({
     where: { email, is_active: true }
@@ -31,7 +29,6 @@ export async function sendPasswordResetLink(email: string) {
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-  await new Promise(resolve => setTimeout(resolve, 1000))
 
   if (!token || !newPassword || newPassword.length < 8) {
     return { error: 'Dados inválidos ou senha muito curta.' }
