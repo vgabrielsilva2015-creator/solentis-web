@@ -83,44 +83,46 @@ export default function ImportLaudoPage() {
         if (result.success) {
           const data = result.data
           let mPoint = ''
-          let mDate = data.dataColeta || new Date().toISOString().split('T')[0]
+          let mDate = data.data_coleta || new Date().toISOString().split('T')[0]
           
-          if (data.pontoColeta) {
+          if (data.ponto_amostragem) {
             const foundPoint = context.points.find(p => 
-              p.name.toLowerCase().includes(data.pontoColeta.toLowerCase()) ||
-              data.pontoColeta.toLowerCase().includes(p.name.toLowerCase())
+              p.name.toLowerCase().includes(data.ponto_amostragem.toLowerCase()) ||
+              data.ponto_amostragem.toLowerCase().includes(p.name.toLowerCase())
             )
             if (foundPoint) mPoint = foundPoint.id
           }
 
           const mParams: Record<number, string> = {}
-          data.parametros.forEach((p: any, idx: number) => {
-            const nomeStr = p.nomeExtraido.trim()
-            
-            // 1. Tentar match exato via alias
-            const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
-            if (foundAlias) {
-              mParams[idx] = foundAlias.parameter_id
-              return
-            }
-
-            // 2. Tentar match exato do nome oficial
-            const exactParam = context.parameters.find(param => param.name.toLowerCase() === nomeStr.toLowerCase())
-            if (exactParam) {
-              mParams[idx] = exactParam.id
-              return
-            }
-
-            // 3. Tentar Fuzzy Match
-            if (context.parameters.length > 0) {
-              const paramNames = context.parameters.map(param => param.name)
-              const match = stringSimilarity.findBestMatch(nomeStr, paramNames)
-              if (match.bestMatch.rating > 0.5) { // Confiança de 50% (antes era 60%)
-                const matchedParam = context.parameters[match.bestMatchIndex]
-                mParams[idx] = matchedParam.id
+          if (data.resultados && Array.isArray(data.resultados)) {
+            data.resultados.forEach((p: any, idx: number) => {
+              const nomeStr = (p.parametro || '').trim()
+              
+              // 1. Tentar match exato via alias
+              const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
+              if (foundAlias) {
+                mParams[idx] = foundAlias.parameter_id
+                return
               }
-            }
-          })
+
+              // 2. Tentar match exato do nome oficial
+              const exactParam = context.parameters.find(param => param.name.toLowerCase() === nomeStr.toLowerCase())
+              if (exactParam) {
+                mParams[idx] = exactParam.id
+                return
+              }
+
+              // 3. Tentar Fuzzy Match
+              if (context.parameters.length > 0 && nomeStr) {
+                const paramNames = context.parameters.map(param => param.name)
+                const match = stringSimilarity.findBestMatch(nomeStr, paramNames)
+                if (match.bestMatch.rating > 0.5) { // Confiança de 50%
+                  const matchedParam = context.parameters[match.bestMatchIndex]
+                  mParams[idx] = matchedParam.id
+                }
+              }
+            })
+          }
 
           updateFileItem(currentQueue[i].id, {
             status: 'success',
@@ -158,31 +160,33 @@ export default function ImportLaudoPage() {
       if (result.success) {
         const data = result.data
         let mPoint = ''
-        let mDate = data.dataColeta || new Date().toISOString().split('T')[0]
+        let mDate = data.data_coleta || new Date().toISOString().split('T')[0]
         
-        if (data.pontoColeta) {
+        if (data.ponto_amostragem) {
           const foundPoint = context.points.find(p => 
-            p.name.toLowerCase().includes(data.pontoColeta.toLowerCase()) ||
-            data.pontoColeta.toLowerCase().includes(p.name.toLowerCase())
+            p.name.toLowerCase().includes(data.ponto_amostragem.toLowerCase()) ||
+            data.ponto_amostragem.toLowerCase().includes(p.name.toLowerCase())
           )
           if (foundPoint) mPoint = foundPoint.id
         }
 
         const mParams: Record<number, string> = {}
-        data.parametros.forEach((p: any, idx: number) => {
-          const nomeStr = p.nomeExtraido.trim()
-          const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
-          if (foundAlias) { mParams[idx] = foundAlias.parameter_id; return }
-          const exactParam = context.parameters.find(param => param.name.toLowerCase() === nomeStr.toLowerCase())
-          if (exactParam) { mParams[idx] = exactParam.id; return }
-          if (context.parameters.length > 0) {
-            const paramNames = context.parameters.map(param => param.name)
-            const match = stringSimilarity.findBestMatch(nomeStr, paramNames)
-            if (match.bestMatch.rating > 0.5) {
-              mParams[idx] = context.parameters[match.bestMatchIndex].id
+        if (data.resultados && Array.isArray(data.resultados)) {
+          data.resultados.forEach((p: any, idx: number) => {
+            const nomeStr = (p.parametro || '').trim()
+            const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
+            if (foundAlias) { mParams[idx] = foundAlias.parameter_id; return }
+            const exactParam = context.parameters.find(param => param.name.toLowerCase() === nomeStr.toLowerCase())
+            if (exactParam) { mParams[idx] = exactParam.id; return }
+            if (context.parameters.length > 0 && nomeStr) {
+              const paramNames = context.parameters.map(param => param.name)
+              const match = stringSimilarity.findBestMatch(nomeStr, paramNames)
+              if (match.bestMatch.rating > 0.5) {
+                mParams[idx] = context.parameters[match.bestMatchIndex].id
+              }
             }
-          }
-        })
+          })
+        }
 
         updateFileItem(fileItem.id, { status: 'success', data, mappedPoint: mPoint, mappedDate: mDate, mappedParams: mParams })
       } else {
@@ -237,7 +241,7 @@ export default function ImportLaudoPage() {
       if (!item.mappedPoint) {
         return setGlobalError(`Selecione o ponto de coleta para o arquivo ${item.file.name}`)
       }
-      const hasValidParam = item.data.parametros.some((p: any, idx: number) => item.mappedParams[idx] && !isNaN(parseFloat(p.valor)))
+      const hasValidParam = item.data.resultados?.some((p: any, idx: number) => item.mappedParams[idx])
       if (!hasValidParam) {
         return setGlobalError(`Mapeie pelo menos um parâmetro válido para o arquivo ${item.file.name}`)
       }
@@ -249,13 +253,16 @@ export default function ImportLaudoPage() {
     // Save sequentially
     let allSuccess = true
     for (const item of successItems) {
-      const validReadings = item.data.parametros
+      const validReadings = (item.data.resultados || [])
         .map((p: any, idx: number) => ({
           parameterId: item.mappedParams[idx],
-          value: parseFloat(p.valor),
-          originalName: p.nomeExtraido
+          value: p.valor,
+          is_detected: p.detectado,
+          originalName: p.parametro,
+          bruto: p.bruto,
+          unit: p.unidade
         }))
-        .filter((r: any) => r.parameterId && !isNaN(r.value))
+        .filter((r: any) => r.parameterId)
 
       const result = await saveMappedReadings({
         pointId: item.mappedPoint,
@@ -395,9 +402,9 @@ export default function ImportLaudoPage() {
               <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center gap-3">
                 <FileCheck2 className="w-5 h-5 text-blue-500" />
                 <h3 className="font-medium text-white truncate">{item.file.name}</h3>
-                {item.data?.pontoColeta && (
+                {item.data?.ponto_amostragem && (
                   <span className="ml-auto text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">
-                    Identificado: {item.data.pontoColeta}
+                    Identificado: {item.data.ponto_amostragem}
                   </span>
                 )}
               </div>
@@ -430,7 +437,7 @@ export default function ImportLaudoPage() {
 
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-slate-400 mb-2">Parâmetros Mapeados</h4>
-                  {item.data?.parametros.map((p: any, pIdx: number) => {
+                  {item.data?.resultados?.map((p: any, pIdx: number) => {
                     const isUnmapped = !item.mappedParams[pIdx]
                     const createKey = `${item.id}-${pIdx}`
                     const isCreating = creatingParam === createKey
@@ -439,9 +446,9 @@ export default function ImportLaudoPage() {
                       <div key={pIdx} className={`flex flex-col md:flex-row items-center gap-4 p-3 rounded-lg border ${isUnmapped ? 'bg-amber-950/20 border-amber-800/40' : 'bg-slate-950 border-slate-800'}`}>
                         <div className="flex-1 w-full">
                           <div className="text-sm font-medium text-slate-300">
-                            {p.nomeExtraido} <span className="text-slate-500 font-normal">({p.unidade})</span>
+                            {p.parametro} <span className="text-slate-500 font-normal">({p.unidade})</span>
                           </div>
-                          <div className="text-xl font-bold text-white mt-1">{p.valor}</div>
+                          <div className="text-xl font-bold text-white mt-1">{p.bruto || p.valor}</div>
                         </div>
                         <div className="hidden md:flex items-center justify-center px-2">
                           <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
@@ -461,10 +468,10 @@ export default function ImportLaudoPage() {
                           </select>
                           {isUnmapped && (
                             <button
-                              onClick={() => handleCreateParam(item.id, pIdx, p.nomeExtraido, p.unidade)}
+                              onClick={() => handleCreateParam(item.id, pIdx, p.parametro, p.unidade)}
                               disabled={isCreating}
                               className="shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-60 text-white text-xs font-medium px-3 py-2 rounded-md transition-colors shadow-sm"
-                              title={`Criar "${p.nomeExtraido}" como novo parâmetro`}
+                              title={`Criar "${p.parametro}" como novo parâmetro`}
                             >
                               {isCreating ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

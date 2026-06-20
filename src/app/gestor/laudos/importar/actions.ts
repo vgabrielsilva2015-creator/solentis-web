@@ -15,18 +15,29 @@ export async function extractDataFromPDF(base64Data: string, mimeType: string) {
   const genAI = new GoogleGenerativeAI(apiKey)
   
   const prompt = `
-Você é um especialista em análise ambiental e processamento de laudos de qualidade de água.
-Analise o PDF em anexo, que é um laudo de laboratório terceirizado.
-Extraia os resultados das análises de água.
+Você é um extrator de dados de laudos laboratoriais ambientais brasileiros (relatórios de ensaio). 
+Leia o PDF e devolva SOMENTE um JSON válido no schema fornecido, sem comentários e sem texto fora do JSON. 
+Não invente valores: se um campo não existir no laudo, use null.
+Preserve os números exatamente como aparecem na hora de extrair "bruto", mas converta para float com ponto em "valor".
+Resultados abaixo do limite de quantificação (ex.: "<0,05") devem ser marcados como "detectado": false, "valor": null, e "bruto" com o texto original.
+
 Retorne um JSON ESTRITO seguindo este formato:
 {
-  "dataColeta": "YYYY-MM-DD", // data em que a amostra foi coletada (se não encontrar, retorne null)
-  "pontoColeta": "Nome do Ponto", // ex: Saída Final, Reator, etc (se não encontrar, retorne null)
-  "parametros": [
-    {
-      "nomeExtraido": "Nome do Parâmetro como está no laudo",
-      "valor": 12.5, // apenas o número. Se for indetectável, ausente ou < limite, coloque 0. Extraia como float.
-      "unidade": "mg/L" // unidade de medida
+  "laboratorio": "Nome do Laboratório",
+  "laudo_numero": "Numero do laudo",
+  "ponto_amostragem": "Nome do Ponto",
+  "matriz": "Matriz (ex: Água Subterrânea)",
+  "data_coleta": "YYYY-MM-DD",
+  "data_analise": "YYYY-MM-DD",
+  "temperatura_amostra_c": 19.9,
+  "ph_campo": 6.8,
+  "resultados": [
+    { 
+      "parametro": "Nome do parametro", 
+      "bruto": "<0,05", 
+      "valor": null, 
+      "unidade": "mg/L", 
+      "detectado": false 
     }
   ]
 }
@@ -156,7 +167,7 @@ export async function createParameterFromImport(data: { name: string; unit: stri
 export async function saveMappedReadings(data: {
   pointId: string,
   date: string,
-  readings: { parameterId: string, value: number, originalName: string }[]
+  readings: { parameterId: string, value: number | null, is_detected: boolean, originalName: string, bruto: string, unit: string }[]
 }) {
   const { prisma } = await import('@/lib/prisma')
   const { getTenantId } = await import('@/lib/tenant')
@@ -173,6 +184,17 @@ export async function saveMappedReadings(data: {
     select: { id: true }
   })
   if (!user) return { success: false, error: 'Usuário não encontrado.' }
+
+  // Buscar a matriz do ponto para verificação multi-matriz
+  const point = await prisma.collectionPoint.findUnique({
+    where: { id: data.pointId }
+  })
+  const matrixName = point?.matrix || null
+
+  // Usar fallback de metodo
+  const fallbackMethod = await prisma.analyticalMethod.findFirst({
+    where: { tenant_id: tenantId }
+  })
   
   try {
     for (const r of data.readings) {
@@ -181,20 +203,38 @@ export async function saveMappedReadings(data: {
       })
       if (!param) continue;
 
-      const isNonConformant = calcularNaoConformidade(r.value, param.min_limit, param.max_limit)
+      let min_limit: number | null = null
+      let max_limit: number | null = null
+
+      if (matrixName) {
+        const pLimit = await prisma.parameterLimit.findFirst({
+          where: { parameter_id: param.id, matrix: matrixName }
+        })
+        if (pLimit) {
+          min_limit = pLimit.min_limit
+          max_limit = pLimit.max_limit
+        }
+      }
+
+      const isNonConformant = calcularNaoConformidade(r.value, min_limit, max_limit, r.is_detected)
 
       await prisma.$transaction(async (tx) => {
-        await tx.reading.create({
+        await tx.analysis.create({
           data: {
             tenant_id: tenantId,
-            value: r.value,
-            unit: param.unit,
+            value: r.bruto || String(r.value),
+            unit: r.unit || param.unit,
             parameter_id: r.parameterId,
             collection_point_id: data.pointId,
-            recorded_by: user.id,
-            recorded_at: new Date(data.date),
-            is_non_conformant: isNonConformant,
-            origin: 'AI_IMPORT'
+            recorder_id: user.id,
+            collected_at: new Date(data.date),
+            is_non_conformant: isNonConformant ?? false,
+            is_detected: r.is_detected,
+            laboratory_type: 'EXTERNAL',
+            origin: 'AI_IMPORT',
+            method_id: fallbackMethod?.id || null,
+            min_limit_applied: min_limit,
+            max_limit_applied: max_limit
           }
         })
         
@@ -209,7 +249,7 @@ export async function saveMappedReadings(data: {
           await tx.occurrence.create({
             data: {
               tenant_id: tenantId,
-              description: `Não Conformidade via IA (${param.name}): Leitura registrada = ${r.value} ${param.unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${data.pointId}`,
+              description: `Não Conformidade via Laudo (${param.name}): Resultado = ${r.bruto}. O valor está fora dos limites aceitáveis para a matriz ${matrixName || 'não definida'}. Ponto: ${point?.name}`,
               severity: 'HIGH',
               status: 'OPEN',
               deadline,
@@ -218,9 +258,7 @@ export async function saveMappedReadings(data: {
           })
         }
 
-        // Criar ou ignorar o alias para aprendizado futuro
         if (r.originalName && r.originalName.trim() !== '') {
-          // Usamos upsert para evitar erro de constraint única se rodar em paralelo
           const aliasName = r.originalName.trim()
           await tx.parameterAlias.upsert({
             where: { tenant_id_alias: { tenant_id: tenantId, alias: aliasName } },
