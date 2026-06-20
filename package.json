@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "export:code": "node scripts/export-code.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
