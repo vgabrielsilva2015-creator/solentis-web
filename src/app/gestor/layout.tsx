@@ -7,6 +7,7 @@ import { TopNav } from '@/components/ui/top-nav'
 import { MobileNav } from '@/components/mobile-nav'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
+import { ThemeToggle } from '@/components/theme-provider'
 
 export default async function GestorLayout({
   children,
@@ -32,6 +33,7 @@ export default async function GestorLayout({
             <span className="text-sm text-slate-400">
               {session.user.name ?? session.user.email}
             </span>
+            <ThemeToggle />
             <PushManager />
             <SignOutButton />
           </div>
@@ -42,7 +44,7 @@ export default async function GestorLayout({
 
       <div className="flex flex-1">
         {/* Sidebar (visível apenas em telas lg+) */}
-        <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-900/50">
+        <aside className="hidden lg:flex w-[244px] shrink-0 flex-col border-r border-slate-800 bg-slate-900/50">
           <GestorSidebar />
         </aside>
 

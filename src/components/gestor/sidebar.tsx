@@ -55,7 +55,7 @@ export function GestorSidebar() {
           return (
             <p
               key={i}
-              className="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wider text-slate-500"
+              className="px-3 pt-5 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500 font-mono"
             >
               {item.label}
             </p>
@@ -70,9 +70,17 @@ export function GestorSidebar() {
             href={item.href}
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
               isActive
-                ? 'bg-emerald-600/20 font-medium text-emerald-300 border border-emerald-500/20'
+                ? 'font-semibold border border-[var(--brand)]/10'
                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
             }`}
+            style={
+              isActive
+                ? {
+                    color: 'var(--brand)',
+                    backgroundColor: 'var(--brand-soft)',
+                  }
+                : undefined
+            }
           >
             {item.icon}
             {item.label}

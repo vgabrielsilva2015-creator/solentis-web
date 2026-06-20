@@ -1,12 +1,6 @@
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
-import { KpiCard } from '@/components/ui/kpi-card'
-import { StatusHeatmap, HeatmapPoint, PointStatus } from '@/components/ui/status-heatmap'
-import { TrendChart, TrendChartData } from '@/components/ui/trend-chart'
-import { ConsumptionBarChart } from '@/components/ui/consumption-bar-chart'
-import { OccurrencesPieChart } from '@/components/ui/occurrences-pie-chart'
-import { ParamSelector } from "./param-selector"
+import { DashboardClient } from './dashboard-client'
 
 function calcDelta(current: number, previous: number): number | null {
   if (previous === 0) return null // Sem histórico para comparar
@@ -144,10 +138,10 @@ export default async function GestorDashboard({
   })
   const chemicalConsumptionData = Array.from(chemicalConsumptionMap.values()).sort((a, b) => b.total - a.total)
 
-  const heatmapPoints: HeatmapPoint[] = collectionPointsRaw.map(cp => {
+  const heatmapPoints = collectionPointsRaw.map(cp => {
     const hasNonConform = cp.readings.some(r => r.is_non_conformant)
     const hasAnyReadings = cp.readings.length > 0
-    let status: PointStatus = 'OK'
+    let status: 'OK' | 'WARNING' | 'DANGER' = 'OK'
     if (hasNonConform) status = 'DANGER'
     else if (!hasAnyReadings) status = 'WARNING' // Atenção se não mediu nas últimas 24h
     return { id: cp.id, name: cp.name, status }
@@ -182,7 +176,7 @@ export default async function GestorDashboard({
   })
   
   const selectedParam = parameters.find(p => p.id === paramId) || parameters[0]
-  let trendData: TrendChartData[] = []
+  let trendData = []
   
   if (selectedParam) {
     const analysesForChart = await prisma.analysis.findMany({
@@ -200,153 +194,23 @@ export default async function GestorDashboard({
     }))
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // RENDERIZAÇÃO DA PÁGINA
-  // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <main className="px-6 py-8 space-y-8 max-w-7xl mx-auto">
-      
-      {/* HEADER & FILTROS GLOBAIS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-100">Visão Geral</h1>
-          <p className="text-sm text-slate-400">Status operacional e alertas em tempo real.</p>
-        </div>
-        
-        <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-800">
-          {[1, 7, 30].map(d => (
-            <Link
-              key={d}
-              href={`/gestor/dashboard?dias=${d}${paramId ? `&paramId=${paramId}` : ''}`}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                diasNum === d 
-                  ? 'bg-slate-700 text-slate-100 shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              }`}
-            >
-              {d === 1 ? '24h' : `${d}d`}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* LINHA 1: KPIs */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard 
-          title="Leituras Hoje"
-          value={readingsToday}
-          delta={calcDelta(readingsToday, readingsYesterday)}
-          deltaLabel="vs ontem"
-          href="/gestor/leituras"
-          sparklineData={sparklineData}
-        />
-        <KpiCard 
-          title="Ocorrências Abertas"
-          value={openOccurrences}
-          href="/gestor/ocorrencias"
-          alert={openOccurrences > 0}
-        />
-        <KpiCard 
-          title="SLA em Risco (< 2h)"
-          value={slaAtRisk}
-          href="/gestor/ocorrencias"
-          alert={slaAtRisk > 0}
-        />
-        <KpiCard 
-          title="Conformidade CONAMA"
-          value={confCurrent !== null ? `${confCurrent.toFixed(1)}%` : '—'}
-          delta={confDelta}
-          deltaLabel={`vs ${diasNum}d anteriores`}
-        />
-      </section>
-
-      {/* LINHA 2: HEATMAP E OCORRÊNCIAS CRÍTICAS */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Status dos Pontos de Coleta (24h)</h2>
-          <StatusHeatmap points={heatmapPoints} />
-        </div>
-        
-        <div className="space-y-4">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Ocorrências Críticas</h2>
-          <div className="flex flex-col gap-2">
-            {criticalOccurrences.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
-                Nenhuma ocorrência crítica aberta.
-              </div>
-            ) : (
-              criticalOccurrences.map(occ => {
-                const isOverdue = occ.deadline < now
-                const color = occ.severity === 'CRITICAL' ? 'border-status-critical/50' : 'border-status-danger/50'
-                const badgeBg = occ.severity === 'CRITICAL' ? 'bg-status-critical/20 text-status-critical' : 'bg-status-danger/20 text-status-danger'
-                
-                return (
-                  <Link 
-                    key={occ.id} 
-                    href={`/gestor/ocorrencias`}
-                    className={`flex flex-col gap-1 p-3 rounded-lg border bg-slate-900/50 hover:bg-slate-800 transition-colors ${color}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-200 truncate pr-2">{occ.description}</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeBg}`}>
-                        {occ.severity}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px] text-slate-500">{occ.reporter?.name || 'Sistema'}</span>
-                      <span className={`text-[10px] font-mono ${isOverdue ? 'text-status-critical font-bold' : 'text-slate-400'}`}>
-                        ⏱ {isOverdue ? 'VENCIDO' : formatDateDisplay(occ.deadline)}
-                      </span>
-                    </div>
-                  </Link>
-                )
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-            Ocorrências por Severidade ({diasNum === 1 ? '24h' : `${diasNum}d`})
-          </h2>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <OccurrencesPieChart data={occurrencesPieData} />
-          </div>
-        </div>
-      </section>
-
-      {/* LINHA 3: TENDÊNCIA DE PARÂMETROS E CONSUMO QUÍMICO */}
-      {parameters.length > 0 && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">Tendência por Parâmetro (24h)</h2>
-            <ParamSelector 
-              parameters={parameters} 
-              defaultValue={selectedParam?.id} 
-              diasNum={diasNum} 
-            />
-          </div>
-          
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <TrendChart 
-              data={trendData} 
-              parameterName={selectedParam?.name || ''} 
-              unit={selectedParam?.unit || ''} 
-            />
-          </div>
-        </section>
-      )}
-
-      {/* LINHA 4: CONSUMO QUÍMICO */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
-          Consumo Químico ({diasNum === 1 ? '24h' : `${diasNum}d`})
-        </h2>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-          <ConsumptionBarChart data={chemicalConsumptionData} />
-        </div>
-      </section>
-
-    </main>
+    <DashboardClient 
+      dbReadingsToday={readingsToday}
+      dbOpenOccurrences={openOccurrences}
+      dbSlaAtRisk={slaAtRisk}
+      dbConfCurrent={confCurrent}
+      dbConfDelta={confDelta}
+      dbSparklineData={sparklineData}
+      dbHeatmapPoints={heatmapPoints}
+      dbCriticalOccurrences={criticalOccurrences}
+      dbOccurrencesPieData={occurrencesPieData}
+      dbChemicalConsumptionData={chemicalConsumptionData}
+      dbTrendData={trendData}
+      dbParameters={parameters}
+      dbSelectedParam={selectedParam}
+      diasNum={diasNum}
+      paramId={paramId}
+    />
   )
 }

@@ -1,0 +1,15 @@
+<svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="solentis-bg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3ad0d6"></stop>
+      <stop offset="1" stop-color="#0a86a0"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="24" fill="url(#solentis-bg)"></rect>
+  
+  <rect x="28" y="28" width="44" height="6" rx="3" fill="#ffffff"></rect>
+  <circle cx="47" cy="44" r="9" fill="#ffffff"></circle>
+  <circle cx="58" cy="59" r="6" fill="#ffffff" fill-opacity="0.82"></circle>
+  <circle cx="44" cy="71" r="4.6" fill="#ffffff" fill-opacity="0.6"></circle>
+  <circle cx="56" cy="82" r="3.4" fill="#ffffff" fill-opacity="0.42"></circle>
+</svg>
