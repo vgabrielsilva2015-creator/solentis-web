@@ -2,10 +2,12 @@
 // Retorna null quando não há valor (leitura observacional sem parâmetro).
 // Retorna false quando nenhum limite está definido para o parâmetro.
 export function calcularNaoConformidade(
-  value:    number | null,
-  minLimit: number | null,
-  maxLimit: number | null,
+  value:       number | null,
+  minLimit:    number | null,
+  maxLimit:    number | null,
+  is_detected: boolean = true
 ): boolean | null {
+  if (!is_detected) return false // Se foi < LQ, considera sempre conforme
   if (value === null) return null
   const below = minLimit !== null && value < minLimit
   const above = maxLimit !== null && value > maxLimit

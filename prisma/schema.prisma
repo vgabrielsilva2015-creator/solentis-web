@@ -44,6 +44,7 @@ model Tenant {
   chemical_stock_exits    ChemicalStockExit[]
   chemical_stock_counts   ChemicalStockCount[]
   parameter_aliases       ParameterAlias[]
+  parameter_limits        ParameterLimit[]
 
   @@map("tenants")
 }
@@ -136,12 +137,12 @@ model Session {
 }
 
 model PushSubscription {
-  id        String   @id @default(cuid())
-  user_id   String
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  user_id  String
+  endpoint String @unique
+  p256dh   String
+  auth     String
+  user     User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
   @@map("push_subscriptions")
@@ -152,33 +153,53 @@ model PushSubscription {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model QualityParameter {
-  id              String   @id @default(cuid())
-  tenant_id       String
-  name            String
-  unit            String
-  min_limit       Float?
-  max_limit       Float?
-  legal_reference String?
-  effective_date  DateTime
-  is_active       Boolean  @default(true)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  created_by      String
+  id                String   @id @default(cuid())
+  tenant_id         String
+  name              String
+  unit              String
+  min_limit         Float?
+  max_limit         Float?
+  legal_reference   String?
+  effective_date    DateTime
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  created_by        String
   default_method_id String?
 
-  tenant  Tenant @relation(fields: [tenant_id], references: [id])
-  creator User   @relation(fields: [created_by], references: [id])
+  tenant  Tenant          @relation(fields: [tenant_id], references: [id])
+  creator User            @relation(fields: [created_by], references: [id])
   method  AnalysisMethod? @relation(fields: [default_method_id], references: [id])
 
-  readings Reading[]
-  analyses Analysis[]
-  history  ParameterHistory[]
-  aliases  ParameterAlias[]
+  readings          Reading[]
+  analyses          Analysis[]
+  history           ParameterHistory[]
+  aliases           ParameterAlias[]
   collection_points CollectionPoint[]
+  parameter_limits  ParameterLimit[]
 
   @@index([tenant_id, is_active])
   @@index([created_at])
   @@map("quality_parameters")
+}
+
+model ParameterLimit {
+  id              String   @id @default(cuid())
+  tenant_id       String
+  parameter_id    String
+  matrix          String
+  min_limit       Float?
+  max_limit       Float?
+  rule_type       String   @default("TETO") // TETO, FAIXA, EFICIENCIA
+  legal_reference String? // e.g. "CONAMA 430/2011"
+  created_at      DateTime @default(now())
+
+  tenant    Tenant           @relation(fields: [tenant_id], references: [id])
+  parameter QualityParameter @relation(fields: [parameter_id], references: [id], onDelete: Cascade)
+
+  @@unique([tenant_id, parameter_id, matrix, legal_reference])
+  @@index([tenant_id, matrix])
+  @@map("parameter_limits")
 }
 
 model ParameterHistory {
@@ -224,8 +245,8 @@ model AnalysisMethod {
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 
-  tenant            Tenant            @relation(fields: [tenant_id], references: [id])
-  analyses          Analysis[]
+  tenant             Tenant             @relation(fields: [tenant_id], references: [id])
+  analyses           Analysis[]
   quality_parameters QualityParameter[]
 
   @@unique([tenant_id, name])
@@ -251,14 +272,15 @@ model CollectionPoint {
   id          String   @id @default(cuid())
   tenant_id   String
   name        String
+  matrix      String? // 'efluente', 'subterranea', 'superficial', etc.
   location    String?
   description String?
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
 
-  tenant   Tenant          @relation(fields: [tenant_id], references: [id])
-  readings Reading[]
-  analyses Analysis[]
+  tenant     Tenant             @relation(fields: [tenant_id], references: [id])
+  readings   Reading[]
+  analyses   Analysis[]
   parameters QualityParameter[]
 
   @@index([tenant_id])
@@ -288,7 +310,7 @@ model ShiftSchedule {
   id           String   @id @default(cuid())
   tenant_id    String
   shift_id     String
-  days_of_week Int[]    // e.g. [1, 2, 3, 4, 5] for Mon-Fri
+  days_of_week Int[] // e.g. [1, 2, 3, 4, 5] for Mon-Fri
   is_active    Boolean  @default(true)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
@@ -370,6 +392,8 @@ model Reading {
   parameter_id        String?
   shift_instance_id   String?
   value               Float?
+  raw_value           String?
+  is_detected         Boolean  @default(true)
   unit                String?
   notes               String?
   is_non_conformant   Boolean?
@@ -399,7 +423,9 @@ model Analysis {
   collection_point_id String
   parameter_id        String
   method_id           String?
-  value               Float
+  value               Float?
+  raw_value           String?
+  is_detected         Boolean   @default(true)
   unit                String
   min_limit_applied   Float?
   max_limit_applied   Float?

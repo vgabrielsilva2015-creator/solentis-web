@@ -97,6 +97,21 @@ async function main() {
         created_by: admin.id,
       },
     })
+    
+    // Criar o limite legal multi-matriz atrelado a esse parâmetro (EFLUENTE)
+    await prisma.parameterLimit.upsert({
+      where: { tenant_id_parameter_id_matrix_legal_reference: { tenant_id: 'default', parameter_id: param.id, matrix: 'EFLUENTE', legal_reference: 'CONAMA 430/2011 Art. 16' } },
+      update: {},
+      create: {
+        tenant_id: 'default',
+        parameter_id: param.id,
+        matrix: 'EFLUENTE',
+        min_limit: param.min_limit,
+        max_limit: param.max_limit,
+        legal_reference: 'CONAMA 430/2011 Art. 16',
+        rule_type: param.min_limit !== null && param.max_limit !== null ? 'FAIXA' : 'TETO'
+      }
+    })
   }
   console.log(`Parametros CONAMA: ${qualityParams.length}`)
 
@@ -149,9 +164,10 @@ async function main() {
 
   // ── Pontos de coleta ──────────────────────────────────────────────────────
   const collectionPoints = [
-    { id: 'seed-cp-entrada', name: 'Entrada ETE',      location: 'Calha Parshall - entrada',      description: 'Efluente bruto antes de qualquer tratamento' },
-    { id: 'seed-cp-reator',  name: 'Reator Biologico', location: 'Tanque de aeracao - saida',     description: 'Efluente apos tratamento biologico aerobio' },
-    { id: 'seed-cp-saida',   name: 'Saida Final',      location: 'Calha de saida - apos filtros', description: 'Efluente tratado lancado no corpo receptor' },
+    { id: 'seed-cp-entrada', name: 'Entrada ETE',      location: 'Calha Parshall - entrada',      description: 'Efluente bruto antes de qualquer tratamento', matrix: 'EFLUENTE' },
+    { id: 'seed-cp-reator',  name: 'Reator Biologico', location: 'Tanque de aeracao - saida',     description: 'Efluente apos tratamento biologico aerobio', matrix: 'EFLUENTE' },
+    { id: 'seed-cp-saida',   name: 'Saida Final',      location: 'Calha de saida - apos filtros', description: 'Efluente tratado lancado no corpo receptor', matrix: 'EFLUENTE' },
+    { id: 'seed-cp-poco-1',  name: 'Poço de Monitoramento 1', location: 'Montante', description: 'Água subterrânea', matrix: 'SUBTERRANEA' },
   ]
 
   for (const cp of collectionPoints) {
@@ -162,6 +178,7 @@ async function main() {
         id: cp.id,
         tenant_id: 'default',
         name: cp.name,
+        matrix: cp.matrix,
         location: cp.location,
         description: cp.description,
         is_active: true,
