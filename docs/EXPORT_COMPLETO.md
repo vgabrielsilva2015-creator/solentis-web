@@ -1,9 +1,9 @@
 # SOLENTIS WEB - EXPORT COMPLETO
 
-Este arquivo contém todo o código fonte relevante do projeto Solentis, exportado em 2026-06-20T13:44:56.288Z.
+Este arquivo contém todo o código fonte relevante do projeto Solentis, exportado em 2026-06-20T16:20:27.147Z.
 
-### `src/app/(auth)/actions.ts`
-```ts
+### src\app\(auth)\actions.ts
+`	s
 'use server'
 
 import { prisma } from '@/lib/prisma'
@@ -18,8 +18,6 @@ function decodeToken(token: string) {
 }
 
 export async function sendPasswordResetLink(email: string) {
-  // Simula um atraso de rede
-  await new Promise(resolve => setTimeout(resolve, 1000))
 
   const user = await prisma.user.findFirst({
     where: { email, is_active: true }
@@ -37,7 +35,6 @@ export async function sendPasswordResetLink(email: string) {
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-  await new Promise(resolve => setTimeout(resolve, 1000))
 
   if (!token || !newPassword || newPassword.length < 8) {
     return { error: 'Dados inválidos ou senha muito curta.' }
@@ -67,10 +64,10 @@ export async function resetPassword(token: string, newPassword: string) {
   }
 }
 
-```
+`
 
-### `src/app/(auth)/forgot/page.tsx`
-```tsx
+### src\app\(auth)\forgot\page.tsx
+`	s
 'use client'
 
 import { useState } from 'react'
@@ -201,10 +198,10 @@ export default function ForgotPasswordPage() {
   )
 }
 
-```
+`
 
-### `src/app/(auth)/invite/[token]/page.tsx`
-```tsx
+### src\app\(auth)\invite\[token]\page.tsx
+`	s
 'use client'
 
 import { useState, use } from 'react'
@@ -308,10 +305,10 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   )
 }
 
-```
+`
 
-### `src/app/(auth)/layout.tsx`
-```tsx
+### src\app\(auth)\layout.tsx
+`	s
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
@@ -320,10 +317,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   )
 }
 
-```
+`
 
-### `src/app/(auth)/login/actions.ts`
-```ts
+### src\app\(auth)\login\actions.ts
+`	s
 'use server'
 
 import { signIn } from '@/lib/auth'
@@ -377,10 +374,10 @@ export async function loginAction(
   return {}
 }
 
-```
+`
 
-### `src/app/(auth)/login/page.tsx`
-```tsx
+### src\app\(auth)\login\page.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -472,10 +469,10 @@ export default function LoginPage() {
   )
 }
 
-```
+`
 
-### `src/app/(auth)/reset/page.tsx`
-```tsx
+### src\app\(auth)\reset\page.tsx
+`	s
 'use client'
 
 import { useState, Suspense } from 'react'
@@ -625,10 +622,10 @@ export default function ResetPasswordPage() {
   )
 }
 
-```
+`
 
-### `src/app/(auth)/signup/page.tsx`
-```tsx
+### src\app\(auth)\signup\page.tsx
+`	s
 'use client'
 
 import { useState } from 'react'
@@ -743,10 +740,10 @@ export default function SignupPage() {
   )
 }
 
-```
+`
 
-### `src/app/(auth)/trocar-senha/actions.ts`
-```ts
+### src\app\(auth)\trocar-senha\actions.ts
+`	s
 'use server'
 
 import { auth, signIn } from '@/lib/auth'
@@ -828,10 +825,10 @@ function getDashboard(role: string): string {
   }
 }
 
-```
+`
 
-### `src/app/(auth)/trocar-senha/page.tsx`
-```tsx
+### src\app\(auth)\trocar-senha\page.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -982,10 +979,10 @@ export default function TrocarSenhaPage() {
   )
 }
 
-```
+`
 
-### `src/app/(auth)/verify-email/page.tsx`
-```tsx
+### src\app\(auth)\verify-email\page.tsx
+`	s
 'use client'
 
 import { useState } from 'react'
@@ -1049,10 +1046,139 @@ export default function VerifyEmailPage() {
   )
 }
 
-```
+`
 
-### `src/app/admin/auditoria/page.tsx`
-```tsx
+### src\app\actions\notifications.ts
+`	s
+'use server'
+
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+
+export type NotificationItem = {
+  id: string
+  title: string
+  description: string
+  type: 'TASK' | 'OCCURRENCE' | 'MAINTENANCE'
+  href: string
+  date: Date
+}
+
+export async function getNotifications(): Promise<NotificationItem[]> {
+  const session = await auth()
+  if (!session) return []
+
+  const tenantId = await getTenantId()
+  const notifications: NotificationItem[] = []
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { tenant_id_email: { tenant_id: tenantId, email: session.user.email! } },
+    })
+
+    if (!user) return []
+
+    // 1. Ocorrências Abertas (Para todos)
+    const occurrences = await prisma.occurrence.findMany({
+      where: {
+        tenant_id: tenantId,
+        status: { in: ['OPEN', 'IN_PROGRESS'] },
+      },
+      orderBy: { created_at: 'desc' },
+      take: 5,
+    })
+
+    occurrences.forEach((occ) => {
+      notifications.push({
+        id: `occ-${occ.id}`,
+        title: `Ocorrência ${occ.severity === 'CRITICAL' ? 'Crítica' : occ.severity === 'HIGH' ? 'Alta' : occ.severity === 'MEDIUM' ? 'Média' : 'Baixa'}`,
+        description: occ.description,
+        type: 'OCCURRENCE',
+        href: session.user.role === 'OPERATOR' 
+          ? `/operador/ocorrencias/${occ.id}` 
+          : session.user.role === 'TECHNICIAN'
+          ? `/tecnico/ocorrencias/${occ.id}`
+          : `/gestor/ocorrencias/${occ.id}`,
+        date: occ.created_at,
+      })
+    })
+
+    // 2. Tarefas Pendentes do Turno Atual
+    const activeShiftInstance = await prisma.shiftInstance.findFirst({
+      where: {
+        tenant_id: tenantId,
+        status: 'OPEN',
+      },
+      select: { id: true },
+    })
+
+    if (activeShiftInstance) {
+      const tasks = await prisma.shiftTask.findMany({
+        where: {
+          tenant_id: tenantId,
+          shift_instance_id: activeShiftInstance.id,
+          status: 'PENDING',
+        },
+        take: 5,
+      })
+
+      tasks.forEach((task) => {
+        notifications.push({
+          id: `task-${task.id}`,
+          title: 'Tarefa Pendente',
+          description: task.title,
+          type: 'TASK',
+          href: session.user.role === 'OPERATOR'
+            ? `/operador/turnos/${activeShiftInstance.id}/tarefas`
+            : `/tecnico/turnos/tarefas`,
+          date: task.created_at,
+        })
+      })
+    }
+
+    // 3. Manutenções Preventivas (Apenas Técnico/Gestor)
+    if (session.user.role === 'TECHNICIAN' || session.user.role === 'MANAGER') {
+      const maintenances = await prisma.preventiveMaintenance.findMany({
+        where: {
+          tenant_id: tenantId,
+          status: 'SCHEDULED',
+          scheduled_date: {
+            lte: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000) // Próximos 7 dias
+          }
+        },
+        include: { equipment: true },
+        take: 5,
+      })
+
+      maintenances.forEach((maint) => {
+        notifications.push({
+          id: `maint-${maint.id}`,
+          title: 'Preventiva Agendada',
+          description: maint.equipment.name,
+          type: 'MAINTENANCE',
+          href: session.user.role === 'TECHNICIAN'
+            ? `/tecnico/equipamentos/${maint.equipment_id}`
+            : `/gestor/equipamentos/${maint.equipment_id}`,
+          date: maint.scheduled_date,
+        })
+      })
+    }
+
+    // Ordenar por data (mais recentes primeiro)
+    notifications.sort((a, b) => b.date.getTime() - a.date.getTime())
+
+    return notifications.slice(0, 10) // Retornar no máximo 10
+  } catch (err) {
+    console.error('Failed to get notifications', err)
+    return []
+  }
+}
+
+`
+
+### src\app\admin\auditoria\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -1330,10 +1456,10 @@ export default async function AdminAuditoriaPage({
   )
 }
 
-```
+`
 
-### `src/app/admin/layout.tsx`
-```tsx
+### src\app\admin\layout.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -1388,10 +1514,10 @@ export default async function AdminLayout({
   )
 }
 
-```
+`
 
-### `src/app/admin/loading.tsx`
-```tsx
+### src\app\admin\loading.tsx
+`	s
 import { Loader2 } from 'lucide-react'
 
 export default function Loading() {
@@ -1405,10 +1531,10 @@ export default function Loading() {
   )
 }
 
-```
+`
 
-### `src/app/admin/plantas/actions.ts`
-```ts
+### src\app\admin\plantas\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -1514,10 +1640,10 @@ export async function criarPlanta(
   }
 }
 
-```
+`
 
-### `src/app/admin/plantas/nova/page.tsx`
-```tsx
+### src\app\admin\plantas\nova\page.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -1691,10 +1817,10 @@ export default function NovaPlantaPage() {
   )
 }
 
-```
+`
 
-### `src/app/admin/plantas/page.tsx`
-```tsx
+### src\app\admin\plantas\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -1917,10 +2043,10 @@ export default async function AdminPlantasPage() {
   )
 }
 
-```
+`
 
-### `src/app/admin/plantas/[id]/page.tsx`
-```tsx
+### src\app\admin\plantas\[id]\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -2157,10 +2283,10 @@ export default async function AdminPlantaDetalhePage({
   )
 }
 
-```
+`
 
-### `src/app/admin/seguranca/page.tsx`
-```tsx
+### src\app\admin\seguranca\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Shield, Lock, Clock } from 'lucide-react'
@@ -2206,18 +2332,18 @@ export default async function AdminSegurancaPage() {
   )
 }
 
-```
+`
 
-### `src/app/api/auth/[...nextauth]/route.ts`
-```ts
+### src\app\api\auth\[...nextauth]\route.ts
+`	s
 import { handlers } from '@/lib/auth'
 
 export const { GET, POST } = handlers
 
-```
+`
 
-### `src/app/api/cron/shifts/route.ts`
-```ts
+### src\app\api\cron\shifts\route.ts
+`	s
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { startOfDay, addDays } from 'date-fns'
@@ -2295,10 +2421,172 @@ export async function GET(request: Request) {
   }
 }
 
-```
+`
 
-### `src/app/api/occurrences/[id]/photo/route.ts`
-```ts
+### src\app\api\export\route.ts
+`	s
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+import { NextResponse } from 'next/server'
+
+export async function GET(request: Request) {
+  const session = await auth()
+  if (!session || session.user.role !== 'MANAGER') {
+    return new NextResponse('Unauthorized', { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const type = searchParams.get('type')
+  const tenantId = await getTenantId()
+
+  let csv = ''
+  let filename = ''
+
+  if (type === 'occurrences') {
+    const statusFilter = searchParams.get('status')
+    const showAll = statusFilter === 'all'
+
+    const where = {
+      tenant_id: tenantId,
+      ...(showAll ? {} : { status: { in: ['OPEN', 'IN_PROGRESS'] } }),
+    }
+
+    const occurrences = await prisma.occurrence.findMany({
+      where,
+      include: {
+        reporter: { select: { name: true } },
+        collection_point: { select: { name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    })
+
+    const headers = ['ID', 'Data Criação', 'Severidade', 'Categoria', 'Ponto de Coleta', 'Status', 'Prazo', 'Reportado por', 'Descrição']
+    csv += headers.join(';') + '\n'
+
+    for (const oc of occurrences) {
+      const row = [
+        oc.id,
+        oc.created_at.toISOString(),
+        oc.severity,
+        oc.category ?? '',
+        oc.collection_point?.name ?? '',
+        oc.status,
+        oc.deadline.toISOString(),
+        oc.reporter.name,
+        `"${oc.description.replace(/"/g, '""')}"`
+      ]
+      csv += row.join(';') + '\n'
+    }
+
+    filename = `ocorrencias_${new Date().toISOString().slice(0, 10)}.csv`
+  } else if (type === 'readings') {
+    // Add logic for readings if needed
+    const readings = await prisma.reading.findMany({
+      where: { tenant_id: tenantId },
+      include: {
+        recorder: { select: { name: true } },
+        collection_point: { select: { name: true } },
+        parameter: { select: { name: true, unit: true } },
+      },
+      orderBy: { recorded_at: 'desc' },
+      take: 1000 // Limit to prevent massive loads
+    })
+
+    const headers = ['Data', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Registrado por', 'Não Conforme']
+    csv += headers.join(';') + '\n'
+
+    for (const r of readings) {
+      const row = [
+        r.recorded_at.toISOString(),
+        r.collection_point.name,
+        r.parameter?.name ?? '',
+        r.value ?? '',
+        r.parameter?.unit ?? r.unit ?? '',
+        r.recorder.name,
+        r.is_non_conformant ? 'SIM' : 'NÃO'
+      ]
+      csv += row.join(';') + '\n'
+    }
+
+    filename = `leituras_${new Date().toISOString().slice(0, 10)}.csv`
+  } else if (type === 'analyses') {
+    const analyses = await prisma.analysis.findMany({
+      where: { tenant_id: tenantId },
+      include: {
+        recorder: { select: { name: true } },
+        collection_point: { select: { name: true } },
+        parameter: { select: { name: true, unit: true } },
+      },
+      orderBy: { collected_at: 'desc' },
+      take: 1000
+    })
+
+    const headers = ['Data Coleta', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Registrado por', 'Não Conforme']
+    csv += headers.join(';') + '\n'
+
+    for (const a of analyses) {
+      const row = [
+        a.collected_at.toISOString(),
+        a.collection_point.name,
+        a.parameter.name,
+        a.value ?? '',
+        a.parameter.unit,
+        a.recorder.name,
+        a.is_non_conformant ? 'SIM' : 'NÃO'
+      ]
+      csv += row.join(';') + '\n'
+    }
+
+    filename = `analises_${new Date().toISOString().slice(0, 10)}.csv`
+  } else if (type === 'preventives') {
+    const maintenances = await prisma.preventiveMaintenance.findMany({
+      where: { tenant_id: tenantId },
+      include: {
+        equipment: { select: { name: true, serial_number: true } },
+        completer: { select: { name: true } },
+      },
+      orderBy: { scheduled_date: 'desc' },
+      take: 1000
+    })
+
+    const headers = ['ID', 'Equipamento', 'Serial', 'Data Agendada', 'Data Conclusão', 'Status', 'Responsável', 'Notas']
+    csv += headers.join(';') + '\n'
+
+    for (const m of maintenances) {
+      const row = [
+        m.id,
+        `"${m.equipment.name}"`,
+        m.equipment.serial_number ?? '',
+        m.scheduled_date.toISOString(),
+        m.completed_at ? m.completed_at.toISOString() : '',
+        m.status,
+        m.completer?.name ?? '',
+        m.completion_notes ? `"${m.completion_notes.replace(/"/g, '""')}"` : ''
+      ]
+      csv += row.join(';') + '\n'
+    }
+
+    filename = `preventivas_${new Date().toISOString().slice(0, 10)}.csv`
+  } else {
+    return new NextResponse('Invalid type', { status: 400 })
+  }
+
+  // Use BOM for Excel to recognize UTF-8 correctly
+  const bom = '\uFEFF'
+
+  return new NextResponse(bom + csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  })
+}
+
+`
+
+### src\app\api\occurrences\[id]\photo\route.ts
+`	s
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
@@ -2346,10 +2634,96 @@ export async function GET(
   }
 }
 
-```
+`
 
-### `src/app/api/shift-task-photos/[id]/route.ts`
-```ts
+### src\app\api\search\route.ts
+`	s
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const q = searchParams.get('q')
+    
+    if (!q || q.length < 2) {
+      return NextResponse.json({ results: [] })
+    }
+
+    const tenant_id = await getTenantId()
+    const query = q.toLowerCase()
+
+    const [equipments, points, occurrences] = await Promise.all([
+      // Equipamentos
+      prisma.equipment.findMany({
+        where: {
+          tenant_id,
+          OR: [
+            { name: { contains: query } },
+            { serial_number: { contains: query } }
+          ]
+        },
+        take: 3,
+        select: { id: true, name: true, serial_number: true }
+      }),
+      
+      // Pontos de Coleta
+      prisma.collectionPoint.findMany({
+        where: {
+          tenant_id,
+          name: { contains: query }
+        },
+        take: 3,
+        select: { id: true, name: true }
+      }),
+      
+      // Ocorrencias (Abertas ou em Andamento)
+      prisma.occurrence.findMany({
+        where: {
+          tenant_id,
+          description: { contains: query }
+        },
+        take: 3,
+        select: { id: true, category: true, description: true }
+      })
+    ])
+
+    const results = [
+      ...equipments.map(e => ({
+        id: e.id,
+        type: 'equipment',
+        title: e.name,
+        subtitle: e.serial_number ? `SN: ${e.serial_number}` : 'Equipamento',
+        href: `/tecnico/equipamentos` // Redirecionamento genérico
+      })),
+      ...points.map(p => ({
+        id: p.id,
+        type: 'point',
+        title: p.name,
+        subtitle: 'Ponto de Coleta',
+        href: `/gestor/dashboard?pontoId=${p.id}`
+      })),
+      ...occurrences.map(o => ({
+        id: o.id,
+        type: 'occurrence',
+        title: o.category || 'Ocorrência',
+        subtitle: o.description.substring(0, 50) + '...',
+        href: `/gestor/ocorrencias`
+      }))
+    ]
+
+    return NextResponse.json({ results })
+  } catch (error) {
+    console.error('Search API Error:', error)
+    return NextResponse.json({ error: 'Failed to search' }, { status: 500 })
+  }
+}
+
+`
+
+### src\app\api\shift-task-photos\[id]\route.ts
+`	s
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
@@ -2394,10 +2768,10 @@ export async function GET(
   }
 }
 
-```
+`
 
-### `src/app/gestor/analises/page.tsx`
-```tsx
+### src\app\gestor\analises\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -2405,7 +2779,8 @@ import { PageHeader } from '@/components/ui/page-header'
 import { formatDateDisplay } from '@/lib/date-utils'
 import { getTenantId } from '@/lib/tenant'
 import Link from 'next/link'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export const metadata = {
   title: 'Análises Registradas | Solentis',
@@ -2444,10 +2819,18 @@ export default async function GestorAnalisesPage({
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <PageHeader 
-        title="Histórico de Análises" 
-        description="Visualize e edite as análises registradas pelos técnicos."
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader 
+          title="Histórico de Análises" 
+          description="Visualize e edite as análises registradas pelos técnicos."
+        />
+        <Link href={`/api/export?type=analyses`} target="_blank">
+          <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+            <Download className="w-4 h-4 mr-1.5" />
+            Exportar CSV
+          </Button>
+        </Link>
+      </div>
 
       <div className="rounded-md border border-slate-800 bg-slate-900 overflow-hidden">
         <table className="w-full text-left text-sm text-slate-300">
@@ -2543,10 +2926,10 @@ export default async function GestorAnalisesPage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/analises-internas/page.tsx`
-```tsx
+### src\app\gestor\analises-internas\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -2707,10 +3090,10 @@ export default async function AnalisesInternasGridPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/auditoria/page.tsx`
-```tsx
+### src\app\gestor\auditoria\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId } from '@/lib/tenant'
@@ -3014,10 +3397,10 @@ export default async function AuditoriaPage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/categorias/actions.ts`
-```ts
+### src\app\gestor\categorias\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -3117,10 +3500,10 @@ export async function toggleAtivoCategoria(id: string): Promise<{ error?: string
   return {}
 }
 
-```
+`
 
-### `src/app/gestor/categorias/novo/page.tsx`
-```tsx
+### src\app\gestor\categorias\novo\page.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -3171,10 +3554,10 @@ export default function NovaCategoriaPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/categorias/page.tsx`
-```tsx
+### src\app\gestor\categorias\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -3250,10 +3633,10 @@ export default async function CategoriasPage({ searchParams }: { searchParams: P
   )
 }
 
-```
+`
 
-### `src/app/gestor/categorias/[id]/edit-form.tsx`
-```tsx
+### src\app\gestor\categorias\[id]\edit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useTransition } from 'react'
@@ -3330,10 +3713,10 @@ export function EditCategoriaForm({ categoria }: { categoria: Categoria }) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/categorias/[id]/page.tsx`
-```tsx
+### src\app\gestor\categorias\[id]\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { EditCategoriaForm } from './edit-form'
@@ -3347,10 +3730,10 @@ export default async function EditarCategoriaPage({ params }: { params: Promise<
   return <EditCategoriaForm categoria={categoria} />
 }
 
-```
+`
 
-### `src/app/gestor/dashboard/dashboard-client.tsx`
-```tsx
+### src\app\gestor\dashboard\dashboard-client.tsx
+`	s
 'use client'
 
 import React, { useState } from 'react'
@@ -3378,6 +3761,7 @@ interface DashboardClientProps {
   paramId?: string
   pontoId?: string
   activePointName?: string | null
+  dbEfficiency: { in: number; out: number; val: number } | null
 }
 
 export function DashboardClient({
@@ -3401,6 +3785,7 @@ export function DashboardClient({
   paramId,
   pontoId,
   activePointName,
+  dbEfficiency,
 }: DashboardClientProps) {
   const router = useRouter()
   const [period, setPeriod] = useState<string>('7d')
@@ -3664,11 +4049,10 @@ export function DashboardClient({
   }
 
   const buildDonut = () => {
-    const data = [
-      { v: 2, col: 'var(--danger)', l: 'Crítica' },
-      { v: 1, col: 'var(--warn)', l: 'Alta' },
-    ]
-    const total = 3
+    const data = dbOccurrencesPieData.filter(d => d.value > 0).map(d => ({ v: d.value, col: d.color, l: d.name }))
+    if (data.length === 0) return miniEmpty('Nenhuma ocorrência neste período.')
+    
+    const total = data.reduce((sum, d) => sum + d.v, 0)
     const r = 42
     const cx = 52
     const cy = 52
@@ -3921,12 +4305,11 @@ export function DashboardClient({
 
   // Efficiency progress widget (Anéis de progresso)
   const renderEfficiency = () => {
-    if (isEmpty) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída para calcular a eficiência.'), 'Performance')
-    const val = 92
+    if (isEmpty || !dbEfficiency) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída suficientes para calcular a eficiência.'), 'Performance')
+    const val = dbEfficiency.val
     const center = (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span style={{ fontFamily: F.sora, fontSize: '26px', fontWeight: 700, color: 'var(--txt)', lineHeight: 1 }}>{val}%</span>
-        <span style={{ fontFamily: F.mono, fontSize: '9px', letterSpacing: '.06em', color: 'var(--ok)', marginTop: '3px' }}>▲ 4 pts</span>
       </div>
     )
     const stat = (l: string, v: string, ok?: boolean) => (
@@ -3939,10 +4322,10 @@ export function DashboardClient({
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         {buildRing(val, 'var(--brand)', 116, 12, center)}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {stat('Entrada ETE', '412 mg/L')}
-          {stat('Saída Final', '33 mg/L')}
+          {stat('Entrada ETE', `${dbEfficiency.in} mg/L`)}
+          {stat('Saída Final', `${dbEfficiency.out} mg/L`)}
           <div style={{ height: '1px', background: 'var(--border)' }} />
-          {stat('Meta CONAMA', '≤ 120 mg/L ✓', true)}
+          {stat('Meta CONAMA', '≥ 80% ✓', val >= 80)}
         </div>
       </div>
     )
@@ -4159,7 +4542,7 @@ export function DashboardClient({
         </div>
 
         {/* Row 3: Widgets (Feed, Maintenance, SLA) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px', paddingBottom: '40px' }}>
           {renderFeedWidget()}
           {renderMaintenanceWidget()}
           {renderSlaWidget()}
@@ -4169,10 +4552,10 @@ export function DashboardClient({
   )
 }
 
-```
+`
 
-### `src/app/gestor/dashboard/nonconform-chart.tsx`
-```tsx
+### src\app\gestor\dashboard\nonconform-chart.tsx
+`	s
 'use client'
 
 import {
@@ -4236,10 +4619,10 @@ export function NonConformChart({ data }: { data: DataPoint[] }) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/dashboard/page.tsx`
-```tsx
+### src\app\gestor\dashboard\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { DashboardClient } from './dashboard-client'
@@ -4289,7 +4672,7 @@ export default async function GestorDashboard({
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
   // Filtro por ponto
-  const pointCond = pontoId ? { point_id: pontoId } : {}
+  const pointCond = pontoId ? { collection_point_id: pontoId } : {}
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. DADOS DOS KPIs (Paralelizados)
@@ -4513,6 +4896,39 @@ export default async function GestorDashboard({
     return { sev: severityLabels[severity] || severity, avg, meta }
   })
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 6. CÁLCULO DE EFICIÊNCIA (DQO / DBO)
+  // ─────────────────────────────────────────────────────────────────────────────
+  let dbEfficiency = null
+  const dqoParam = parameters.find(p => p.name.toLowerCase().includes('dqo') || p.name.toLowerCase().includes('demanda química'))
+  if (dqoParam) {
+    // Busca média de entrada e saída
+    const inPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('entrada') || p.name.toLowerCase().includes('bruto'))
+    const outPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('saída') || p.name.toLowerCase().includes('tratado') || p.name.toLowerCase().includes('final'))
+    
+    if (inPoint && outPoint) {
+      const inAnalyses = await prisma.analysis.findMany({
+        where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } },
+        select: { value: true }
+      })
+      const outAnalyses = await prisma.analysis.findMany({
+        where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } },
+        select: { value: true }
+      })
+      
+      const inValid = inAnalyses.filter(a => a.value !== null)
+      const outValid = outAnalyses.filter(a => a.value !== null)
+      
+      const inAvg = inValid.length > 0 ? inValid.reduce((s, a) => s + (a.value || 0), 0) / inValid.length : 0
+      const outAvg = outValid.length > 0 ? outValid.reduce((s, a) => s + (a.value || 0), 0) / outValid.length : 0
+      
+      if (inAvg > 0) {
+        const val = Math.max(0, Math.round(((inAvg - outAvg) / inAvg) * 100))
+        dbEfficiency = { in: Math.round(inAvg), out: Math.round(outAvg), val }
+      }
+    }
+  }
+
   return (
     <DashboardClient 
       dbReadingsToday={readingsToday}
@@ -4535,14 +4951,15 @@ export default async function GestorDashboard({
       paramId={paramId}
       pontoId={pontoId}
       activePointName={activePointName}
+      dbEfficiency={dbEfficiency}
     />
   )
 }
 
-```
+`
 
-### `src/app/gestor/dashboard/param-selector.tsx`
-```tsx
+### src\app\gestor\dashboard\param-selector.tsx
+`	s
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -4578,10 +4995,10 @@ export function ParamSelector({ parameters, defaultValue, diasNum }: ParamSelect
   )
 }
 
-```
+`
 
-### `src/app/gestor/laudos/importar/actions.ts`
-```ts
+### src\app\gestor\laudos\importar\actions.ts
+`	s
 'use server'
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -4865,10 +5282,10 @@ export async function saveMappedReadings(data: {
   }
 }
 
-```
+`
 
-### `src/app/gestor/laudos/importar/page.tsx`
-```tsx
+### src\app\gestor\laudos\importar\page.tsx
+`	s
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -4934,10 +5351,8 @@ export default function ImportLaudoPage() {
     for (let i = 0; i < currentQueue.length; i++) {
       if (currentQueue[i].status !== 'pending') continue;
 
-      // Delay between PDFs (skip first one) — 5s para respeitar rate limit da API gratuita
-      if (i > 0) {
-        await delay(5000)
-      }
+      // Process files sequentially without artificial delay
+
 
       // Update status to extracting
       updateFileItem(currentQueue[i].id, { status: 'extracting' })
@@ -5071,7 +5486,6 @@ export default function ImportLaudoPage() {
   const retryAllFailed = async () => {
     const failedFiles = filesQueue.filter(f => f.status === 'error')
     for (let i = 0; i < failedFiles.length; i++) {
-      if (i > 0) await delay(5000)
       await retryFile(failedFiles[i])
     }
   }
@@ -5400,10 +5814,10 @@ export default function ImportLaudoPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/laudos/page.tsx`
-```tsx
+### src\app\gestor\laudos\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -5534,10 +5948,10 @@ export default async function LaudosExternosPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/laudos/[id]/page.tsx`
-```tsx
+### src\app\gestor\laudos\[id]\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
@@ -5723,10 +6137,10 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
   )
 }
 
-```
+`
 
-### `src/app/gestor/layout.tsx`
-```tsx
+### src\app\gestor\layout.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -5737,6 +6151,7 @@ import { MobileNav } from '@/components/mobile-nav'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
 import { ThemeToggle } from '@/components/theme-provider'
+import { NotificationBell } from '@/components/ui/notification-bell'
 
 export default async function GestorLayout({
   children,
@@ -5763,6 +6178,7 @@ export default async function GestorLayout({
               {session.user.name ?? session.user.email}
             </span>
             <ThemeToggle />
+            <NotificationBell />
             <PushManager />
             <SignOutButton />
           </div>
@@ -5786,15 +6202,17 @@ export default async function GestorLayout({
   )
 }
 
-```
+`
 
-### `src/app/gestor/leituras/page.tsx`
-```tsx
+### src\app\gestor\leituras\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId } from '@/lib/tenant'
+import { Button } from '@/components/ui/button'
+import { Download } from 'lucide-react'
 
 const PAGE_SIZE = 20
 
@@ -5841,6 +6259,12 @@ export default async function GestorLeiturasPage({
             <h1 className="text-2xl font-bold text-white">Todas as Leituras</h1>
             <p className="text-sm text-slate-400">Histórico completo de registros manuais e inteligência artificial. ({total} registros)</p>
           </div>
+          <Link href={`/api/export?type=readings`} target="_blank">
+            <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+              <Download className="w-4 h-4 mr-1.5" />
+              Exportar CSV
+            </Button>
+          </Link>
         </div>
 
         {/* Tabela de leituras */}
@@ -5929,10 +6353,10 @@ export default async function GestorLeiturasPage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/loading.tsx`
-```tsx
+### src\app\gestor\loading.tsx
+`	s
 import { Loader2 } from 'lucide-react'
 
 export default function Loading() {
@@ -5946,10 +6370,453 @@ export default function Loading() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/ocorrencias/nova/occurrence-form.tsx`
-```tsx
+### src\app\gestor\manutencao\corretivas\nova\page.tsx
+`	s
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+
+export default async function NovaCorretivaPage() {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const tenant_id = await getTenantId()
+  
+  const [equipment, users] = await Promise.all([
+    prisma.equipment.findMany({
+      where: { tenant_id, is_active: true },
+      select: { id: true, name: true, serial_number: true }
+    }),
+    prisma.user.findMany({
+      where: { tenant_id, is_active: true, role: { in: ['TECHNICIAN', 'MANAGER'] } },
+      select: { id: true, name: true }
+    })
+  ])
+
+  // Simple placeholder for creating
+  return (
+    <main className="px-6 py-8 max-w-2xl mx-auto space-y-6">
+      <Link 
+        href="/gestor/manutencao/corretivas" 
+        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <ArrowLeft className="mr-2 w-4 h-4" />
+        Voltar para Corretivas
+      </Link>
+
+      <PageHeader 
+        title="Nova Manutenção Corretiva" 
+        description="Registre uma nova manutenção corretiva."
+      />
+
+      <div className="bg-surface-1 border border-border rounded-xl shadow-sm p-6">
+        <form className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Equipamento</label>
+            <select className="w-full h-10 px-3 rounded-lg border border-border bg-surface-2">
+              <option value="">Selecione um equipamento...</option>
+              {equipment.map(e => (
+                <option key={e.id} value={e.id}>{e.name} {e.serial_number ? `(SN: ${e.serial_number})` : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Descrição do Problema</label>
+            <input type="text" className="w-full h-10 px-3 rounded-lg border border-border bg-surface-2" placeholder="O que aconteceu?" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Responsável</label>
+              <select className="w-full h-10 px-3 rounded-lg border border-border bg-surface-2">
+                <option value="">Atribuir a...</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Prioridade</label>
+              <select className="w-full h-10 px-3 rounded-lg border border-border bg-surface-2">
+                <option value="LOW">Baixa</option>
+                <option value="MEDIUM">Média</option>
+                <option value="HIGH">Alta</option>
+                <option value="CRITICAL">Crítica</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Observações adicionais</label>
+            <textarea className="w-full p-3 rounded-lg border border-border bg-surface-2" rows={3}></textarea>
+          </div>
+
+          <div className="pt-4 flex justify-end gap-3">
+            <Link href="/gestor/manutencao/corretivas" className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-2 rounded-lg transition-colors border border-border">Cancelar</Link>
+            <button type="button" className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:brightness-105 transition-all shadow-sm">
+              Registrar Corretiva
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  )
+}
+
+`
+
+### src\app\gestor\manutencao\corretivas\page.tsx
+`	s
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Plus, CheckCircle2, AlertCircle, Wrench, CircleDashed } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_STATUS_COLOR, PRIORITY_LABEL, SEVERITY_COLOR } from '@/lib/labels'
+
+export default async function CorrectiveMaintenancePage() {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const tenant_id = await getTenantId()
+
+  const maintenances = await prisma.correctiveMaintenance.findMany({
+    where: { tenant_id },
+    include: {
+      equipment: true,
+      responsible: { select: { name: true } },
+    },
+    orderBy: { start_date: 'desc' },
+  })
+
+  const getStatusBadge = (status: string) => {
+    const colorClass = MAINTENANCE_STATUS_COLOR[status] || 'bg-slate-800 text-slate-400 border-slate-700'
+    const label = MAINTENANCE_STATUS_LABEL[status] || status
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${colorClass}`}>
+        {status === 'IN_PROGRESS' && <CircleDashed className="w-3.5 h-3.5 animate-spin-slow" />}
+        {(status === 'COMPLETED' || status === 'DONE' || status === 'RESOLVED') && <CheckCircle2 className="w-3.5 h-3.5" />}
+        {(status === 'SCHEDULED' || status === 'CANCELLED') && <AlertCircle className="w-3.5 h-3.5" />}
+        {label}
+      </span>
+    )
+  }
+
+  const getPriorityBadge = (priority: string | null) => {
+    const safePriority = priority || 'MEDIUM'
+    const colorClass = SEVERITY_COLOR[safePriority] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+    const label = PRIORITY_LABEL[safePriority] || safePriority
+    return <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${colorClass}`}>{label}</span>
+  }
+
+  return (
+    <main className="px-6 py-8 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader 
+          title="Manutenção Corretiva" 
+          description="Acompanhe as manutenções corretivas em equipamentos."
+        />
+        <Link 
+          href="/gestor/manutencao/corretivas/nova" 
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:brightness-105 transition-all shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Nova Corretiva
+        </Link>
+      </div>
+
+      <div className="bg-surface-1 border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-surface-2 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
+              <tr>
+                <th className="px-6 py-4">Descrição / Equipamento</th>
+                <th className="px-6 py-4">Data Início</th>
+                <th className="px-6 py-4">Prioridade</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Responsável</th>
+                <th className="px-6 py-4 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {maintenances.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center">
+                        <Wrench className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        Nenhuma manutenção corretiva cadastrada.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                maintenances.map((m) => (
+                  <tr key={m.id} className="hover:bg-surface-2/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col max-w-sm">
+                        <span className="font-medium text-foreground truncate" title={m.description}>{m.description}</span>
+                        <span className="text-[11px] text-muted-foreground font-mono mt-0.5">{m.equipment.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                      {m.start_date.toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getPriorityBadge(m.priority)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(m.status)}
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {m.responsible?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link 
+                        href={`/gestor/manutencao/corretivas/${m.id}`}
+                        className="text-primary hover:text-primary/80 font-medium text-xs transition-colors"
+                      >
+                        Detalhes
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+`
+
+### src\app\gestor\manutencao\preventivas\nova\page.tsx
+`	s
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+
+export default async function NovaPreventivaPage() {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const tenant_id = await getTenantId()
+  const equipment = await prisma.equipment.findMany({
+    where: { tenant_id, is_active: true },
+    select: { id: true, name: true, serial_number: true }
+  })
+
+  // Simple placeholder for creating
+  return (
+    <main className="px-6 py-8 max-w-2xl mx-auto space-y-6">
+      <Link 
+        href="/gestor/manutencao/preventivas" 
+        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <ArrowLeft className="mr-2 w-4 h-4" />
+        Voltar para Preventivas
+      </Link>
+
+      <PageHeader 
+        title="Nova Manutenção Preventiva" 
+        description="Agende uma nova manutenção para um equipamento."
+      />
+
+      <div className="bg-surface-1 border border-border rounded-xl shadow-sm p-6">
+        <form className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Equipamento</label>
+            <select className="w-full h-10 px-3 rounded-lg border border-border bg-surface-2">
+              <option value="">Selecione um equipamento...</option>
+              {equipment.map(e => (
+                <option key={e.id} value={e.id}>{e.name} {e.serial_number ? `(SN: ${e.serial_number})` : ''}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Data Agendada</label>
+            <input type="date" className="w-full h-10 px-3 rounded-lg border border-border bg-surface-2" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Observações</label>
+            <textarea className="w-full p-3 rounded-lg border border-border bg-surface-2" rows={4}></textarea>
+          </div>
+
+          <div className="pt-4 flex justify-end gap-3">
+            <Link href="/gestor/manutencao/preventivas" className="px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-2 rounded-lg transition-colors border border-border">Cancelar</Link>
+            <button type="button" className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:brightness-105 transition-all shadow-sm">
+              Agendar Manutenção
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  )
+}
+
+`
+
+### src\app\gestor\manutencao\preventivas\page.tsx
+`	s
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Plus, Calendar, CheckCircle2, AlertCircle, Wrench, Download } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_STATUS_COLOR } from '@/lib/labels'
+
+export default async function PreventiveMaintenancePage() {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const tenant_id = await getTenantId()
+
+  const maintenances = await prisma.preventiveMaintenance.findMany({
+    where: { tenant_id },
+    include: {
+      equipment: true,
+      completer: { select: { name: true } },
+    },
+    orderBy: { scheduled_date: 'asc' },
+  })
+
+  const getStatusBadge = (status: string, date: Date) => {
+    const isPast = date < new Date() && status !== 'COMPLETED' && status !== 'DONE'
+
+    if (isPast) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">
+          <AlertCircle className="w-3.5 h-3.5" />
+          Atrasada
+        </span>
+      )
+    }
+
+    const colorClass = MAINTENANCE_STATUS_COLOR[status] || 'bg-slate-800 text-slate-400 border-slate-700'
+    const label = MAINTENANCE_STATUS_LABEL[status] || status
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${colorClass}`}>
+        {status === 'DONE' || status === 'COMPLETED' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Calendar className="w-3.5 h-3.5" />}
+        {label}
+      </span>
+    )
+  }
+
+  return (
+    <main className="px-6 py-8 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader 
+          title="Manutenção Preventiva" 
+          description="Acompanhe as manutenções agendadas e histórico de execuções."
+        />
+        <div className="flex gap-2">
+          <Link 
+            href="/api/export?type=preventives" target="_blank"
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-surface-2 text-foreground text-sm font-medium rounded-lg hover:bg-surface-2/80 transition-all shadow-sm border border-border"
+          >
+            <Download className="w-4 h-4" />
+            Exportar CSV
+          </Link>
+          <Link 
+            href="/gestor/manutencao/preventivas/nova" 
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:brightness-105 transition-all shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Preventiva
+          </Link>
+        </div>
+      </div>
+
+      <div className="bg-surface-1 border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-surface-2 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
+              <tr>
+                <th className="px-6 py-4">Equipamento</th>
+                <th className="px-6 py-4">Data Agendada</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Responsável</th>
+                <th className="px-6 py-4 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {maintenances.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center">
+                        <Wrench className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        Nenhuma manutenção preventiva cadastrada.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                maintenances.map((m) => (
+                  <tr key={m.id} className="hover:bg-surface-2/30 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">{m.equipment.name}</span>
+                        <span className="text-[11px] text-muted-foreground font-mono mt-0.5">{m.equipment.serial_number ? `SN: ${m.equipment.serial_number}` : 'Sem SN'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {m.scheduled_date.toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(m.status, m.scheduled_date)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {m.completer?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link 
+                        href={`/gestor/manutencao/preventivas/${m.id}`}
+                        className="text-primary hover:text-primary/80 font-medium text-xs transition-colors"
+                      >
+                        Detalhes
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+`
+
+### src\app\gestor\ocorrencias\nova\occurrence-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
@@ -5967,10 +6834,10 @@ const DEADLINE_LABEL: Record<string, string> = {
   LOW:      '720 horas (30 dias)',
 }
 
-type Draft = { description: string; severity: string }
-const EMPTY_DRAFT: Draft = { description: '', severity: '' }
+type Draft = { description: string; severity: string; category: string; collection_point_id: string }
+const EMPTY_DRAFT: Draft = { description: '', severity: '', category: '', collection_point_id: '' }
 
-export function GestorOccurrenceForm() {
+export function GestorOccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {id: string, name: string, location: string | null}[] }) {
   const router   = useRouter()
   const formRef  = useRef<HTMLFormElement>(null)
   const [state, action, isPending] = useActionState(registrarOcorrencia, INITIAL)
@@ -6046,11 +6913,57 @@ export function GestorOccurrenceForm() {
           autoComplete="off"
           value={draft.description}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           placeholder="Descreva o que aconteceu de forma clara e objetiva…"
         />
         {state.fieldErrors?.description && (
           <p className="text-xs text-red-400">{state.fieldErrors.description[0]}</p>
+        )}
+      </div>
+
+      {/* Categoria */}
+      <div className="space-y-1.5">
+        <label htmlFor="category" className="text-sm font-medium text-slate-300">
+          Categoria *
+        </label>
+        <select
+          id="category" name="category"
+          value={draft.category}
+          onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Selecione…</option>
+          <option value="VAZAMENTO">Vazamento</option>
+          <option value="QUEBRA">Quebra de Equipamento</option>
+          <option value="FALTA_PRODUTO">Falta de Produto</option>
+          <option value="SEGURANCA">Segurança/Risco</option>
+          <option value="OUTROS">Outros</option>
+        </select>
+        {state.fieldErrors?.category && (
+          <p className="text-xs text-red-400">{state.fieldErrors.category[0]}</p>
+        )}
+      </div>
+
+      {/* Ponto de Coleta (Opcional) */}
+      <div className="space-y-1.5">
+        <label htmlFor="collection_point_id" className="text-sm font-medium text-slate-300">
+          Ponto de Coleta <span className="text-slate-500 font-normal">(opcional)</span>
+        </label>
+        <select
+          id="collection_point_id" name="collection_point_id"
+          value={draft.collection_point_id}
+          onChange={(e) => setDraft((d) => ({ ...d, collection_point_id: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Nenhum específico</option>
+          {collectionPoints.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name} {p.location ? `(${p.location})` : ''}
+            </option>
+          ))}
+        </select>
+        {state.fieldErrors?.collection_point_id && (
+          <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
         )}
       </div>
 
@@ -6063,7 +6976,7 @@ export function GestorOccurrenceForm() {
           id="severity" name="severity"
           value={draft.severity}
           onChange={(e) => setDraft((d) => ({ ...d, severity: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">Selecione…</option>
           <option value="LOW">Baixa</option>
@@ -6120,18 +7033,26 @@ export function GestorOccurrenceForm() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/ocorrencias/nova/page.tsx`
-```tsx
+### src\app\gestor\ocorrencias\nova\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { GestorOccurrenceForm } from './occurrence-form'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function NovaOcorrenciaGestorPage() {
   const session = await auth()
   if (!session) redirect('/login')
+
+  const collectionPoints = await prisma.collectionPoint.findMany({
+    where: { tenant_id: await getTenantId(), is_active: true },
+    select: { id: true, name: true, location: true },
+    orderBy: { name: 'asc' }
+  })
 
   return (
     <main className="p-6 max-w-lg mx-auto space-y-4">
@@ -6140,33 +7061,26 @@ export default async function NovaOcorrenciaGestorPage() {
         <h1 className="text-xl font-semibold mt-1">Nova ocorrência</h1>
       </div>
 
-      <GestorOccurrenceForm />
+      <GestorOccurrenceForm collectionPoints={collectionPoints} />
     </main>
   )
 }
 
-```
+`
 
-### `src/app/gestor/ocorrencias/page.tsx`
-```tsx
+### src\app\gestor\ocorrencias\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
+import { Download } from 'lucide-react'
+
+import { SEVERITY_LABEL, SEVERITY_COLOR, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
 
 const PAGE_SIZE  = 25
-
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
-}
-const SEVERITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
-  MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
-  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
-}
 
 function formatDatetime(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -6222,6 +7136,12 @@ export default async function OcorrenciasGestorPage({
           <Link href="/gestor/ocorrencias/nova">
             <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
               + Nova ocorrência
+            </Button>
+          </Link>
+          <Link href={`/api/export?type=occurrences${showAll ? '&status=all' : ''}`} target="_blank">
+            <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+              <Download className="w-4 h-4 mr-1.5" />
+              Exportar CSV
             </Button>
           </Link>
           <Link
@@ -6299,15 +7219,9 @@ export default async function OcorrenciasGestorPage({
                       {formatDatetime(oc.deadline)}
                     </td>
                     <td className="px-4 py-3">
-                      {oc.status === 'RESOLVED' ? (
-                        <span className="rounded border border-green-900/50 bg-green-950/60 px-2 py-0.5 text-xs font-medium text-green-400">
-                          Resolvida
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-500">
-                          {oc.status === 'OPEN' ? 'Aberta' : 'Em andamento'}
-                        </span>
-                      )}
+                      <span className={`rounded border px-2 py-0.5 text-xs font-medium ${OCCURRENCE_STATUS_COLOR[oc.status] ?? ''}`}>
+                        {OCCURRENCE_STATUS_LABEL[oc.status] ?? oc.status}
+                      </span>
                     </td>
                   </tr>
                 )
@@ -6343,10 +7257,10 @@ export default async function OcorrenciasGestorPage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/parametros/actions.ts`
-```ts
+### src\app\gestor\parametros\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -6634,10 +7548,10 @@ export async function toggleAtivoParametro(
   return {}
 }
 
-```
+`
 
-### `src/app/gestor/parametros/novo/page.tsx`
-```tsx
+### src\app\gestor\parametros\novo\page.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -6793,10 +7707,10 @@ export default function NovoParametroPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/parametros/page.tsx`
-```tsx
+### src\app\gestor\parametros\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -6930,10 +7844,10 @@ export default async function ParametrosPage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/parametros/[id]/edit-form.tsx`
-```tsx
+### src\app\gestor\parametros\[id]\edit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useTransition } from 'react'
@@ -7158,10 +8072,10 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/parametros/[id]/page.tsx`
-```tsx
+### src\app\gestor\parametros\[id]\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { EditParametroForm } from './edit-form'
@@ -7189,10 +8103,10 @@ export default async function EditarParametroPage({
   return <EditParametroForm parametro={parametro} />
 }
 
-```
+`
 
-### `src/app/gestor/prazos-ocorrencia/actions.ts`
-```ts
+### src\app\gestor\prazos-ocorrencia\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -7259,10 +8173,10 @@ export async function atualizarPrazos(
   return { success: true }
 }
 
-```
+`
 
-### `src/app/gestor/prazos-ocorrencia/page.tsx`
-```tsx
+### src\app\gestor\prazos-ocorrencia\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { PrazosForm } from './prazos-form'
 
@@ -7302,10 +8216,10 @@ export default async function PrazosOcorrenciaPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/prazos-ocorrencia/prazos-form.tsx`
-```tsx
+### src\app\gestor\prazos-ocorrencia\prazos-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -7372,10 +8286,10 @@ export function PrazosForm({ initialValues, severityLabels }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/actions.ts`
-```ts
+### src\app\gestor\produtos-quimicos\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -7547,10 +8461,10 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
   return { success: true }
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/novo/page.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\novo\page.tsx
+`	s
 import { ProductForm } from './product-form'
 import { BackButton } from '@/components/back-button'
 
@@ -7566,10 +8480,10 @@ export default function NovoProdutoPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/novo/product-form.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\novo\product-form.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -7677,10 +8591,10 @@ export function ProductForm() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/page.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { calcularEstoqueAtual, estaAbaixoMinimo, formatarQuantidade } from '@/lib/stock-utils'
 import Link from 'next/link'
@@ -7784,10 +8698,10 @@ export default async function ProdutosQuimicosPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/[id]/edit-form.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\[id]\edit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -7894,10 +8808,10 @@ export function EditForm({ product }: { product: Product }) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/[id]/entrada/entry-form.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\[id]\entrada\entry-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -8004,10 +8918,10 @@ export function EntryForm({ productId, productName, unit }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/[id]/entrada/page.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\[id]\entrada\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
@@ -8037,10 +8951,10 @@ export default async function EntradaPage({ params }: { params: Promise<{ id: st
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/[id]/page.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\[id]\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -8224,10 +9138,10 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
   )
 }
 
-```
+`
 
-### `src/app/gestor/produtos-quimicos/[id]/toggle-button.tsx`
-```tsx
+### src\app\gestor\produtos-quimicos\[id]\toggle-button.tsx
+`	s
 'use client'
 
 import { useTransition } from 'react'
@@ -8251,10 +9165,10 @@ export function ToggleButton({ id, is_active }: { id: string; is_active: boolean
   )
 }
 
-```
+`
 
-### `src/app/gestor/relatorios/actions.ts`
-```ts
+### src\app\gestor\relatorios\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -8395,10 +9309,10 @@ export async function getReportData(startDate: string, endDate: string) {
   }
 }
 
-```
+`
 
-### `src/app/gestor/relatorios/page.tsx`
-```tsx
+### src\app\gestor\relatorios\page.tsx
+`	s
 'use client'
 
 import { useState } from 'react'
@@ -8622,10 +9536,10 @@ export default function RelatoriosPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/actions.ts`
-```ts
+### src\app\gestor\turnos\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -8760,10 +9674,10 @@ export async function toggleDaySchedule(shiftId: string, days_of_week: number[])
   revalidatePath(`/gestor/turnos/${shiftId}`)
 }
 
-```
+`
 
-### `src/app/gestor/turnos/novo/page.tsx`
-```tsx
+### src\app\gestor\turnos\novo\page.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -8841,10 +9755,10 @@ export default function NovoTurnoPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/page.tsx`
-```tsx
+### src\app\gestor\turnos\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -8913,10 +9827,10 @@ export default async function TurnosPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/actions.ts`
-```ts
+### src\app\gestor\turnos\tarefas\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -9085,10 +9999,10 @@ export async function preAgendarTurno(
 }
 
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/page.tsx`
-```tsx
+### src\app\gestor\turnos\tarefas\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -9266,10 +10180,10 @@ export default async function InstanciasTurnosPage({
 }
 
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/pre-agendar/page.tsx`
-```tsx
+### src\app\gestor\turnos\tarefas\pre-agendar\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -9301,10 +10215,10 @@ export default async function PreAgendarPage() {
 }
 
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/pre-agendar/pre-agendar-form.tsx`
-```tsx
+### src\app\gestor\turnos\tarefas\pre-agendar\pre-agendar-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
@@ -9395,10 +10309,10 @@ export function PreAgendarForm({ shifts }: { shifts: Shift[] }) {
 }
 
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/[id]/edit-handover-form.tsx`
-```tsx
+### src\app\gestor\turnos\tarefas\[id]\edit-handover-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -9477,10 +10391,10 @@ export function EditHandoverForm({ handoverId, currentOutgoing, currentIncoming 
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/[id]/page.tsx`
-```tsx
+### src\app\gestor\turnos\tarefas\[id]\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
@@ -9713,10 +10627,10 @@ export default async function InstanciaDetalhePage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/[id]/task-actions.ts`
-```ts
+### src\app\gestor\turnos\tarefas\[id]\task-actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -9836,10 +10750,10 @@ export async function removerTarefa(taskId: string): Promise<void> {
   revalidatePath(`/gestor/turnos/tarefas/${task.shift_instance_id}`)
 }
 
-```
+`
 
-### `src/app/gestor/turnos/tarefas/[id]/task-form.tsx`
-```tsx
+### src\app\gestor\turnos\tarefas\[id]\task-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -9978,10 +10892,10 @@ export function TaskForm({
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/[id]/edit-form.tsx`
-```tsx
+### src\app\gestor\turnos\[id]\edit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useTransition } from 'react'
@@ -10091,10 +11005,10 @@ export function EditTurnoForm({ turno }: { turno: Turno }) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/turnos/[id]/page.tsx`
-```tsx
+### src\app\gestor\turnos\[id]\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import { EditTurnoForm } from './edit-form'
@@ -10109,10 +11023,10 @@ export default async function EditarTurnoPage({ params }: { params: Promise<{ id
   return <EditTurnoForm turno={turno} />
 }
 
-```
+`
 
-### `src/app/gestor/turnos/[id]/shift-schedule-section.tsx`
-```tsx
+### src\app\gestor\turnos\[id]\shift-schedule-section.tsx
+`	s
 'use client'
 
 import { useTransition } from 'react'
@@ -10186,10 +11100,10 @@ export function ShiftScheduleSection({ shiftId, schedule }: { shiftId: string, s
   )
 }
 
-```
+`
 
-### `src/app/gestor/usuarios/actions.ts`
-```ts
+### src\app\gestor\usuarios\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -10406,10 +11320,10 @@ export async function resetarSenha(
   return { tempPassword }
 }
 
-```
+`
 
-### `src/app/gestor/usuarios/novo/page.tsx`
-```tsx
+### src\app\gestor\usuarios\novo\page.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -10552,10 +11466,10 @@ export default function NovoUsuarioPage() {
   )
 }
 
-```
+`
 
-### `src/app/gestor/usuarios/page.tsx`
-```tsx
+### src\app\gestor\usuarios\page.tsx
+`	s
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -10703,10 +11617,10 @@ export default async function UsuariosPage({
   )
 }
 
-```
+`
 
-### `src/app/gestor/usuarios/[id]/edit-form.tsx`
-```tsx
+### src\app\gestor\usuarios\[id]\edit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useTransition, useState } from 'react'
@@ -10924,10 +11838,10 @@ export function EditForm({ user }: { user: User }) {
   )
 }
 
-```
+`
 
-### `src/app/gestor/usuarios/[id]/page.tsx`
-```tsx
+### src\app\gestor\usuarios\[id]\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect, notFound } from 'next/navigation'
@@ -10956,10 +11870,10 @@ export default async function EditarUsuarioPage({
   return <EditForm user={user} />
 }
 
-```
+`
 
-### `src/app/globals.css`
-```css
+### src\app\globals.css
+`	s
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -11270,10 +12184,10 @@ export default async function EditarUsuarioPage({
     bottom: 40%;
   }
 }
-```
+`
 
-### `src/app/layout.tsx`
-```tsx
+### src\app\layout.tsx
+`	s
 import type { Metadata } from "next";
 import { Sora, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
@@ -11327,10 +12241,10 @@ export default function RootLayout({
   );
 }
 
-```
+`
 
-### `src/app/manutencao/corretivas/page.tsx`
-```tsx
+### src\app\manutencao\corretivas\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -11510,10 +12424,10 @@ export default async function CorretivasPage({
   )
 }
 
-```
+`
 
-### `src/app/manutencao/dashboard/page.tsx`
-```tsx
+### src\app\manutencao\dashboard\page.tsx
+`	s
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Wrench, AlertTriangle, Calendar, Settings } from 'lucide-react'
@@ -11636,10 +12550,10 @@ export default async function ManutencaoDashboardPage() {
   )
 }
 
-```
+`
 
-### `src/app/manutencao/layout.tsx`
-```tsx
+### src\app\manutencao\layout.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -11697,10 +12611,10 @@ export default async function ManutencaoLayout({
   )
 }
 
-```
+`
 
-### `src/app/manutencao/preventivas/page.tsx`
-```tsx
+### src\app\manutencao\preventivas\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -11873,10 +12787,10 @@ export default async function PreventivasPage({
   )
 }
 
-```
+`
 
-### `src/app/operador/dashboard/page.tsx`
-```tsx
+### src\app\operador\dashboard\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -12108,10 +13022,10 @@ export default async function OperadorDashboard() {
   )
 }
 
-```
+`
 
-### `src/app/operador/estoque/actions.ts`
-```ts
+### src\app\operador\estoque\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -12199,6 +13113,13 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
   const recorded_by = await resolveUserId(session.user.email!)
 
+  const novoEstoque = estoqueAtual - quantity
+  if (novoEstoque < 0) {
+    return {
+      error: `Atenção: saída de ${quantity} resulta em estoque negativo (saldo atual é ${estoqueAtual.toFixed(2)}). Operação bloqueada.`,
+    }
+  }
+
   await prisma.chemicalStockExit.create({
     data: {
       tenant_id: (await getTenantId()),
@@ -12214,14 +13135,6 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   revalidatePath(`/operador/estoque/${product_id}`)
   revalidatePath('/tecnico/estoque')
   revalidatePath(`/tecnico/estoque/${product_id}`)
-
-  const novoEstoque = estoqueAtual - quantity
-  if (novoEstoque < 0) {
-    return {
-      success: true,
-      warning: `Atenção: estoque calculado ficou negativo (${novoEstoque.toFixed(2)}). Verifique se há entradas não registradas ou faça uma contagem física.`,
-    }
-  }
 
   return { success: true }
 }
@@ -12254,10 +13167,10 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
   return { success: true }
 }
 
-```
+`
 
-### `src/app/operador/estoque/page.tsx`
-```tsx
+### src\app\operador\estoque\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -12355,10 +13268,10 @@ export default async function OperadorEstoquePage() {
   )
 }
 
-```
+`
 
-### `src/app/operador/estoque/[id]/contagem/count-form.tsx`
-```tsx
+### src\app\operador\estoque\[id]\contagem\count-form.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -12467,10 +13380,10 @@ export function CountForm({ productId, unit, estoqueCalculado }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/operador/estoque/[id]/contagem/page.tsx`
-```tsx
+### src\app\operador\estoque\[id]\contagem\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -12542,15 +13455,16 @@ export default async function ContagemPage({ params }: { params: Promise<{ id: s
   )
 }
 
-```
+`
 
-### `src/app/operador/estoque/[id]/saida/exit-form.tsx`
-```tsx
+### src\app\operador\estoque\[id]\saida\exit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { registrarSaida } from '../../actions'
+import { Input } from '@/components/ui/input'
 
 type Props = {
   productId:    string
@@ -12569,7 +13483,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
 
   const [state, action, pending] = useActionState(async (prev: unknown, formData: FormData) => {
     const result = await registrarSaida(prev, formData)
-    if (result?.success && !result?.warning) router.push('/operador/estoque')
+    if (result?.success) router.push('/operador/estoque')
     return result
   }, null)
 
@@ -12590,37 +13504,23 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
       <input type="hidden" name="product_id" value={productId} />
 
       {offlineError && (
-        <p className="rounded-lg bg-amber-900/30 border border-amber-700/50 px-4 py-3 text-sm text-amber-300">
+        <p aria-live="polite" className="rounded-lg bg-amber-900/30 border border-amber-700/50 px-4 py-3 text-sm text-amber-300">
           Sem conexão. Verifique sua internet e tente novamente.
         </p>
       )}
 
       {state?.error && (
-        <p className="rounded-lg bg-red-900/40 border border-red-700 px-4 py-3 text-sm text-red-300">
+        <p aria-live="assertive" className="rounded-lg bg-red-900/40 border border-red-700 px-4 py-3 text-sm text-red-300">
           {state.error}
         </p>
       )}
 
-      {state?.warning && (
-        <div className="rounded-lg bg-amber-900/30 border border-amber-700 px-4 py-3 space-y-3">
-          <p className="text-sm text-amber-300">{state.warning}</p>
-          <button
-            type="button"
-            onClick={() => router.push('/operador/estoque')}
-            className="w-full rounded-lg bg-amber-700 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
-          >
-            Entendido — voltar ao estoque
-          </button>
-        </div>
-      )}
-
-      {!state?.warning && (
         <>
           <div className="space-y-1">
             <label className="text-sm text-slate-300">
               Quantidade usada ({unit}) *
             </label>
-            <input
+            <Input
               name="quantity"
               type="number"
               inputMode="decimal"
@@ -12629,25 +13529,24 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
               required
               value={qty}
               onChange={(e) => setQty(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-500 py-6"
               placeholder="0"
             />
             {ficaNegativo && (
-              <p className="text-xs text-amber-400">
-                Atenção: quantidade maior que o estoque calculado ({estoqueAtual.toFixed(2)} {unit}).
-                O registro será salvo mesmo assim.
+              <p className="text-xs text-red-400 mt-1">
+                Não é possível retirar mais que o saldo disponível ({estoqueAtual.toFixed(2)} {unit}).
               </p>
             )}
           </div>
 
           <div className="space-y-1">
             <label className="text-sm text-slate-300">Data e hora do uso *</label>
-            <input
+            <Input
               name="used_at"
               type="datetime-local"
               required
               defaultValue={defaultDate}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-800 border-slate-700 text-slate-100 py-6"
             />
           </div>
 
@@ -12664,8 +13563,8 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
           <div className="flex gap-3 pt-1">
             <button
               type="submit"
-              disabled={pending}
-              className="flex-1 rounded-lg bg-red-700 py-3 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              disabled={pending || ficaNegativo}
+              className="flex-1 rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
             >
               {pending ? 'Registrando...' : 'Confirmar saída'}
             </button>
@@ -12678,15 +13577,14 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
             </button>
           </div>
         </>
-      )}
     </form>
   )
 }
 
-```
+`
 
-### `src/app/operador/estoque/[id]/saida/page.tsx`
-```tsx
+### src\app\operador\estoque\[id]\saida\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -12748,16 +13646,18 @@ export default async function SaidaPage({ params }: { params: Promise<{ id: stri
   )
 }
 
-```
+`
 
-### `src/app/operador/layout.tsx`
-```tsx
+### src\app\operador\layout.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
-import { OperadorBottomNav } from '@/components/operador/bottom-nav'
+import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
+import { LayoutDashboard, Droplets, Clock, AlertTriangle, Package } from 'lucide-react'
 import { TopNav } from '@/components/ui/top-nav'
+import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
 
@@ -12766,6 +13666,14 @@ export default async function OperadorLayout({
 }: {
   children: React.ReactNode
 }) {
+  const NAV_ITEMS: NavItem[] = [
+    { href: '/operador/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+    { href: '/operador/leituras',    label: 'Leituras',    icon: Droplets        },
+    { href: '/operador/turnos',      label: 'Turnos',      icon: Clock           },
+    { href: '/operador/ocorrencias', label: 'Ocorrências', icon: AlertTriangle   },
+    { href: '/operador/estoque',     label: 'Estoque',     icon: Package         },
+  ]
+
   const session = await auth()
   if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
     redirect('/acesso-negado')
@@ -12786,6 +13694,7 @@ export default async function OperadorLayout({
             <span className="hidden sm:block text-sm text-slate-400">
               {session.user.name ?? session.user.email}
             </span>
+            <NotificationBell />
             <PushManager />
             <SignOutButton />
           </div>
@@ -12799,15 +13708,15 @@ export default async function OperadorLayout({
         {children}
       </div>
 
-      <OperadorBottomNav />
+      <BottomNav items={NAV_ITEMS} />
     </div>
   )
 }
 
-```
+`
 
-### `src/app/operador/leituras/actions.ts`
-```ts
+### src\app\operador\leituras\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -12979,10 +13888,10 @@ export async function registrarLeitura(
   return { success: true }
 }
 
-```
+`
 
-### `src/app/operador/leituras/nova/page.tsx`
-```tsx
+### src\app\operador\leituras\nova\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -13016,10 +13925,10 @@ export default async function NovaLeituraPage() {
   )
 }
 
-```
+`
 
-### `src/app/operador/leituras/nova/reading-form.tsx`
-```tsx
+### src\app\operador\leituras\nova\reading-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
@@ -13323,10 +14232,10 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/operador/leituras/page.tsx`
-```tsx
+### src\app\operador\leituras\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -13346,18 +14255,25 @@ function formatDatetime(d: Date): string {
 export default async function LeituraListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; filter?: string }>
 }) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, filter } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
+  const where: any = { tenant_id: (await getTenantId()) }
+  if (filter === 'non-conformant') {
+    where.is_non_conformant = true
+  } else if (filter === 'conformant') {
+    where.is_non_conformant = false
+  }
+
   const [readings, total] = await Promise.all([
     prisma.reading.findMany({
-      where:   { tenant_id: (await getTenantId()) },
+      where,
       include: {
         collection_point: { select: { name: true } },
         parameter:        { select: { name: true } },
@@ -13366,7 +14282,7 @@ export default async function LeituraListPage({
       take:    PAGE_SIZE,
       skip,
     }),
-    prisma.reading.count({ where: { tenant_id: (await getTenantId()) } }),
+    prisma.reading.count({ where }),
   ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
@@ -13380,9 +14296,22 @@ export default async function LeituraListPage({
             <p className="text-xs text-slate-400">{total} registro(s) no total</p>
           </div>
           <Link href="/operador/leituras/nova">
-            <Button className="bg-slate-100 text-slate-900 hover:bg-white">
+            <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
               + Nova
             </Button>
+          </Link>
+        </div>
+
+        {/* Filtros rápidos */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Link href="/operador/leituras" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${!filter ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Todas
+          </Link>
+          <Link href="/operador/leituras?filter=conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'conformant' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Conforme
+          </Link>
+          <Link href="/operador/leituras?filter=non-conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'non-conformant' ? 'bg-red-900/30 text-red-400 border-red-900/50' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Não Conforme
           </Link>
         </div>
 
@@ -13478,10 +14407,10 @@ export default async function LeituraListPage({
   )
 }
 
-```
+`
 
-### `src/app/operador/loading.tsx`
-```tsx
+### src\app\operador\loading.tsx
+`	s
 import { Loader2 } from 'lucide-react'
 
 export default function Loading() {
@@ -13495,10 +14424,10 @@ export default function Loading() {
   )
 }
 
-```
+`
 
-### `src/app/operador/ocorrencias/actions.ts`
-```ts
+### src\app\operador\ocorrencias\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -13537,6 +14466,8 @@ const OcorrenciaSchema = z.object({
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
     error: 'Selecione a severidade',
   }),
+  category: z.string().min(1, 'Selecione a categoria'),
+  collection_point_id: z.string().optional().or(z.literal('')),
 })
 
 // ─── Form state types ─────────────────────────────────────────────────────────
@@ -13558,6 +14489,8 @@ export async function registrarOcorrencia(
   const parsed = OcorrenciaSchema.safeParse({
     description: formData.get('description'),
     severity:    formData.get('severity'),
+    category:    formData.get('category'),
+    collection_point_id: formData.get('collection_point_id') || undefined,
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -13614,10 +14547,12 @@ export async function registrarOcorrencia(
       data: {
         tenant_id:   (await getTenantId()),
         description: parsed.data.description,
+        category:    parsed.data.category,
         severity:    parsed.data.severity,
         status:      'OPEN',
         deadline,
         reported_by: userId,
+        collection_point_id: parsed.data.collection_point_id || null,
       },
     })
 
@@ -13650,10 +14585,10 @@ export async function registrarOcorrencia(
   return { success: true }
 }
 
-```
+`
 
-### `src/app/operador/ocorrencias/nova/occurrence-form.tsx`
-```tsx
+### src\app\operador\ocorrencias\nova\occurrence-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
@@ -13672,10 +14607,10 @@ const DEADLINE_LABEL: Record<string, string> = {
   LOW:      '720 horas (30 dias)',
 }
 
-type Draft = { description: string; severity: string }
-const EMPTY_DRAFT: Draft = { description: '', severity: '' }
+type Draft = { description: string; severity: string; category: string; collection_point_id: string }
+const EMPTY_DRAFT: Draft = { description: '', severity: '', category: '', collection_point_id: '' }
 
-export function OccurrenceForm() {
+export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {id: string, name: string, location: string | null}[] }) {
   const router   = useRouter()
   const formRef  = useRef<HTMLFormElement>(null)
   const [state, action, isPending] = useActionState(registrarOcorrencia, INITIAL)
@@ -13766,11 +14701,57 @@ export function OccurrenceForm() {
           autoComplete="off"
           value={draft.description}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           placeholder="Descreva o que aconteceu de forma clara e objetiva…"
         />
         {state.fieldErrors?.description && (
           <p className="text-xs text-red-400">{state.fieldErrors.description[0]}</p>
+        )}
+      </div>
+
+      {/* Categoria */}
+      <div className="space-y-1.5">
+        <label htmlFor="category" className="text-sm font-medium text-slate-300">
+          Categoria *
+        </label>
+        <select
+          id="category" name="category"
+          value={draft.category}
+          onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Selecione…</option>
+          <option value="VAZAMENTO">Vazamento</option>
+          <option value="QUEBRA">Quebra de Equipamento</option>
+          <option value="FALTA_PRODUTO">Falta de Produto</option>
+          <option value="SEGURANCA">Segurança/Risco</option>
+          <option value="OUTROS">Outros</option>
+        </select>
+        {state.fieldErrors?.category && (
+          <p className="text-xs text-red-400">{state.fieldErrors.category[0]}</p>
+        )}
+      </div>
+
+      {/* Ponto de Coleta (Opcional) */}
+      <div className="space-y-1.5">
+        <label htmlFor="collection_point_id" className="text-sm font-medium text-slate-300">
+          Ponto de Coleta <span className="text-slate-500 font-normal">(opcional)</span>
+        </label>
+        <select
+          id="collection_point_id" name="collection_point_id"
+          value={draft.collection_point_id}
+          onChange={(e) => setDraft((d) => ({ ...d, collection_point_id: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Nenhum específico</option>
+          {collectionPoints.map(p => (
+            <option key={p.id} value={p.id}>
+              {p.name} {p.location ? `(${p.location})` : ''}
+            </option>
+          ))}
+        </select>
+        {state.fieldErrors?.collection_point_id && (
+          <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
         )}
       </div>
 
@@ -13783,7 +14764,7 @@ export function OccurrenceForm() {
           id="severity" name="severity"
           value={draft.severity}
           onChange={(e) => setDraft((d) => ({ ...d, severity: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">Selecione…</option>
           <option value="LOW">Baixa</option>
@@ -13844,35 +14825,43 @@ export function OccurrenceForm() {
   )
 }
 
-```
+`
 
-### `src/app/operador/ocorrencias/nova/page.tsx`
-```tsx
+### src\app\operador\ocorrencias\nova\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { OccurrenceForm } from './occurrence-form'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
 
 export default async function NovaOcorrenciaPage() {
   const session = await auth()
   if (!session) redirect('/login')
 
+  const collectionPoints = await prisma.collectionPoint.findMany({
+    where: { tenant_id: await getTenantId(), is_active: true },
+    select: { id: true, name: true, location: true },
+    orderBy: { name: 'asc' }
+  })
+
   return (
-    <main className="mx-auto max-w-lg px-4 py-6 space-y-4">
+    <main className="mx-auto max-w-lg px-4 py-6 space-y-4 pb-24">
       <div>
         <BackButton href="/operador/ocorrencias" label="Ocorrências" />
         <h1 className="text-xl font-semibold mt-1">Nova ocorrência</h1>
       </div>
 
-      <OccurrenceForm />
+      <OccurrenceForm collectionPoints={collectionPoints} />
     </main>
   )
 }
 
-```
+`
 
-### `src/app/operador/ocorrencias/page.tsx`
-```tsx
+### src\app\operador\ocorrencias\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -13882,25 +14871,7 @@ import { getTenantId } from '@/lib/tenant'
 
 const PAGE_SIZE  = 20
 
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW:      'Baixa',
-  MEDIUM:   'Média',
-  HIGH:     'Alta',
-  CRITICAL: 'Crítica',
-}
-
-const SEVERITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
-  MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
-  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  OPEN:        'Aberta',
-  IN_PROGRESS: 'Em andamento',
-  RESOLVED:    'Resolvida',
-}
+import { SEVERITY_LABEL, SEVERITY_COLOR, OCCURRENCE_STATUS_LABEL } from '@/lib/labels'
 
 function formatDatetime(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -13912,12 +14883,12 @@ function formatDatetime(d: Date): string {
 export default async function OcorrenciasOperadorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; filter?: string }>
 }) {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, filter } = await searchParams
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
@@ -13928,7 +14899,14 @@ export default async function OcorrenciasOperadorPage({
 
   if (!userId) redirect('/login')
 
-  const where = { tenant_id: (await getTenantId()), reported_by: userId.id }
+  const where: any = { tenant_id: (await getTenantId()), reported_by: userId.id }
+  if (filter === 'open') {
+    where.status = { in: ['OPEN', 'IN_PROGRESS'] }
+  } else if (filter === 'resolved') {
+    where.status = 'RESOLVED'
+  } else if (filter === 'high') {
+    where.severity = { in: ['HIGH', 'CRITICAL'] }
+  }
 
   const [ocorrencias, total] = await Promise.all([
     prisma.occurrence.findMany({
@@ -13958,6 +14936,22 @@ export default async function OcorrenciasOperadorPage({
             <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
               + Nova
             </Button>
+          </Link>
+        </div>
+
+        {/* Filtros rápidos */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Link href="/operador/ocorrencias" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${!filter ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Todas
+          </Link>
+          <Link href="/operador/ocorrencias?filter=open" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'open' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Abertas
+          </Link>
+          <Link href="/operador/ocorrencias?filter=high" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'high' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Alta Prioridade
+          </Link>
+          <Link href="/operador/ocorrencias?filter=resolved" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'resolved' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+            Resolvidas
           </Link>
         </div>
 
@@ -13993,7 +14987,7 @@ export default async function OcorrenciasOperadorPage({
                       )}
                     </div>
                     <span className="shrink-0 text-xs text-slate-500">
-                      {STATUS_LABEL[oc.status] ?? oc.status}
+                      {OCCURRENCE_STATUS_LABEL[oc.status] ?? oc.status}
                     </span>
                   </div>
 
@@ -14045,10 +15039,217 @@ export default async function OcorrenciasOperadorPage({
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/abrir/page.tsx`
-```tsx
+### src\app\operador\ocorrencias\[id]\page.tsx
+`	s
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
+import { redirect, notFound } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft, Clock, AlertTriangle, User, CheckCircle2, History, MapPin } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
+import { SEVERITY_LABEL, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
+
+export default async function OperadorOcorrenciaDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const tenant_id = await getTenantId()
+  const occurrence = await prisma.occurrence.findUnique({
+    where: { id: params.id, tenant_id },
+    include: {
+      reporter: { select: { name: true } },
+      responsible: { select: { name: true } },
+      resolver: { select: { name: true } },
+      collection_point: { select: { name: true } },
+      photos: { select: { id: true }, take: 1 },
+    }
+  })
+
+  if (!occurrence) {
+    notFound()
+  }
+
+  const getStatusColor = (s: string) => {
+    return OCCURRENCE_STATUS_COLOR[s] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+  }
+
+  const getStatusText = (s: string) => {
+    return OCCURRENCE_STATUS_LABEL[s] || s
+  }
+
+  const getSeverityBadge = (s: string) => {
+    return SEVERITY_LABEL[s] || s
+  }
+
+  return (
+    <main className="px-6 py-8 max-w-4xl mx-auto space-y-6 pb-24">
+      <Link 
+        href="/operador/ocorrencias" 
+        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <ArrowLeft className="mr-2 w-4 h-4" />
+        Voltar para Ocorrências
+      </Link>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(occurrence.status)} uppercase tracking-wider`}>
+              {getStatusText(occurrence.status)}
+            </span>
+            <span className="text-xs text-muted-foreground font-mono">ID: {occurrence.id.slice(-6).toUpperCase()}</span>
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {occurrence.category || 'Ocorrência'}
+          </h1>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          <div className="bg-surface-1 border border-border rounded-xl p-5 shadow-sm space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Detalhes da Ocorrência</h2>
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{occurrence.description}</p>
+            
+            {occurrence.photos.length > 0 && (
+              <div className="pt-2">
+                <Link
+                  href={`/api/occurrences/${occurrence.id}/photo`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-soft"
+                >
+                  Ver foto anexada →
+                </Link>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+              <div>
+                <span className="block text-xs text-muted-foreground mb-1">Severidade</span>
+                <span className="font-medium text-sm text-foreground">{getSeverityBadge(occurrence.severity)}</span>
+              </div>
+              <div>
+                <span className="block text-xs text-muted-foreground mb-1">Local / Ponto</span>
+                <span className="font-medium text-sm text-foreground flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                  {occurrence.collection_point?.name || 'Não especificado'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-surface-1 border border-border rounded-xl p-5 shadow-sm space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <History className="w-4 h-4" /> Timeline de Resolução
+            </h2>
+            
+            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
+              
+              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface-1 bg-primary text-primary-foreground shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl bg-surface-2 border border-border shadow-sm">
+                  <div className="flex items-center justify-between space-x-2 mb-1">
+                    <div className="font-bold text-foreground text-sm">Abertura</div>
+                    <time className="font-mono text-xs text-muted-foreground">{occurrence.created_at.toLocaleString('pt-BR')}</time>
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                    <User className="w-3.5 h-3.5" />
+                    Por {occurrence.reporter?.name}
+                  </div>
+                </div>
+              </div>
+
+              {occurrence.status === 'RESOLVED' && occurrence.resolved_at && (
+                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface-1 bg-emerald-500 text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl bg-surface-2 border border-border shadow-sm">
+                    <div className="flex items-center justify-between space-x-2 mb-1">
+                      <div className="font-bold text-foreground text-sm">Resolvida</div>
+                      <time className="font-mono text-xs text-muted-foreground">{occurrence.resolved_at.toLocaleString('pt-BR')}</time>
+                    </div>
+                    {occurrence.resolution_notes && (
+                      <div className="text-sm text-foreground mt-2 p-3 bg-surface-1 rounded-md border border-border">
+                        {occurrence.resolution_notes}
+                      </div>
+                    )}
+                    <div className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                      <User className="w-3.5 h-3.5" />
+                      Por {occurrence.resolver?.name || 'Desconhecido'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Note: Adicionamos um link placeholder/form que permitiria ao Operador resolver diretamente */}
+            {occurrence.status !== 'RESOLVED' && (
+              <div className="mt-6 pt-6 border-t border-border">
+                <form className="space-y-4" action="/api/ocorrencias/resolver" method="POST">
+                  <input type="hidden" name="id" value={occurrence.id} />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Adicionar Notas de Resolução</label>
+                    <textarea 
+                      name="notes"
+                      className="w-full p-3 rounded-lg border border-border bg-surface-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40" 
+                      rows={3} 
+                      placeholder="Descreva o que foi feito para resolver o problema..."
+                    ></textarea>
+                  </div>
+                  <div className="flex justify-end">
+                    <button type="button" className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2 opacity-50 cursor-not-allowed" title="Em breve">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Marcar como Resolvida
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="bg-surface-1 border border-border rounded-xl p-5 shadow-sm space-y-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Responsabilidade</h2>
+            
+            <div>
+              <span className="block text-xs text-muted-foreground mb-1">Atribuído para</span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                  {occurrence.responsible?.name?.charAt(0) || '?'}
+                </div>
+                <span className="font-medium text-sm text-foreground">{occurrence.responsible?.name || 'Não atribuído'}</span>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/50">
+              <span className="block text-xs text-muted-foreground mb-1">Prazo SLA</span>
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span className={occurrence.deadline < new Date() && occurrence.status !== 'RESOLVED' ? 'text-red-500 font-bold animate-pulse' : 'text-foreground'}>
+                  {occurrence.deadline.toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+`
+
+### src\app\operador\turnos\abrir\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -14086,10 +15287,10 @@ export default async function AbrirTurnoPage() {
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/abrir/shift-form.tsx`
-```tsx
+### src\app\operador\turnos\abrir\shift-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -14151,10 +15352,10 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/actions.ts`
-```ts
+### src\app\operador\turnos\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -14207,10 +15408,10 @@ const IniciarPassagemSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
   ),
-  outgoing_observations: z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
-  ),
+  outgoing_observations: z.string().min(5, 'A observação do turno deve ter pelo menos 5 caracteres.'),
+  confirm: z.literal('on', {
+    error: 'É obrigatório confirmar a passagem do turno.'
+  }),
 })
 
 const ConfirmarPassagemSchema = z.object({
@@ -14341,6 +15542,7 @@ export async function iniciarPassagem(
   const parsed = IniciarPassagemSchema.safeParse({
     pending_items:         formData.get('pending_items'),
     outgoing_observations: formData.get('outgoing_observations'),
+    confirm:               formData.get('confirm'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -14562,10 +15764,10 @@ export async function pularTarefa(taskId: string): Promise<void> {
   revalidatePath('/operador/turnos')
 }
 
-```
+`
 
-### `src/app/operador/turnos/confirmar/confirm-form.tsx`
-```tsx
+### src\app\operador\turnos\confirmar\confirm-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -14616,10 +15818,10 @@ export function ConfirmForm({ handoverId }: { handoverId: string }) {
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/confirmar/page.tsx`
-```tsx
+### src\app\operador\turnos\confirmar\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -14730,10 +15932,10 @@ export default async function ConfirmarPage({
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/page.tsx`
-```tsx
+### src\app\operador\turnos\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -15002,10 +16204,10 @@ export default async function TurnosPage() {
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/[id]/passagem/handover-form.tsx`
-```tsx
+### src\app\operador\turnos\[id]\passagem\handover-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -15043,16 +16245,33 @@ export function HandoverForm({ instanceId }: { instanceId: string }) {
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-slate-300">
-          Observações do turno
-          <span className="ml-1 text-slate-500 font-normal">(opcional)</span>
+          Observações do turno *
         </label>
         <textarea
           name="outgoing_observations"
           rows={3}
-          placeholder="Informações relevantes para o próximo operador"
+          placeholder="Ex: Turno ocorreu sem grandes anormalidades. Atenção ao equipamento X..."
           className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none resize-none"
         />
+        {state.fieldErrors?.outgoing_observations && (
+          <p className="text-xs text-red-400">{state.fieldErrors.outgoing_observations[0]}</p>
+        )}
       </div>
+
+      <div className="flex items-start gap-2 pt-2">
+        <input 
+          type="checkbox" 
+          id="confirm" 
+          name="confirm" 
+          className="mt-1 shrink-0 rounded border-slate-700 bg-slate-800 text-emerald-600 focus:ring-emerald-600 focus:ring-offset-slate-900" 
+        />
+        <label htmlFor="confirm" className="text-sm text-slate-300">
+          Declaro que as informações estão corretas e o turno está pronto para ser repassado. *
+        </label>
+      </div>
+      {state.fieldErrors?.confirm && (
+        <p className="text-xs text-red-400">{state.fieldErrors.confirm[0]}</p>
+      )}
 
       {state.error && (
         <p className="text-xs text-red-400">{state.error}</p>
@@ -15069,10 +16288,10 @@ export function HandoverForm({ instanceId }: { instanceId: string }) {
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/[id]/passagem/page.tsx`
-```tsx
+### src\app\operador\turnos\[id]\passagem\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -15161,10 +16380,10 @@ export default async function PassagemPage({
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/[id]/tarefas/page.tsx`
-```tsx
+### src\app\operador\turnos\[id]\tarefas\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -15266,10 +16485,10 @@ export default async function TarefasDoTurnoPage({
   )
 }
 
-```
+`
 
-### `src/app/operador/turnos/[id]/tarefas/task-card.tsx`
-```tsx
+### src\app\operador\turnos\[id]\tarefas\task-card.tsx
+`	s
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -15462,10 +16681,10 @@ export function TaskCard({
   )
 }
 
-```
+`
 
-### `src/app/page.tsx`
-```tsx
+### src\app\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { getDashboardRoute } from '@/lib/auth-utils'
@@ -15477,10 +16696,10 @@ export default async function Home() {
   redirect(getDashboardRoute(session.user.role))
 }
 
-```
+`
 
-### `src/app/tecnico/analises/actions.ts`
-```ts
+### src\app\tecnico\analises\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -15637,10 +16856,10 @@ export async function aprovarAnalise(
   return {}
 }
 
-```
+`
 
-### `src/app/tecnico/analises/approve-button.tsx`
-```tsx
+### src\app\tecnico\analises\approve-button.tsx
+`	s
 'use client'
 
 import { useTransition } from 'react'
@@ -15672,10 +16891,10 @@ export function ApproveButton({ analysisId }: { analysisId: string }) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/analises/historico/analysis-chart.tsx`
-```tsx
+### src\app\tecnico\analises\historico\analysis-chart.tsx
+`	s
 'use client'
 
 import {
@@ -15765,10 +16984,10 @@ export function AnalysisChart({ data, unit, minLimit, maxLimit }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/analises/historico/page.tsx`
-```tsx
+### src\app\tecnico\analises\historico\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -15893,10 +17112,10 @@ export default async function HistoricoPage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/analises/nova/analysis-form.tsx`
-```tsx
+### src\app\tecnico\analises\nova\analysis-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
@@ -16196,10 +17415,10 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/analises/nova/page.tsx`
-```tsx
+### src\app\tecnico\analises\nova\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -16242,10 +17461,10 @@ export default async function NovaAnalisePage() {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/analises/page.tsx`
-```tsx
+### src\app\tecnico\analises\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -16421,10 +17640,10 @@ export default async function AnalisesPage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/dashboard/page.tsx`
-```tsx
+### src\app\tecnico\dashboard\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -16555,10 +17774,10 @@ export default async function TecnicoDashboard() {
 }
 
 
-```
+`
 
-### `src/app/tecnico/equipamentos/actions.ts`
-```ts
+### src\app\tecnico\equipamentos\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -16875,10 +18094,10 @@ export async function atualizarStatusCorretiva(
   return {}
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/novo/equipment-form.tsx`
-```tsx
+### src\app\tecnico\equipamentos\novo\equipment-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
@@ -17005,10 +18224,10 @@ export function EquipmentForm({ categories }: { categories: Category[] }) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/novo/page.tsx`
-```tsx
+### src\app\tecnico\equipamentos\novo\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -17039,10 +18258,10 @@ export default async function NovoEquipamentoPage() {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/page.tsx`
-```tsx
+### src\app\tecnico\equipamentos\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -17224,10 +18443,10 @@ export default async function EquipamentosPage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/[id]/conclude-button.tsx`
-```tsx
+### src\app\tecnico\equipamentos\[id]\conclude-button.tsx
+`	s
 'use client'
 
 import { useTransition } from 'react'
@@ -17257,10 +18476,10 @@ export function ConcludeButton({ preventivaId }: { preventivaId: string }) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/[id]/corrective-form.tsx`
-```tsx
+### src\app\tecnico\equipamentos\[id]\corrective-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect } from 'react'
@@ -17372,10 +18591,10 @@ export function CorrectiveForm({ equipamentoId }: { equipamentoId: string }) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/[id]/edit-form.tsx`
-```tsx
+### src\app\tecnico\equipamentos\[id]\edit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect } from 'react'
@@ -17526,10 +18745,10 @@ export function EditForm({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/[id]/page.tsx`
-```tsx
+### src\app\tecnico\equipamentos\[id]\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -17793,10 +19012,10 @@ export default async function EquipamentoDetailPage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/[id]/status-button.tsx`
-```tsx
+### src\app\tecnico\equipamentos\[id]\status-button.tsx
+`	s
 'use client'
 
 import { useTransition } from 'react'
@@ -17841,10 +19060,10 @@ export function StatusButton({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/equipamentos/[id]/toggle-button.tsx`
-```tsx
+### src\app\tecnico\equipamentos\[id]\toggle-button.tsx
+`	s
 'use client'
 
 import { useTransition } from 'react'
@@ -17885,10 +19104,10 @@ export function ToggleButton({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/estoque/page.tsx`
-```tsx
+### src\app\tecnico\estoque\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -17975,10 +19194,10 @@ export default async function TecnicoEstoquePage() {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/estoque/[id]/entrada/entry-form.tsx`
-```tsx
+### src\app\tecnico\estoque\[id]\entrada\entry-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -18086,10 +19305,10 @@ export function TecnicoEntryForm({ productId, productName, unit }: Props) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/estoque/[id]/entrada/page.tsx`
-```tsx
+### src\app\tecnico\estoque\[id]\entrada\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -18123,10 +19342,10 @@ export default async function TecnicoEntradaPage({ params }: { params: Promise<{
   )
 }
 
-```
+`
 
-### `src/app/tecnico/estoque/[id]/saida/exit-form.tsx`
-```tsx
+### src\app\tecnico\estoque\[id]\saida\exit-form.tsx
+`	s
 'use client'
 
 import { useActionState, useState } from 'react'
@@ -18150,7 +19369,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
 
   const [state, action, pending] = useActionState(async (prev: unknown, formData: FormData) => {
     const result = await registrarSaida(prev, formData)
-    if (result?.success && !result?.warning) router.push('/tecnico/estoque')
+    if (result?.success) router.push('/tecnico/estoque')
     return result
   }, null)
 
@@ -18182,20 +19401,6 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
         </p>
       )}
 
-      {state?.warning && (
-        <div className="rounded-lg bg-amber-900/30 border border-amber-700 px-4 py-3 space-y-3">
-          <p className="text-sm text-amber-300">{state.warning}</p>
-          <button
-            type="button"
-            onClick={() => router.push('/tecnico/estoque')}
-            className="w-full rounded-lg bg-amber-700 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors"
-          >
-            Entendido — voltar ao estoque
-          </button>
-        </div>
-      )}
-
-      {!state?.warning && (
         <>
           <div className="space-y-1">
             <label className="text-sm text-slate-300">
@@ -18259,15 +19464,14 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
             </button>
           </div>
         </>
-      )}
     </form>
   )
 }
 
-```
+`
 
-### `src/app/tecnico/estoque/[id]/saida/page.tsx`
-```tsx
+### src\app\tecnico\estoque\[id]\saida\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -18329,16 +19533,18 @@ export default async function SaidaPage({ params }: { params: Promise<{ id: stri
   )
 }
 
-```
+`
 
-### `src/app/tecnico/layout.tsx`
-```tsx
+### src\app\tecnico\layout.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
-import { TecnicoBottomNav } from '@/components/tecnico/bottom-nav'
+import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
+import { LayoutDashboard, FlaskConical, Wrench, AlertTriangle, Clock } from 'lucide-react'
 import { TopNav } from '@/components/ui/top-nav'
+import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
 
@@ -18347,6 +19553,14 @@ export default async function TecnicoLayout({
 }: {
   children: React.ReactNode
 }) {
+  const NAV_ITEMS: NavItem[] = [
+    { href: '/tecnico/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+    { href: '/tecnico/analises',     label: 'Análises',     icon: FlaskConical    },
+    { href: '/tecnico/equipamentos', label: 'Equip.',       icon: Wrench          },
+    { href: '/tecnico/ocorrencias',  label: 'Ocorrências',  icon: AlertTriangle   },
+    { href: '/tecnico/turnos/tarefas', label: 'Turnos', icon: Clock           },
+  ]
+
   const session = await auth()
   if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
     redirect('/acesso-negado')
@@ -18367,6 +19581,7 @@ export default async function TecnicoLayout({
             <span className="text-sm text-slate-400">
               {session.user.name ?? session.user.email}
             </span>
+            <NotificationBell />
             <PushManager />
             <SignOutButton />
           </div>
@@ -18380,15 +19595,15 @@ export default async function TecnicoLayout({
         {children}
       </div>
 
-      <TecnicoBottomNav />
+      <BottomNav items={NAV_ITEMS} />
     </div>
   )
 }
 
-```
+`
 
-### `src/app/tecnico/loading.tsx`
-```tsx
+### src\app\tecnico\loading.tsx
+`	s
 import { Loader2 } from 'lucide-react'
 
 export default function Loading() {
@@ -18402,10 +19617,10 @@ export default function Loading() {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/ocorrencias/actions.ts`
-```ts
+### src\app\tecnico\ocorrencias\actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -18493,10 +19708,10 @@ export async function resolverOcorrencia(
   return { success: true }
 }
 
-```
+`
 
-### `src/app/tecnico/ocorrencias/nova/occurrence-form.tsx`
-```tsx
+### src\app\tecnico\ocorrencias\nova\occurrence-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect, useRef, useState } from 'react'
@@ -18683,10 +19898,10 @@ export function TecnicoOccurrenceForm() {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/ocorrencias/nova/page.tsx`
-```tsx
+### src\app\tecnico\ocorrencias\nova\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
@@ -18708,10 +19923,10 @@ export default async function NovaOcorrenciaTecnicoPage() {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/ocorrencias/page.tsx`
-```tsx
+### src\app\tecnico\ocorrencias\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -18897,10 +20112,10 @@ export default async function OcorrenciasTecnicoPage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/ocorrencias/[id]/page.tsx`
-```tsx
+### src\app\tecnico\ocorrencias\[id]\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -19051,10 +20266,10 @@ export default async function OcorrenciaDetailPage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/ocorrencias/[id]/resolve-form.tsx`
-```tsx
+### src\app\tecnico\ocorrencias\[id]\resolve-form.tsx
+`	s
 'use client'
 
 import { useActionState, useEffect } from 'react'
@@ -19109,10 +20324,10 @@ export function ResolveForm({ ocorrenciaId }: { ocorrenciaId: string }) {
   )
 }
 
-```
+`
 
-### `src/app/tecnico/turnos/tarefas/page.tsx`
-```tsx
+### src\app\tecnico\turnos\tarefas\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -19224,10 +20439,10 @@ export default async function TecnicoInstanciasPage() {
 }
 
 
-```
+`
 
-### `src/app/tecnico/turnos/tarefas/[id]/page.tsx`
-```tsx
+### src\app\tecnico\turnos\tarefas\[id]\page.tsx
+`	s
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -19311,10 +20526,10 @@ export default async function TecnicoInstanciaDetalhePage({
   )
 }
 
-```
+`
 
-### `src/app/tecnico/turnos/tarefas/[id]/tecnico-task-form.tsx`
-```tsx
+### src\app\tecnico\turnos\tarefas\[id]\tecnico-task-form.tsx
+`	s
 'use client'
 
 import { useActionState } from 'react'
@@ -19454,10 +20669,10 @@ export function TecnicoTaskForm({
   )
 }
 
-```
+`
 
-### `src/components/admin/sidebar.tsx`
-```tsx
+### src\components\admin\sidebar.tsx
+`	s
 'use client'
 
 import Link from 'next/link'
@@ -19518,10 +20733,10 @@ export function AdminSidebar() {
   )
 }
 
-```
+`
 
-### `src/components/auth/AuthComponents.tsx`
-```tsx
+### src\components\auth\AuthComponents.tsx
+`	s
 'use client'
 
 import React from 'react'
@@ -19602,10 +20817,10 @@ export function PasswordStrength({ password }: { password?: string }) {
   )
 }
 
-```
+`
 
-### `src/components/auth/AuthShell.tsx`
-```tsx
+### src\components\auth\AuthShell.tsx
+`	s
 'use client'
 
 import React from 'react'
@@ -19638,10 +20853,10 @@ export function AuthShell({ children, tagline }: AuthShellProps) {
   )
 }
 
-```
+`
 
-### `src/components/auth/PasswordField.tsx`
-```tsx
+### src\components\auth\PasswordField.tsx
+`	s
 'use client'
 
 import React, { useState } from 'react'
@@ -19679,10 +20894,10 @@ export function PasswordField({ label = "Senha", ...props }: PasswordFieldProps)
   )
 }
 
-```
+`
 
-### `src/components/auth/WaterCanvas.tsx`
-```tsx
+### src\components\auth\WaterCanvas.tsx
+`	s
 'use client'
 
 import { Logo } from '@/components/logo'
@@ -19800,10 +21015,10 @@ function Badge({ children, icon: Icon }: { children: React.ReactNode, icon: Reac
   )
 }
 
-```
+`
 
-### `src/components/back-button.tsx`
-```tsx
+### src\components\back-button.tsx
+`	s
 'use client'
 
 import Link from 'next/link'
@@ -19842,10 +21057,10 @@ export function BackButton({ href, label = 'Voltar' }: BackButtonProps) {
   )
 }
 
-```
+`
 
-### `src/components/gestor/sidebar.tsx`
-```tsx
+### src\components\gestor\sidebar.tsx
+`	s
 'use client'
 
 import Link from 'next/link'
@@ -19865,7 +21080,8 @@ import {
   FileCheck2,
   AlertTriangle,
   ScrollText,
-  ShieldAlert
+  ShieldAlert,
+  Wrench
 } from 'lucide-react'
 
 type NavItem =
@@ -19889,6 +21105,10 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Laudos Externos',      href: '/gestor/laudos', icon: <UploadCloud className="w-4 h-4" /> },
   { type: 'link',    label: 'Leituras Realizadas',  href: '/gestor/leituras', icon: <FileCheck2 className="w-4 h-4" /> },
   { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias', icon: <AlertTriangle className="w-4 h-4" /> },
+  { type: 'section', label: 'Manutenção' },
+  { type: 'link',    label: 'Preventivas',         href: '/gestor/manutencao/preventivas', icon: <CalendarDays className="w-4 h-4" /> },
+  { type: 'link',    label: 'Corretivas',          href: '/gestor/manutencao/corretivas', icon: <Wrench className="w-4 h-4" /> },
+  { type: 'section', label: 'Governança' },
   { type: 'link',    label: 'Relatórios (Auditoria)', href: '/gestor/relatorios', icon: <ScrollText className="w-4 h-4" /> },
   { type: 'section', label: 'Sistema' },
   { type: 'link',    label: 'Auditoria Global',     href: '/gestor/auditoria', icon: <ShieldAlert className="w-4 h-4" /> },
@@ -19941,10 +21161,10 @@ export function GestorSidebar() {
 }
 
 
-```
+`
 
-### `src/components/logo.tsx`
-```tsx
+### src\components\logo.tsx
+`	s
 export function Logo({ className = "", size = "sm" }: { className?: string; size?: "sm" | "lg" }) {
   const dim = size === "lg" ? 48 : 31
 
@@ -19979,10 +21199,10 @@ export function Logo({ className = "", size = "sm" }: { className?: string; size
   )
 }
 
-```
+`
 
-### `src/components/manutencao/sidebar.tsx`
-```tsx
+### src\components\manutencao\sidebar.tsx
+`	s
 'use client'
 
 import Link from 'next/link'
@@ -20052,10 +21272,10 @@ export function ManutencaoSidebar() {
   )
 }
 
-```
+`
 
-### `src/components/mobile-nav.tsx`
-```tsx
+### src\components\mobile-nav.tsx
+`	s
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -20121,77 +21341,10 @@ export function MobileNav({ children }: { children: React.ReactNode }) {
   )
 }
 
-```
+`
 
-### `src/components/operador/bottom-nav.tsx`
-```tsx
-'use client'
-
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Droplets, Clock, AlertTriangle, Package } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
-
-type NavItem = {
-  href:  string
-  label: string
-  icon:  LucideIcon
-}
-
-const NAV: NavItem[] = [
-  { href: '/operador/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { href: '/operador/leituras',    label: 'Leituras',    icon: Droplets        },
-  { href: '/operador/turnos',      label: 'Turnos',      icon: Clock           },
-  { href: '/operador/ocorrencias', label: 'Ocorrências', icon: AlertTriangle   },
-  { href: '/operador/estoque',     label: 'Estoque',     icon: Package         },
-]
-
-export function OperadorBottomNav() {
-  const pathname = usePathname()
-
-  return (
-    <nav
-      className="fixed bottom-0 inset-x-0 z-40 bg-slate-900 border-t border-slate-800"
-      aria-label="Navegação principal"
-    >
-      <ul className="flex h-14">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <li key={href} className="flex flex-1">
-              <Link
-                href={href}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-colors',
-                  isActive
-                    ? 'border-sky-400 text-sky-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-300',
-                )}
-              >
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                <span
-                  className={cn(
-                    'text-[10px] leading-none font-medium tracking-wide',
-                    !isActive && 'text-slate-600',
-                  )}
-                >
-                  {label}
-                </span>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
-  )
-}
-
-```
-
-### `src/components/push-manager.tsx`
-```tsx
+### src\components\push-manager.tsx
+`	s
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -20273,10 +21426,10 @@ export function PushManager() {
   )
 }
 
-```
+`
 
-### `src/components/sign-out-action.ts`
-```ts
+### src\components\sign-out-action.ts
+`	s
 'use server'
 
 import { signOut } from '@/lib/auth'
@@ -20287,10 +21440,10 @@ export async function handleSignOut() {
   redirect('/login')
 }
 
-```
+`
 
-### `src/components/sign-out-button.tsx`
-```tsx
+### src\components\sign-out-button.tsx
+`	s
 import { Button } from '@/components/ui/button'
 import { handleSignOut } from './sign-out-action'
 
@@ -20304,78 +21457,10 @@ export function SignOutButton() {
   )
 }
 
-```
+`
 
-### `src/components/tecnico/bottom-nav.tsx`
-```tsx
-'use client'
-
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FlaskConical, Wrench, AlertTriangle, Clock } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
-
-type NavItem = {
-  href:  string
-  label: string
-  icon:  LucideIcon
-}
-
-const NAV: NavItem[] = [
-  { href: '/tecnico/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/tecnico/analises',     label: 'Análises',     icon: FlaskConical    },
-  { href: '/tecnico/equipamentos', label: 'Equip.',       icon: Wrench          },
-  { href: '/tecnico/ocorrencias',  label: 'Ocorrências',  icon: AlertTriangle   },
-  { href: '/tecnico/turnos/tarefas', label: 'Turnos', icon: Clock           },
-]
-
-export function TecnicoBottomNav() {
-  const pathname = usePathname()
-
-  return (
-    <nav
-      className="fixed bottom-0 inset-x-0 z-40 bg-slate-900 border-t border-slate-800"
-      aria-label="Navegação principal"
-    >
-      <ul className="flex h-14">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <li key={href} className="flex flex-1">
-              <Link
-                href={href}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-colors',
-                  isActive
-                    ? 'border-sky-400 text-sky-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-300',
-                )}
-              >
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                <span
-                  className={cn(
-                    'text-[10px] leading-none font-medium tracking-wide',
-                    !isActive && 'text-slate-600',
-                  )}
-                >
-                  {label}
-                </span>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
-  )
-}
-
-
-```
-
-### `src/components/theme-provider.tsx`
-```tsx
+### src\components\theme-provider.tsx
+`	s
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -20436,10 +21521,10 @@ export function ThemeToggle() {
   )
 }
 
-```
+`
 
-### `src/components/ui/badge.tsx`
-```tsx
+### src\components\ui\badge.tsx
+`	s
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
@@ -20490,10 +21575,72 @@ function Badge({
 
 export { Badge, badgeVariants }
 
-```
+`
 
-### `src/components/ui/button.tsx`
-```tsx
+### src\components\ui\bottom-nav.tsx
+`	s
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+export type NavItem = {
+  href:  string
+  label: string
+  icon:  LucideIcon
+}
+
+type BottomNavProps = {
+  items: NavItem[]
+}
+
+export function BottomNav({ items }: BottomNavProps) {
+  const pathname = usePathname()
+
+  return (
+    <nav
+      className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/60 pb-safe"
+      aria-label="Navegação principal"
+    >
+      <ul className="flex h-14">
+        {items.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <li key={href} className="flex flex-1">
+              <Link
+                href={href}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-colors',
+                  isActive
+                    ? 'border-sky-400 text-sky-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-300',
+                )}
+              >
+                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <span
+                  className={cn(
+                    'text-[10px] leading-none font-medium tracking-wide',
+                    !isActive && 'text-slate-600',
+                  )}
+                >
+                  {label}
+                </span>
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
+  )
+}
+
+`
+
+### src\components\ui\button.tsx
+`	s
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
@@ -20562,10 +21709,10 @@ function Button({
 
 export { Button, buttonVariants }
 
-```
+`
 
-### `src/components/ui/card.tsx`
-```tsx
+### src\components\ui\card.tsx
+`	s
 import * as React from "react"
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -20632,21 +21779,39 @@ CardFooter.displayName = "CardFooter"
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 
-```
+`
 
-### `src/components/ui/command-menu.tsx`
-```tsx
+### src\components\ui\command-menu.tsx
+`	s
 'use client'
 
 import * as React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Command } from 'cmdk'
-import { Search, AlertTriangle, Droplet, LayoutDashboard, FileText, UploadCloud, FileCheck, Power, Wrench } from 'lucide-react'
+import { Search, AlertTriangle, Droplet, LayoutDashboard, FileText, UploadCloud, FileCheck, Power, Wrench, MapPin, SearchCode } from 'lucide-react'
+
+// Hook for debouncing input
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = React.useState<T>(value)
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+  return debouncedValue
+}
 
 export function CommandMenu() {
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState('')
+  const debouncedSearch = useDebounce(search, 300)
+  const [results, setResults] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(false)
 
   // Toggle the menu when ⌘K is pressed
   React.useEffect(() => {
@@ -20664,7 +21829,35 @@ export function CommandMenu() {
   // Close the menu when navigating
   React.useEffect(() => {
     setOpen(false)
+    setSearch('')
   }, [pathname])
+
+  // Fetch search results
+  React.useEffect(() => {
+    if (debouncedSearch.length < 2) {
+      setResults([])
+      setLoading(false)
+      return
+    }
+
+    let isMounted = true
+    setLoading(true)
+    
+    fetch(`/api/search?q=${encodeURIComponent(debouncedSearch)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted) {
+          setResults(data.results || [])
+          setLoading(false)
+        }
+      })
+      .catch(err => {
+        console.error(err)
+        if (isMounted) setLoading(false)
+      })
+
+    return () => { isMounted = false }
+  }, [debouncedSearch])
 
   const runCommand = React.useCallback((command: () => void) => {
     setOpen(false)
@@ -20678,80 +21871,123 @@ export function CommandMenu() {
 
   if (!isGestor && !isTecnico && !isOperador) return null
 
+  const getIconForType = (type: string) => {
+    if (type === 'equipment') return <Wrench className="h-4 w-4" />
+    if (type === 'point') return <MapPin className="h-4 w-4" />
+    if (type === 'occurrence') return <AlertTriangle className="h-4 w-4 text-amber-500" />
+    return <SearchCode className="h-4 w-4" />
+  }
+
   return (
     <Command.Dialog 
       open={open} 
       onOpenChange={setOpen} 
       label="Global Command Menu"
       className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/80 backdrop-blur-sm p-4 pt-[20vh]"
+      shouldFilter={false} // We are doing server-side filtering
     >
       <div className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
         <div className="flex items-center border-b border-slate-800 px-3">
           <Search className="mr-2 h-4 w-4 shrink-0 text-slate-500" />
           <Command.Input 
-            placeholder="Digite um comando ou busque telas..." 
+            value={search}
+            onValueChange={setSearch}
+            placeholder="Digite um comando, equipamento, ponto ou ocorrência..." 
             className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-slate-500 text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
         <Command.List className="max-h-[300px] overflow-y-auto overflow-x-hidden p-2 text-slate-200">
-          <Command.Empty className="py-6 text-center text-sm text-slate-500">
-            Nenhum resultado encontrado.
-          </Command.Empty>
+          
+          {loading && (
+            <div className="py-6 text-center text-sm text-slate-500">
+              Buscando...
+            </div>
+          )}
 
-          {isOperador && (
-            <Command.Group heading="Ações de Operação" className="px-2 text-xs font-medium text-slate-500 mb-2">
-              <Command.Item onSelect={() => runCommand(() => router.push('/operador/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/operador/leituras/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <Droplet className="h-4 w-4" /> Cadastrar Leitura Manual
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/operador/turnos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <FileCheck className="h-4 w-4" /> Passagem de Turno
-              </Command.Item>
+          {!loading && search.length >= 2 && results.length === 0 && (
+            <Command.Empty className="py-6 text-center text-sm text-slate-500">
+              Nenhum resultado encontrado para "{search}".
+            </Command.Empty>
+          )}
+
+          {!loading && results.length > 0 && (
+            <Command.Group heading="Resultados da Busca" className="px-2 text-xs font-medium text-slate-500 mb-2">
+              {results.map((item) => (
+                <Command.Item 
+                  key={item.id} 
+                  onSelect={() => runCommand(() => router.push(item.href))} 
+                  className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/80 shrink-0 text-slate-400">
+                    {getIconForType(item.type)}
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="font-medium text-slate-200 truncate">{item.title}</span>
+                    <span className="text-[11px] text-slate-500 truncate">{item.subtitle}</span>
+                  </div>
+                </Command.Item>
+              ))}
             </Command.Group>
           )}
 
-          {isTecnico && (
-            <Command.Group heading="Manutenção & Análise" className="px-2 text-xs font-medium text-slate-500 mb-2">
-              <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/ocorrencias/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <AlertTriangle className="h-4 w-4" /> Relatar Ocorrência
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/equipamentos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <Wrench className="h-4 w-4" /> Gerir Equipamentos
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/analises/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <FileText className="h-4 w-4" /> Cadastrar Análise Laboratorial
-              </Command.Item>
-            </Command.Group>
-          )}
+          {!search && (
+            <>
+              {isOperador && (
+                <Command.Group heading="Ações de Operação" className="px-2 text-xs font-medium text-slate-500 mb-2">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/leituras/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <Droplet className="h-4 w-4" /> Cadastrar Leitura Manual
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/turnos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <FileCheck className="h-4 w-4" /> Passagem de Turno
+                  </Command.Item>
+                </Command.Group>
+              )}
 
-          {isGestor && (
-            <Command.Group heading="Gestão Hídrica" className="px-2 text-xs font-medium text-slate-500 mb-2">
-              <Command.Item onSelect={() => runCommand(() => router.push('/gestor/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/gestor/relatorios'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <FileText className="h-4 w-4 text-emerald-500" /> Gerar Relatório de Auditoria
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/gestor/laudos/importar'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <UploadCloud className="h-4 w-4 text-blue-500" /> Importar Laudos com IA
-              </Command.Item>
-              <Command.Item onSelect={() => runCommand(() => router.push('/gestor/ocorrencias'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
-                <AlertTriangle className="h-4 w-4 text-amber-500" /> Painel de Ocorrências
-              </Command.Item>
-            </Command.Group>
-          )}
+              {isTecnico && (
+                <Command.Group heading="Manutenção & Análise" className="px-2 text-xs font-medium text-slate-500 mb-2">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/ocorrencias/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <AlertTriangle className="h-4 w-4" /> Relatar Ocorrência
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/equipamentos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <Wrench className="h-4 w-4" /> Gerir Equipamentos
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/analises/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <FileText className="h-4 w-4" /> Cadastrar Análise Laboratorial
+                  </Command.Item>
+                </Command.Group>
+              )}
 
-          <Command.Separator className="-mx-2 my-1 h-px bg-slate-800" />
-          <Command.Group className="px-2">
-            <Command.Item onSelect={() => runCommand(() => router.push('/login'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800 text-slate-400">
-              <Power className="h-4 w-4" /> Fazer Logoff
-            </Command.Item>
-          </Command.Group>
+              {isGestor && (
+                <Command.Group heading="Gestão Hídrica" className="px-2 text-xs font-medium text-slate-500 mb-2">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/relatorios'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <FileText className="h-4 w-4 text-emerald-500" /> Gerar Relatório de Auditoria
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/laudos/importar'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <UploadCloud className="h-4 w-4 text-blue-500" /> Importar Laudos com IA
+                  </Command.Item>
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/ocorrencias'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" /> Painel de Ocorrências
+                  </Command.Item>
+                </Command.Group>
+              )}
+
+              <Command.Separator className="-mx-2 my-1 h-px bg-slate-800" />
+              <Command.Group className="px-2">
+                <Command.Item onSelect={() => runCommand(() => router.push('/login'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800 text-slate-400">
+                  <Power className="h-4 w-4" /> Fazer Logoff
+                </Command.Item>
+              </Command.Group>
+            </>
+          )}
 
         </Command.List>
       </div>
@@ -20759,10 +21995,10 @@ export function CommandMenu() {
   )
 }
 
-```
+`
 
-### `src/components/ui/consumption-bar-chart.tsx`
-```tsx
+### src\components\ui\consumption-bar-chart.tsx
+`	s
 'use client'
 
 import {
@@ -20838,10 +22074,10 @@ export function ConsumptionBarChart({ data }: { data: ConsumptionData[] }) {
   )
 }
 
-```
+`
 
-### `src/components/ui/input.tsx`
-```tsx
+### src\components\ui\input.tsx
+`	s
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
@@ -20870,10 +22106,10 @@ Input.displayName = 'Input'
 
 export { Input }
 
-```
+`
 
-### `src/components/ui/kpi-card.tsx`
-```tsx
+### src\components\ui\kpi-card.tsx
+`	s
 import Link from 'next/link'
 import React from 'react'
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
@@ -20993,10 +22229,124 @@ export function KpiCard({
   )
 }
 
-```
+`
 
-### `src/components/ui/occurrences-pie-chart.tsx`
-```tsx
+### src\components\ui\notification-bell.tsx
+`	s
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { Bell, AlertTriangle, CheckSquare, Wrench } from 'lucide-react'
+import Link from 'next/link'
+import { getNotifications, type NotificationItem } from '@/app/actions/notifications'
+import { cn } from '@/lib/utils'
+
+export function NotificationBell() {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [isOpen, setIsOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    async function load() {
+      const data = await getNotifications()
+      setNotifications(data)
+      setUnreadCount(data.length)
+    }
+    load()
+    // Poll every 1 minute
+    const interval = setInterval(load, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleOpen = () => {
+    setIsOpen(!isOpen)
+    if (!isOpen) {
+      setUnreadCount(0) // Mark as read when opening
+    }
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={handleOpen}
+        className="relative p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+        title="Notificações"
+      >
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute top-1 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-700 bg-slate-800 shadow-xl z-50 overflow-hidden">
+          <div className="border-b border-slate-700 bg-slate-900/50 px-4 py-3">
+            <h3 className="text-sm font-semibold text-slate-200">Notificações</h3>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-slate-500">
+                Nenhuma notificação no momento.
+              </div>
+            ) : (
+              <ul className="divide-y divide-slate-700/50">
+                {notifications.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-start gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors"
+                    >
+                      <div className={cn(
+                        "mt-0.5 shrink-0 rounded-full p-1.5",
+                        item.type === 'OCCURRENCE' && "bg-red-900/50 text-red-400",
+                        item.type === 'TASK' && "bg-amber-900/50 text-amber-400",
+                        item.type === 'MAINTENANCE' && "bg-sky-900/50 text-sky-400"
+                      )}>
+                        {item.type === 'OCCURRENCE' && <AlertTriangle className="h-4 w-4" />}
+                        {item.type === 'TASK' && <CheckSquare className="h-4 w-4" />}
+                        {item.type === 'MAINTENANCE' && <Wrench className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-xs font-medium text-slate-200">
+                          {item.title}
+                        </p>
+                        <p className="line-clamp-2 text-xs text-slate-400">
+                          {item.description}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {new Date(item.date).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+`
+
+### src\components\ui\occurrences-pie-chart.tsx
+`	s
 'use client'
 
 import {
@@ -21070,25 +22420,25 @@ export function OccurrencesPieChart({ data }: { data: OccurrencesData[] }) {
   )
 }
 
-```
+`
 
-### `src/components/ui/page-header.tsx`
-```tsx
+### src\components\ui\page-header.tsx
+`	s
 import React from 'react'
 
 export function PageHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="space-y-1">
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-100">{title}</h1>
-      {description && <p className="text-sm text-slate-400">{description}</p>}
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
     </div>
   )
 }
 
-```
+`
 
-### `src/components/ui/status-heatmap.tsx`
-```tsx
+### src\components\ui\status-heatmap.tsx
+`	s
 import Link from 'next/link'
 import React from 'react'
 
@@ -21144,10 +22494,10 @@ export function StatusHeatmap({ points }: StatusHeatmapProps) {
   )
 }
 
-```
+`
 
-### `src/components/ui/top-nav.tsx`
-```tsx
+### src\components\ui\top-nav.tsx
+`	s
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
@@ -21194,10 +22544,10 @@ export function TopNav() {
   )
 }
 
-```
+`
 
-### `src/components/ui/trend-chart.tsx`
-```tsx
+### src\components\ui\trend-chart.tsx
+`	s
 'use client'
 
 import React from 'react'
@@ -21367,10 +22717,10 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
   )
 }
 
-```
+`
 
-### `src/lib/audit.ts`
-```ts
+### src\lib\audit.ts
+`	s
 import { PrismaClient } from '@prisma/client'
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'
@@ -21411,10 +22761,10 @@ export async function logAudit(
   })
 }
 
-```
+`
 
-### `src/lib/auth-utils.ts`
-```ts
+### src\lib\auth-utils.ts
+`	s
 export const RATE_LIMIT_MAX_ATTEMPTS  = 5
 export const RATE_LIMIT_WINDOW_MS     = 15 * 60 * 1000 // 15 minutos
 export const SESSION_MAX_AGE_OPERATOR = 30 * 60         // 30 min em segundos
@@ -21456,10 +22806,10 @@ export function isRouteAllowedForRole(pathname: string, userRole: string): boole
   return true
 }
 
-```
+`
 
-### `src/lib/auth.config.ts`
-```ts
+### src\lib\auth.config.ts
+`	s
 import type { NextAuthConfig } from 'next-auth'
 import { SESSION_MAX_AGE_DEFAULT, getSessionMaxAge } from '@/lib/auth-utils'
 
@@ -21493,10 +22843,10 @@ export const authConfig = {
   providers: [],
 } satisfies NextAuthConfig
 
-```
+`
 
-### `src/lib/auth.ts`
-```ts
+### src\lib\auth.ts
+`	s
 import NextAuth, { type DefaultSession } from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
@@ -21610,19 +22960,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
 })
 
-```
+`
 
-### `src/lib/date-utils.ts`
-```ts
+### src\lib\date-utils.ts
+`	s
 export function formatDateDisplay(date: Date | string) {
   const d = new Date(date)
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-```
+`
 
-### `src/lib/equipment-utils.ts`
-```ts
+### src\lib\equipment-utils.ts
+`	s
 export function addDays(date: Date, days: number): Date {
   const d = new Date(date)
   d.setDate(d.getDate() + days)
@@ -21637,10 +22987,76 @@ export function isOverdue(scheduledDate: Date, today: Date): boolean {
   return s < t
 }
 
-```
+`
 
-### `src/lib/occurrence-utils.ts`
-```ts
+### src\lib\labels.ts
+`	s
+// Dicionários para tradução e humanização de Enums e Valores Padronizados do Prisma
+
+export const SEVERITY_LABEL: Record<string, string> = {
+  LOW: 'Baixa',
+  MEDIUM: 'Média',
+  HIGH: 'Alta',
+  CRITICAL: 'Crítica',
+}
+
+export const SEVERITY_COLOR: Record<string, string> = {
+  LOW: 'bg-slate-800 text-slate-400 border-slate-700',
+  MEDIUM: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
+  HIGH: 'bg-orange-950/60 text-orange-400 border-orange-900/50',
+  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
+}
+
+export const OCCURRENCE_STATUS_LABEL: Record<string, string> = {
+  OPEN: 'Aberta',
+  IN_PROGRESS: 'Em Andamento',
+  RESOLVED: 'Resolvida',
+}
+
+export const OCCURRENCE_STATUS_COLOR: Record<string, string> = {
+  OPEN: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
+  IN_PROGRESS: 'bg-sky-950/60 text-sky-400 border-sky-900/50',
+  RESOLVED: 'bg-green-950/60 text-green-400 border-green-900/50',
+}
+
+export const MAINTENANCE_STATUS_LABEL: Record<string, string> = {
+  SCHEDULED: 'Agendada',
+  IN_PROGRESS: 'Em Andamento',
+  DONE: 'Concluída',
+  CANCELLED: 'Cancelada',
+}
+
+export const MAINTENANCE_STATUS_COLOR: Record<string, string> = {
+  SCHEDULED: 'bg-slate-800 text-slate-400 border-slate-700',
+  IN_PROGRESS: 'bg-sky-950/60 text-sky-400 border-sky-900/50',
+  DONE: 'bg-green-950/60 text-green-400 border-green-900/50',
+  CANCELLED: 'bg-red-950/60 text-red-400 border-red-900/50',
+}
+
+export const TASK_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pendente',
+  DONE: 'Concluída',
+  SKIPPED: 'Pulada',
+}
+
+export const TASK_STATUS_COLOR: Record<string, string> = {
+  PENDING: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
+  DONE: 'bg-green-950/60 text-green-400 border-green-900/50',
+  SKIPPED: 'bg-slate-800 text-slate-400 border-slate-700',
+}
+
+export const OCCURRENCE_CATEGORY_LABEL: Record<string, string> = {
+  VAZAMENTO: 'Vazamento',
+  QUEBRA: 'Quebra de Equipamento',
+  FALTA_PRODUTO: 'Falta de Produto',
+  SEGURANCA: 'Segurança/Risco',
+  OUTROS: 'Outros',
+}
+
+`
+
+### src\lib\occurrence-utils.ts
+`	s
 // Prazos em horas por severidade — espelha occurrence_severity_defaults do seed
 export const DEADLINE_HOURS: Record<string, number> = {
   CRITICAL: 24,
@@ -21662,10 +23078,10 @@ export function isMimeTypeValido(mimeType: string): boolean {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)
 }
 
-```
+`
 
-### `src/lib/password.ts`
-```ts
+### src\lib\password.ts
+`	s
 import bcrypt from 'bcryptjs'
 
 const SALT_ROUNDS = 12
@@ -21681,10 +23097,10 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash)
 }
 
-```
+`
 
-### `src/lib/prisma.ts`
-```ts
+### src\lib\prisma.ts
+`	s
 import { PrismaClient } from '@prisma/client'
 
 // Evita múltiplas instâncias do PrismaClient em desenvolvimento (hot reload do Next.js)
@@ -21696,10 +23112,10 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
-```
+`
 
-### `src/lib/push-actions.ts`
-```ts
+### src\lib\push-actions.ts
+`	s
 'use server'
 
 import { auth } from '@/lib/auth'
@@ -21799,10 +23215,10 @@ export async function sendPushToUsers(userIds: string[], payload: { title: strin
   })
 }
 
-```
+`
 
-### `src/lib/readings-utils.ts`
-```ts
+### src\lib\readings-utils.ts
+`	s
 // Calcula is_non_conformant para uma leitura de campo.
 // Retorna null quando não há valor (leitura observacional sem parâmetro).
 // Retorna false quando nenhum limite está definido para o parâmetro.
@@ -21819,10 +23235,10 @@ export function calcularNaoConformidade(
   return below || above
 }
 
-```
+`
 
-### `src/lib/shift-utils.ts`
-```ts
+### src\lib\shift-utils.ts
+`	s
 export function normalizarData(date: Date): Date {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
@@ -21837,10 +23253,10 @@ export function isHandoverVencido(timeoutAt: Date, now: Date): boolean {
   return timeoutAt < now
 }
 
-```
+`
 
-### `src/lib/stock-utils.ts`
-```ts
+### src\lib\stock-utils.ts
+`	s
 export function calcularEstoqueAtual(totalEntradas: number, totalSaidas: number): number {
   return totalEntradas - totalSaidas
 }
@@ -21865,10 +23281,10 @@ export function formatarQuantidade(value: number): string {
   return value % 1 === 0 ? value.toFixed(0) : value.toFixed(2)
 }
 
-```
+`
 
-### `src/lib/tenant.ts`
-```ts
+### src\lib\tenant.ts
+`	s
 import { auth } from '@/lib/auth'
 
 /**
@@ -21884,10 +23300,10 @@ export async function getTenantId(): Promise<string> {
   return session.user.tenantId
 }
 
-```
+`
 
-### `src/lib/utils.ts`
-```ts
+### src\lib\utils.ts
+`	s
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -21895,10 +23311,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-```
+`
 
-### `src/lib/web-push.ts`
-```ts
+### src\lib\web-push.ts
+`	s
 import webpush from 'web-push'
 
 // Certifique-se de configurar essas variáveis no .env
@@ -21922,10 +23338,10 @@ if (vapidPublicKey && vapidPrivateKey) {
 
 export { webpush }
 
-```
+`
 
-### `src/lib/__tests__/analises.test.ts`
-```ts
+### src\lib\__tests__\analises.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 
@@ -21974,10 +23390,10 @@ describe('snapshot de limites — cálculo usa os limites informados', () => {
   })
 })
 
-```
+`
 
-### `src/lib/__tests__/auth.test.ts`
-```ts
+### src\lib\__tests__\auth.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import { hashPassword, verifyPassword } from '@/lib/password'
 import {
@@ -22045,10 +23461,10 @@ describe('isRouteAllowedForRole — acesso por prefixo de rota', () => {
   })
 })
 
-```
+`
 
-### `src/lib/__tests__/equipamentos.test.ts`
-```ts
+### src\lib\__tests__\equipamentos.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import { addDays, isOverdue } from '@/lib/equipment-utils'
 
@@ -22118,10 +23534,10 @@ describe('isOverdue — detecção de preventiva vencida', () => {
   })
 })
 
-```
+`
 
-### `src/lib/__tests__/estoque.test.ts`
-```ts
+### src\lib\__tests__\estoque.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import {
   calcularEstoqueAtual,
@@ -22210,10 +23626,10 @@ describe('formatarQuantidade', () => {
   })
 })
 
-```
+`
 
-### `src/lib/__tests__/fase11-criticos.test.ts`
-```ts
+### src\lib\__tests__\fase11-criticos.test.ts
+`	s
 /**
  * Testes dos 13 cenários críticos — Briefing seção 5
  *
@@ -22552,10 +23968,10 @@ describe('Cenário 13 — Dado inválido: validação impede corrupção do banc
 })
 
 
-```
+`
 
-### `src/lib/__tests__/ocorrencias.test.ts`
-```ts
+### src\lib\__tests__\ocorrencias.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import { calcularDeadline, isPrazoVencido, isMimeTypeValido, DEADLINE_HOURS } from '@/lib/occurrence-utils'
 
@@ -22640,10 +24056,10 @@ describe('isMimeTypeValido — rejeição de upload inválido', () => {
   })
 })
 
-```
+`
 
-### `src/lib/__tests__/readings.test.ts`
-```ts
+### src\lib\__tests__\readings.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 
@@ -22692,10 +24108,10 @@ describe('calcularNaoConformidade — sem valor ou sem limites', () => {
   })
 })
 
-```
+`
 
-### `src/lib/__tests__/turnos.test.ts`
-```ts
+### src\lib\__tests__\turnos.test.ts
+`	s
 import { describe, it, expect } from 'vitest'
 import { normalizarData, calcularTimeoutAt, isHandoverVencido } from '@/lib/shift-utils'
 
@@ -22765,10 +24181,10 @@ describe('isHandoverVencido — timeout expirado', () => {
   })
 })
 
-```
+`
 
-### `src/middleware.ts`
-```ts
+### src\middleware.ts
+`	s
 import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 import { NextRequest, NextResponse } from 'next/server'
@@ -22836,10 +24252,10 @@ export const config = {
   matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico).*)'],
 }
 
-```
+`
 
-### `src/types/index.ts`
-```ts
+### src\types\index.ts
+`	s
 // Enums do domínio — definidos em TypeScript porque Prisma v5 + SQLite não suporta enums nativos.
 // O banco armazena como String; a aplicação garante os valores válidos via estes tipos.
 
@@ -22954,10 +24370,10 @@ export const AUDIT_ACTIONS = {
   DELETE: 'DELETE',
 } as const satisfies Record<AuditAction, AuditAction>
 
-```
+`
 
-### `prisma/schema.prisma`
-```prisma
+### prisma\schema.prisma
+`	s
 generator client {
   provider = "prisma-client-js"
 }
@@ -23239,9 +24655,10 @@ model CollectionPoint {
   created_at  DateTime @default(now())
 
   tenant     Tenant             @relation(fields: [tenant_id], references: [id])
-  readings   Reading[]
-  analyses   Analysis[]
-  parameters QualityParameter[]
+  readings    Reading[]
+  analyses    Analysis[]
+  parameters  QualityParameter[]
+  occurrences Occurrence[]
 
   @@index([tenant_id])
   @@map("collection_points")
@@ -23464,23 +24881,26 @@ model CorrectiveMaintenance {
 model Occurrence {
   id               String    @id @default(cuid())
   tenant_id        String
-  description      String
-  severity         String
-  status           String    @default("OPEN")
-  deadline         DateTime
-  resolved_at      DateTime?
-  resolved_by      String?
-  resolution_notes String?
-  responsible_id   String?
-  reported_by      String
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  description         String
+  category            String?   // VAZAMENTO, QUEBRA, FALTA_PRODUTO, OUTROS
+  severity            String
+  status              String    @default("OPEN")
+  deadline            DateTime
+  resolved_at         DateTime?
+  resolved_by         String?
+  resolution_notes    String?
+  responsible_id      String?
+  reported_by         String
+  collection_point_id String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
 
-  tenant      Tenant            @relation(fields: [tenant_id], references: [id])
-  reporter    User              @relation("OccurrenceReporter", fields: [reported_by], references: [id])
-  responsible User?             @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
-  resolver    User?             @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
-  photos      OccurrencePhoto[]
+  tenant              Tenant            @relation(fields: [tenant_id], references: [id])
+  reporter            User              @relation("OccurrenceReporter", fields: [reported_by], references: [id])
+  responsible         User?             @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
+  resolver            User?             @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
+  collection_point    CollectionPoint?  @relation(fields: [collection_point_id], references: [id])
+  photos              OccurrencePhoto[]
 
   @@index([tenant_id, severity, status])
   @@index([deadline])
@@ -23688,10 +25108,10 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-```
+`
 
-### `prisma/seed-demo.ts`
-```ts
+### prisma\seed-demo.ts
+`	s
 /**
  * Seed de demonstração: gera ~6 meses de dados operacionais realistas.
  * Uso: npx tsx prisma/seed-demo.ts
@@ -23945,10 +25365,10 @@ main()
   .catch((e) => { console.error(e); process.exit(1) })
   .finally(() => prisma.$disconnect())
 
-```
+`
 
-### `prisma/seed.ts`
-```ts
+### prisma\seed.ts
+`	s
 import { PrismaClient } from '@prisma/client'
 import { hashPassword } from '../src/lib/password'
 
@@ -24218,152 +25638,5 @@ main()
   .catch((e) => { console.error(e); process.exit(1) })
   .finally(() => prisma.$disconnect())
 
-```
-
-### `package.json`
-```json
-{
-  "name": "meu-projeto",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
-    "start": "next start",
-    "lint": "eslint",
-    "postinstall": "prisma generate"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
-  "dependencies": {
-    "@ducanh2912/next-pwa": "^10.2.9",
-    "@google/generative-ai": "^0.24.1",
-    "@vercel/analytics": "^2.0.1",
-    "bcryptjs": "^3.0.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
-    "date-fns": "^4.4.0",
-    "lucide-react": "^1.14.0",
-    "next": "16.2.6",
-    "next-auth": "^5.0.0-beta.31",
-    "radix-ui": "^1.4.3",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "recharts": "^3.8.1",
-    "shadcn": "^4.7.0",
-    "string-similarity": "^4.0.4",
-    "tailwind-merge": "^3.6.0",
-    "tw-animate-css": "^1.4.0",
-    "web-push": "^3.6.7",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.61.0",
-    "@prisma/client": "^5.22.0",
-    "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/string-similarity": "^4.0.2",
-    "@types/web-push": "^3.6.4",
-    "@vitejs/plugin-react": "^6.0.2",
-    "dotenv": "^17.4.2",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "jsdom": "^29.1.1",
-    "playwright": "^1.60.0",
-    "prisma": "^5.22.0",
-    "tailwindcss": "^4",
-    "tsx": "^4.22.0",
-    "typescript": "^5",
-    "vitest": "^4.1.6"
-  }
-}
-
-```
-
-### `README.md`
-```md
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-```
-
-### `tsconfig.json`
-```json
-{
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
-  "exclude": ["node_modules"]
-}
-
-```
+`
 
