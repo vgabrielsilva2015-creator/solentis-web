@@ -51,7 +51,8 @@ export async function GET(request: Request) {
             shift_id: schedule.shift_id,
             date: targetDate,
             status: 'SCHEDULED' as const,
-            operator_id: null // Fica vazio para o Gestor atribuir ou Operador pegar depois
+            operator_id: null, // Fica vazio para o Gestor atribuir ou Operador pegar depois
+            opened_by: 'CRON'
           })
         }
       }

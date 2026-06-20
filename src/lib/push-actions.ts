@@ -18,12 +18,12 @@ export async function subscribeUser(sub: PushSubscription) {
   await prisma.pushSubscription.upsert({
     where: { endpoint: sub.endpoint },
     update: {
-      user_id: session.user.id,
+      user_id: session.user.id as string,
       p256dh,
       auth: authKey
     },
     create: {
-      user_id: session.user.id,
+      user_id: session.user.id as string,
       endpoint: sub.endpoint,
       p256dh,
       auth: authKey

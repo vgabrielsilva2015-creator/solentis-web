@@ -109,7 +109,7 @@ export default async function HistoricoPage({
             <AnalysisChart
               data={dataPoints.map((d) => ({
                 date:            d.collected_at.toISOString(),
-                value:           d.value,
+                value:           d.value ?? 0,
                 isNonConformant: d.is_non_conformant,
               }))}
               unit={selectedParam.unit}

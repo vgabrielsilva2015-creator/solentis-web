@@ -189,7 +189,7 @@ export default async function GestorDashboard({
   })
   
   const selectedParam = parameters.find(p => p.id === paramId) || parameters[0]
-  let trendData = []
+  let trendData: any[] = []
   
   if (selectedParam) {
     const analysesForChart = await prisma.analysis.findMany({
@@ -207,6 +207,70 @@ export default async function GestorDashboard({
     }))
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5. WIDGETS (FEED, MAINTENANCE, SLA)
+  // ─────────────────────────────────────────────────────────────────────────────
+  const [auditFeed, pendingMaintenances, resolvedOccurrences] = await Promise.all([
+    prisma.auditLog.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: 5,
+      include: { user: { select: { name: true } } }
+    }),
+    prisma.preventiveMaintenance.findMany({
+      where: { tenant_id, status: 'SCHEDULED' },
+      orderBy: { scheduled_date: 'asc' },
+      take: 4,
+      include: { equipment: { select: { name: true } } }
+    }),
+    prisma.occurrence.findMany({
+      where: { tenant_id, status: 'RESOLVED', resolved_at: { not: null } },
+      select: { severity: true, created_at: true, resolved_at: true }
+    })
+  ])
+
+  const dbFeed = auditFeed.map(log => {
+    let text = 'registrou uma atividade.'
+    let type = 'ok'
+    if (log.table_name === 'readings') { text = 'registrou uma leitura.'; type = 'reading' }
+    if (log.table_name === 'analyses') { text = 'registrou análise de laboratório.'; type = 'reading' }
+    if (log.table_name === 'occurrences') { text = 'abriu/atualizou uma ocorrência.'; type = 'alert' }
+    if (log.table_name === 'chemical_stock_exits') { text = 'lançou consumo de químicos.'; type = 'chem' }
+    if (log.table_name === 'shift_instances') { text = 'atualizou status de um turno.'; type = 'shift' }
+
+    return {
+      time: formatDateDisplay(log.timestamp),
+      who: log.user ? log.user.name : 'Sistema',
+      text,
+      type
+    }
+  })
+
+  const dbMaintenance = pendingMaintenances.map(m => {
+    const diffTime = m.scheduled_date.getTime() - now.getTime()
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return { name: m.equipment.name, days: days < 0 ? 0 : days }
+  })
+
+  const slaTargets: Record<string, number> = { CRITICAL: 24, HIGH: 72, MEDIUM: 168, LOW: 720 }
+  
+  const slaMap = new Map<string, { totalHours: number, count: number }>()
+  resolvedOccurrences.forEach(o => {
+    if (o.resolved_at) {
+      const hours = (o.resolved_at.getTime() - o.created_at.getTime()) / (1000 * 60 * 60)
+      const data = slaMap.get(o.severity) || { totalHours: 0, count: 0 }
+      data.totalHours += hours
+      data.count += 1
+      slaMap.set(o.severity, data)
+    }
+  })
+
+  const dbSla = Object.keys(slaTargets).map(severity => {
+    const meta = slaTargets[severity]
+    const data = slaMap.get(severity)
+    const avg = data && data.count > 0 ? Math.round(data.totalHours / data.count) : 0
+    return { sev: severityLabels[severity] || severity, avg, meta }
+  })
+
   return (
     <DashboardClient 
       dbReadingsToday={readingsToday}
@@ -220,6 +284,9 @@ export default async function GestorDashboard({
       dbOccurrencesPieData={occurrencesPieData}
       dbChemicalConsumptionData={chemicalConsumptionData}
       dbTrendData={trendData}
+      dbFeed={dbFeed}
+      dbMaintenance={dbMaintenance}
+      dbSla={dbSla}
       dbParameters={parameters}
       dbSelectedParam={selectedParam}
       diasNum={diasNum}

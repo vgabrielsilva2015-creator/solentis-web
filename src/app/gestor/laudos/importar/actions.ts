@@ -192,7 +192,7 @@ export async function saveMappedReadings(data: {
   const matrixName = point?.matrix || null
 
   // Usar fallback de metodo
-  const fallbackMethod = await prisma.analyticalMethod.findFirst({
+  const fallbackMethod = await prisma.analysisMethod.findFirst({
     where: { tenant_id: tenantId }
   })
   
@@ -222,11 +222,12 @@ export async function saveMappedReadings(data: {
         await tx.analysis.create({
           data: {
             tenant_id: tenantId,
-            value: r.bruto || String(r.value),
+            value: r.value,
+            raw_value: r.bruto || String(r.value),
             unit: r.unit || param.unit,
             parameter_id: r.parameterId,
             collection_point_id: data.pointId,
-            recorder_id: user.id,
+            recorded_by: user.id,
             collected_at: new Date(data.date),
             is_non_conformant: isNonConformant ?? false,
             is_detected: r.is_detected,

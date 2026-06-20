@@ -1,7 +1,7 @@
-// worker/index.ts
+// worker/index.js
 // Worker customizado gerado para push notifications com @ducanh2912/next-pwa
 
-self.addEventListener('push', function (event: PushEvent) {
+self.addEventListener('push', function (event) {
   if (event.data) {
     const data = event.data.json()
     const options = {
@@ -19,7 +19,7 @@ self.addEventListener('push', function (event: PushEvent) {
   }
 })
 
-self.addEventListener('notificationclick', function (event: NotificationEvent) {
+self.addEventListener('notificationclick', function (event) {
   event.notification.close()
   event.waitUntil(self.clients.openWindow(event.notification.data.url))
 })

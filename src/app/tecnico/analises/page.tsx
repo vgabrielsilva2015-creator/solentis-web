@@ -124,7 +124,7 @@ export default async function AnalisesPage({
                 <p className="text-sm text-slate-300">
                   <span className="font-medium">{a.parameter.name}:</span>{' '}
                   {a.value} {a.unit}
-                  <span className="text-slate-600"> · {a.method.name}</span>
+                  <span className="text-slate-600"> · {a.method?.name ?? 'N/A'}</span>
                 </p>
 
                 {/* Limites aplicados (snapshot) */}

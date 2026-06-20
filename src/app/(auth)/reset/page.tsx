@@ -7,6 +7,7 @@ import { AuthHeader, FormError, PasswordStrength } from '@/components/auth/AuthC
 import { PasswordField } from '@/components/auth/PasswordField'
 import { ShieldCheck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { resetPassword } from '../actions'
 
 function ResetContent() {
   const router = useRouter()
@@ -68,14 +69,22 @@ function ResetContent() {
       return
     }
 
-    // Mock reset password behavior
-    setTimeout(() => {
+    try {
+      const result = await resetPassword(token as string, password)
       setIsPending(false)
-      setIsSuccess(true)
-      setTimeout(() => {
-        router.push('/login')
-      }, 2000)
-    }, 1500)
+
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setIsSuccess(true)
+        setTimeout(() => {
+          router.push('/login')
+        }, 2000)
+      }
+    } catch (err) {
+      setIsPending(false)
+      setError('Erro ao se conectar com o servidor.')
+    }
   }
 
   return (

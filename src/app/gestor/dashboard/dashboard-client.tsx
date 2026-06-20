@@ -16,6 +16,9 @@ interface DashboardClientProps {
   dbOccurrencesPieData: { name: string; value: number; color: string }[]
   dbChemicalConsumptionData: { name: string; unit: string; total: number }[]
   dbTrendData: any[]
+  dbFeed: any[]
+  dbMaintenance: any[]
+  dbSla: any[]
   dbParameters: { id: string; name: string; unit: string }[]
   dbSelectedParam: any
   diasNum: number
@@ -23,50 +26,6 @@ interface DashboardClientProps {
   pontoId?: string
   activePointName?: string | null
 }
-
-// Mock data values (from reference design)
-const mockPoints = [
-  { key: 'entrada', name: 'Entrada ETE', status: 'crit', ph: 8.9, dqo: 412, trend: [8.2, 8.5, 8.0, 8.8, 9.1, 8.7, 8.9] },
-  { key: 'reator', name: 'Reator Biológico', status: 'warn', ph: 7.2, dqo: 180, trend: [7.6, 7.4, 7.8, 7.2, 7.5, 7.3, 7.2] },
-  { key: 'decantador', name: 'Decantador', status: 'ok', ph: 7.0, dqo: 95, trend: [7.1, 7.0, 7.2, 6.9, 7.0, 7.1, 7.0] },
-  { key: 'saida', name: 'Saída Final', status: 'ok', ph: 7.1, dqo: 33, trend: [7.0, 7.1, 6.9, 7.2, 7.0, 7.1, 7.1] },
-];
-
-const mockTrendData = [7.4, 7.1, 7.6, 6.9, 8.2, 7.0, 7.1];
-
-const mockConsumption = {
-  cloro: [18, 22, 16, 20, 24, 19, 21],
-  sulfato: [40, 38, 44, 36, 42, 39, 41],
-  polimero: [8, 9, 7, 10, 8, 9, 8],
-};
-
-const mockOccurrences = [
-  { t: 'Vazamento de efluente', sev: 'crit', pt: 'Saída Final', ago: 'há 21 min' },
-  { t: 'pH fora da faixa CONAMA', sev: 'crit', pt: 'Entrada ETE', ago: 'há 48 min' },
-  { t: 'Sólidos suspensos elevados', sev: 'high', pt: 'Decantador', ago: 'há 1 h 12' },
-];
-
-const mockFeed = [
-  { time: '16:05', who: 'Sistema', text: 'eficiência de remoção subiu para 92%.', type: 'ok' },
-  { time: '15:42', who: 'Carlos Lima', text: 'dosou 12 kg de Cloro Granulado.', type: 'chem' },
-  { time: '15:18', who: 'Maria Souza', text: 'registrou leitura de pH no Reator Biológico.', type: 'reading' },
-  { time: '15:10', who: 'Sistema', text: 'DQO fora do limite na Saída Final.', type: 'alert' },
-  { time: '14:32', who: 'João Pereira', text: 'abriu o turno da Tarde.', type: 'shift' },
-];
-
-const mockMaintenance = [
-  { name: 'Dosadora de Cloro', days: 2 },
-  { name: 'Bomba de Recirculação', days: 5 },
-  { name: 'Soprador Aerador #2', days: 23 },
-  { name: 'Medidor de Vazão', days: 47 },
-];
-
-const mockSla = [
-  { sev: 'Crítica', avg: 8, meta: 24 },
-  { sev: 'Alta', avg: 40, meta: 72 },
-  { sev: 'Média', avg: 120, meta: 168 },
-  { sev: 'Baixa', avg: 610, meta: 720 },
-];
 
 export function DashboardClient({
   dbReadingsToday,
@@ -80,6 +39,9 @@ export function DashboardClient({
   dbOccurrencesPieData,
   dbChemicalConsumptionData,
   dbTrendData,
+  dbFeed,
+  dbMaintenance,
+  dbSla,
   dbParameters,
   dbSelectedParam,
   diasNum,
@@ -294,62 +256,25 @@ export function DashboardClient({
   }
 
   const buildConsumption = () => {
-    const W = 680
-    const H = 210
-    const pl = 28
-    const pr = 10
-    const pt = 10
-    const pb = 24
-    const cc = ['var(--brand)', 'var(--dash-consumption-2)', 'var(--dash-consumption-3)']
-    const keys = ['cloro', 'sulfato', 'polimero'] as const
-    const totals = days.map((_, i) => keys.reduce((acc, k) => acc + mockConsumption[k][i], 0))
-    const max = Math.max(...totals) * 1.15
-    const step = (W - pl - pr) / days.length
-    const Y = (v: number) => pt + (1 - v / max) * (H - pt - pb)
-
-    const bars = days.map((d, i) => {
-      const x = pl + i * step + step * 0.27
-      const bw = step * 0.46
-      let acc = 0
-      const segs = keys.map((k, ki) => {
-        const v = mockConsumption[k][i]
-        const y0 = Y(acc)
-        const y1 = Y(acc + v)
-        acc += v
-        return <rect key={ki} x={x} y={y1} width={bw} height={Math.max(0, y0 - y1)} fill={cc[ki]} />
-      })
-      return (
-        <g key={i}>
-          {segs}
-          <text x={x + bw / 2} y={H - 7} textAnchor="middle" fontFamily={F.mono} fontSize={9} fill="var(--txt3)">
-            {d}
-          </text>
-        </g>
-      )
-    })
-
-    const glines = [0, 0.5, 1].map((f, i) => (
-      <line key={i} x1={pl} y1={pt + f * (H - pt - pb)} x2={W - pr} y2={pt + f * (H - pt - pb)} stroke="var(--border)" strokeWidth={1} />
-    ))
-
-    const legend = (
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' }}>
-        {['Cloro Granulado', 'Sulfato de Alumínio', 'Polímero Catiônico'].map((l, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-            <span style={{ width: '9px', height: '9px', borderRadius: '3px', background: cc[i] }} />
-            <span style={{ fontSize: '11.5px', color: 'var(--txt2)' }}>{l}</span>
-          </div>
-        ))}
-      </div>
-    )
-
+    if (dbChemicalConsumptionData.length === 0) return miniEmpty('Sem consumo registrado no período.')
+    const max = Math.max(...dbChemicalConsumptionData.map(d => d.total))
+    
     return (
-      <div>
-        {legend}
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
-          {glines}
-          {bars}
-        </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+        {dbChemicalConsumptionData.slice(0, 5).map((chem, i) => {
+          const pct = max > 0 ? (chem.total / max) * 100 : 0
+          return (
+            <div key={i}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '12px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--txt)' }}>{chem.name}</span>
+                <span style={{ fontFamily: F.mono, color: 'var(--txt2)' }}>{chem.total} {chem.unit}</span>
+              </div>
+              <div style={{ height: '6px', borderRadius: '3px', background: 'var(--s3)', overflow: 'hidden' }}>
+                <div style={{ width: pct + '%', height: '100%', background: 'var(--brand)', borderRadius: '3px' }} />
+              </div>
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -444,28 +369,12 @@ export function DashboardClient({
   }
 
   // Active Points depending on selected filter (Option B removed)
-  const activePoints = mockPoints.map((p) => {
-    // Check if status is critically configured
-    const realPoint = dbHeatmapPoints.find((dp) => dp.name.toLowerCase() === p.name.toLowerCase())
-    const status = realPoint
-      ? realPoint.status === 'DANGER'
-        ? 'crit'
-        : realPoint.status === 'WARNING'
-          ? 'warn'
-          : 'ok'
-      : p.status
-    return { ...p, status }
-  })
+  const activePoints = dbHeatmapPoints
 
   const pickPoint = (k: string) => {
     // Navigate and set pontoId in URL search params
     const url = new URL(window.location.href)
-    const realPoint = dbHeatmapPoints.find(dp => dp.name.toLowerCase() === mockPoints.find(m => m.key === k)?.name.toLowerCase())
-    if (realPoint) {
-      url.searchParams.set('pontoId', realPoint.id)
-    } else {
-      url.searchParams.set('pontoId', k)
-    }
+    url.searchParams.set('pontoId', k)
     router.push(url.pathname + url.search)
   }
 
@@ -476,8 +385,8 @@ export function DashboardClient({
       const borderStyle = '1px solid var(--border)'
       return (
         <div
-          key={p.key}
-          onClick={() => pickPoint(p.key)}
+          key={p.id}
+          onClick={() => pickPoint(p.id)}
           style={{
             background: 'var(--s2)',
             border: borderStyle,
@@ -498,13 +407,12 @@ export function DashboardClient({
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: si.col, marginLeft: 'auto', flexShrink: 0 }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600 }}>pH {p.ph.toFixed(1)}</span>
-            <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)' }}>{p.dqo} mg/L</span>
+            <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)' }}>Ponto de Coleta</span>
           </div>
           {isEmpty ? (
             <div style={{ height: '28px', borderRadius: '6px', border: '1px dashed var(--border2)' }} />
           ) : (
-            <div style={{ height: '28px' }}>{buildSpark(p.trend, si.col)}</div>
+            <div style={{ height: '28px' }} />
           )}
         </div>
       )
@@ -617,10 +525,7 @@ export function DashboardClient({
   // Trend Chart Widget
   const renderTrend = () => {
     if (isEmpty) return cardFrame('Tendência por Parâmetro', 'Sem leituras no período', null, emptyState('trend'))
-    let series = mockTrendData
-    if (dbTrendData.length > 0) {
-      series = dbTrendData.map((d) => d.value)
-    }
+    let series = dbTrendData.length > 0 ? dbTrendData.map((d) => d.value) : []
 
     const dropdown = (
       <select
@@ -694,16 +599,17 @@ export function DashboardClient({
   // Occurrences Severity donut chart widget
   const renderOccurrencesWidget = () => {
     if (isEmpty) return cardFrame('Ocorrências críticas', 'Severidade alta e crítica', null, miniEmpty('Nenhuma ocorrência aberta no período.'), 'Operação')
-    const list = mockOccurrences.map((o, i) => {
-      const col = o.sev === 'crit' ? 'var(--danger)' : 'var(--warn)'
+    const list = dbCriticalOccurrences.map((o, i) => {
+      const col = o.severity === 'CRITICAL' ? 'var(--danger)' : 'var(--warn)'
+      const ago = 'recente'
       return (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 0', borderTop: '1px solid var(--border)' }}>
           <span style={{ width: '3px', alignSelf: 'stretch', borderRadius: '2px', background: col, flex: 'none' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {o.t}
+              {o.description || 'Sem descrição'}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--txt3)', marginTop: '2px' }}>{o.pt + ' · ' + o.ago}</div>
+            <div style={{ fontSize: '11px', color: 'var(--txt3)', marginTop: '2px' }}>{o.reporter?.name || 'Sistema'} · {ago}</div>
           </div>
           <span
             style={{
@@ -719,7 +625,7 @@ export function DashboardClient({
               flex: 'none',
             }}
           >
-            {o.sev === 'crit' ? 'Crítica' : 'Alta'}
+            {o.severity === 'CRITICAL' ? 'Crítica' : 'Alta'}
           </span>
         </div>
       )
@@ -737,13 +643,13 @@ export function DashboardClient({
   const renderFeedWidget = () => {
     if (isEmpty) return cardFrame('Atividades recentes', 'Linha do tempo da ETE', null, miniEmpty('Sem atividades registradas hoje.'), 'Tempo real')
     const typeCol = { ok: 'var(--ok)', chem: 'var(--brand)', reading: 'var(--brand)', alert: 'var(--danger)', shift: 'var(--txt3)' }
-    const items = mockFeed.map((it, i) => (
+    const items = dbFeed.map((it, i) => (
       <div key={i} style={{ display: 'flex', gap: '12px' }}>
         <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)', width: '40px', flex: 'none', textAlign: 'right', paddingTop: '1px' }}>
           {it.time}
         </span>
         <div style={{ position: 'relative', width: '14px', flex: 'none', display: 'flex', justifyContent: 'center' }}>
-          {i < mockFeed.length - 1 && <span style={{ position: 'absolute', top: '14px', bottom: '-6px', width: '2px', background: 'var(--border)' }} />}
+          {i < dbFeed.length - 1 && <span style={{ position: 'absolute', top: '14px', bottom: '-6px', width: '2px', background: 'var(--border)' }} />}
           <span
             style={{
               width: '10px',
@@ -768,7 +674,9 @@ export function DashboardClient({
 
   // Maintenance Ring Indicator
   const renderMaintenanceWidget = () => {
-    const rows = mockMaintenance.map((m, i) => {
+    if (isEmpty || dbMaintenance.length === 0) return cardFrame('Manutenção preventiva', 'Equipamentos críticos', null, miniEmpty('Sem manutenções pendentes.'), 'Ativos')
+    
+    const rows = dbMaintenance.map((m, i) => {
       const col = m.days < 7 ? 'var(--danger)' : m.days < 30 ? 'var(--warn)' : 'var(--ok)'
       const pct = Math.min(100, (m.days / 60) * 100)
       return (
@@ -796,9 +704,9 @@ export function DashboardClient({
 
   // SLA Resolution bar chart widget
   const renderSlaWidget = () => {
-    if (isEmpty) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
+    if (isEmpty || dbSla.length === 0) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
     const sevCol = { Crítica: 'var(--danger)', Alta: 'var(--warn)', Média: 'var(--brand)', Baixa: 'var(--txt3)' }
-    const rows = mockSla.map((s, i) => {
+    const rows = dbSla.map((s, i) => {
       const within = s.avg <= s.meta
       const pct = Math.min(100, (s.avg / s.meta) * 100)
       const col = within ? 'var(--ok)' : 'var(--danger)'
@@ -807,7 +715,7 @@ export function DashboardClient({
         <div key={i}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: 600, color: 'var(--txt)' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: sevCol[s.sev as keyof typeof sevCol] }} />
+              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: sevCol[s.sev as keyof typeof sevCol] || 'var(--txt3)' }} />
               {s.sev}
             </span>
             <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt2)' }}>
