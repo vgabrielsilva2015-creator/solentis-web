@@ -8,9 +8,9 @@ export function WaterCanvas({ tagline = "Conformidade ambiental em tempo real." 
     <div className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-background">
       {/* Background Gradient */}
       <div 
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-60"
         style={{
-          background: 'radial-gradient(ellipse at 30% 20%, oklch(0.25 0.04 220 / 0.6), transparent 65%)'
+          background: 'radial-gradient(ellipse at 30% 20%, var(--brand), transparent 65%)'
         }}
       />
 
