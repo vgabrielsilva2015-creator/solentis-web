@@ -173,7 +173,7 @@ async function main() {
   for (const cp of collectionPoints) {
     await prisma.collectionPoint.upsert({
       where: { id: cp.id },
-      update: {},
+      update: { matrix: cp.matrix },
       create: {
         id: cp.id,
         tenant_id: 'default',

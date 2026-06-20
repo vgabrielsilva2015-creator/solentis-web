@@ -8,16 +8,23 @@ import { Activity, Beaker, Check, Save, TrendingDown, TrendingUp } from 'lucide-
 export const dynamic = 'force-dynamic'
 
 export default async function AnalisesInternasGridPage() {
-  // Buscar os pontos de coleta e parâmetros
-  const pontos = await prisma.collectionPoint.findMany({
+  const rawPontos = await prisma.collectionPoint.findMany({
     where: { tenant_id: 'default', is_active: true },
     orderBy: { name: 'asc' },
-    include: {
-      parameter_limits: {
-        include: { parameter: true }
-      }
-    }
   })
+
+  const pontos = await Promise.all(
+    rawPontos.map(async (ponto) => {
+      let parameter_limits: any[] = []
+      if (ponto.matrix) {
+        parameter_limits = await prisma.parameterLimit.findMany({
+          where: { tenant_id: ponto.tenant_id, matrix: ponto.matrix },
+          include: { parameter: true }
+        })
+      }
+      return { ...ponto, parameter_limits }
+    })
+  )
 
   // Simulação de preenchimento rápido (seria um Client Component na versão final)
   return (

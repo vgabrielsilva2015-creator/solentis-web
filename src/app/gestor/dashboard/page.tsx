@@ -14,14 +14,24 @@ function formatDateDisplay(d: Date) {
 export default async function GestorDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ dias?: string; paramId?: string }>
+  searchParams: Promise<{ dias?: string; paramId?: string; pontoId?: string }>
 }) {
   const tenant_id = await getTenantId()
-  const { dias: diasParam, paramId } = await searchParams
+  const { dias: diasParam, paramId, pontoId } = await searchParams
   
   const diasValidos = [1, 7, 30] as const
   type Dias = typeof diasValidos[number]
   const diasNum = diasValidos.includes(Number(diasParam) as Dias) ? (Number(diasParam) as Dias) : 7
+
+  // Busca nome do ponto se o filtro estiver ativo
+  let activePointName = null
+  if (pontoId) {
+    const pt = await prisma.collectionPoint.findUnique({
+      where: { id: pontoId, tenant_id },
+      select: { name: true }
+    })
+    if (pt) activePointName = pt.name
+  }
 
   const now = new Date()
   const today = new Date(now)
@@ -35,6 +45,9 @@ export default async function GestorDashboard({
   
   // Limite de 24h para o Heatmap (mesmo que filtro global seja 7d)
   const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  // Filtro por ponto
+  const pointCond = pontoId ? { point_id: pontoId } : {}
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. DADOS DOS KPIs (Paralelizados)
@@ -56,22 +69,22 @@ export default async function GestorDashboard({
     // Sparkline de Leituras (últimos 7 dias - agregação feita no JS por conta de restrições do SQLite)
     readingsLast7Days,
   ] = await Promise.all([
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: today } } }),
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: yesterday, lt: today } } }),
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: today }, ...pointCond } }),
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: yesterday, lt: today }, ...pointCond } }),
     
-    prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+    prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond } }),
     
     prisma.occurrence.count({ 
-      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, deadline: { lt: new Date(now.getTime() + 2 * 60 * 60 * 1000) } } 
+      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, deadline: { lt: new Date(now.getTime() + 2 * 60 * 60 * 1000) }, ...pointCond } 
     }),
 
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoInicio } } }),
-    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoInicio } } }),
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio } } }),
-    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio } } }),
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond } }),
+    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoInicio }, ...pointCond } }),
+    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
     
     prisma.reading.findMany({
-      where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
+      where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond },
       select: { created_at: true }
     }),
   ])
@@ -107,7 +120,7 @@ export default async function GestorDashboard({
       },
     }),
     prisma.occurrence.findMany({
-      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond },
       orderBy: { deadline: 'asc' },
       take: 6,
       include: { reporter: { select: { name: true } } }
@@ -115,7 +128,7 @@ export default async function GestorDashboard({
     // Ocorrencias por severidade (todas no periodo)
     prisma.occurrence.groupBy({
       by: ['severity'],
-      where: { tenant_id, created_at: { gte: periodoInicio } },
+      where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond },
       _count: { severity: true }
     })
   ])
@@ -180,7 +193,7 @@ export default async function GestorDashboard({
   
   if (selectedParam) {
     const analysesForChart = await prisma.analysis.findMany({
-      where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h } },
+      where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
       orderBy: { collected_at: 'asc' },
       select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true, laboratory_type: true }
     })
@@ -211,6 +224,8 @@ export default async function GestorDashboard({
       dbSelectedParam={selectedParam}
       diasNum={diasNum}
       paramId={paramId}
+      pontoId={pontoId}
+      activePointName={activePointName}
     />
   )
 }

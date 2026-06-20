@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface DashboardClientProps {
   dbReadingsToday: number
@@ -19,6 +20,8 @@ interface DashboardClientProps {
   dbSelectedParam: any
   diasNum: number
   paramId?: string
+  pontoId?: string
+  activePointName?: string | null
 }
 
 // Mock data values (from reference design)
@@ -81,8 +84,10 @@ export function DashboardClient({
   dbSelectedParam,
   diasNum,
   paramId,
+  pontoId,
+  activePointName,
 }: DashboardClientProps) {
-  const [drawerKey, setDrawerKey] = useState<string | null>(null)
+  const router = useRouter()
   const [period, setPeriod] = useState<string>('7d')
 
   // Check if dashboard is empty
@@ -453,7 +458,15 @@ export function DashboardClient({
   })
 
   const pickPoint = (k: string) => {
-    setDrawerKey(k)
+    // Navigate and set pontoId in URL search params
+    const url = new URL(window.location.href)
+    const realPoint = dbHeatmapPoints.find(dp => dp.name.toLowerCase() === mockPoints.find(m => m.key === k)?.name.toLowerCase())
+    if (realPoint) {
+      url.searchParams.set('pontoId', realPoint.id)
+    } else {
+      url.searchParams.set('pontoId', k)
+    }
+    router.push(url.pathname + url.search)
   }
 
   // Render Collection Points
@@ -510,185 +523,7 @@ export function DashboardClient({
     return cardFrame('Pontos de coleta', '4 pontos · monitoramento ativo', null, body, 'SMM')
   }
 
-  // Draw details (Option A Drawer)
-  const renderDrawer = () => {
-    if (!drawerKey) return null
-    const p = mockPoints.find((pt) => pt.key === drawerKey) || mockPoints[0]
-    const si = statusInfo(p.status)
-    const close = () => setDrawerKey(null)
-    const readings = [
-      { t: '16:02', p: 'pH', v: p.ph.toFixed(1), op: 'Maria S.' },
-      { t: '15:30', p: 'DQO', v: p.dqo + ' mg/L', op: 'Carlos L.' },
-      { t: '14:58', p: 'Turbidez', v: '12 NTU', op: 'Maria S.' },
-      { t: '14:20', p: 'OD', v: '4,8 mg/L', op: 'João P.' },
-      { t: '13:50', p: 'Temperatura', v: '24,6 °C', op: 'João P.' },
-    ]
-
-    const sectionTitle = (t: string) => (
-      <div style={{ fontFamily: F.mono, fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--txt3)', margin: '22px 0 10px' }}>
-        {t}
-      </div>
-    )
-
-    const header = (
-      <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: si.col }} />
-            <span style={{ fontFamily: F.sora, fontSize: '18px', fontWeight: 700, color: 'var(--txt)' }}>{p.name}</span>
-          </div>
-          <div style={{ fontSize: '12px', color: si.col, marginTop: '4px', fontWeight: 500 }}>{si.label} · última leitura há 6 min</div>
-        </div>
-        <button
-          onClick={close}
-          style={{
-            background: 'var(--s2)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            width: '30px',
-            height: '30px',
-            cursor: 'pointer',
-            color: 'var(--txt2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 'none',
-          }}
-        >
-          {icon('M18 6 6 18 M6 6l12 12', 16)}
-        </button>
-      </div>
-    )
-
-    const trendBlock = <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}>{buildTrend(p.trend, true)}</div>
-
-    const readingsBlock = (
-      <div style={{ border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-        {readings.map((r, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '10px 13px',
-              borderTop: i ? '1px solid var(--border)' : 'none',
-              background: i % 2 ? 'var(--s1)' : 'var(--s2)',
-            }}
-          >
-            <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)', width: '38px', flex: 'none' }}>{r.t}</span>
-            <span style={{ fontSize: '12.5px', color: 'var(--txt2)', flex: 1 }}>{r.p}</span>
-            <span style={{ fontFamily: F.mono, fontSize: '12.5px', fontWeight: 600, color: 'var(--txt)' }}>{r.v}</span>
-            <span style={{ fontSize: '11px', color: 'var(--txt3)', width: '62px', textAlign: 'right', flex: 'none' }}>{r.op}</span>
-          </div>
-        ))}
-      </div>
-    )
-
-    const ncBlock =
-      p.status === 'ok' ? null : (
-        <div key="nc">
-          {sectionTitle('Não-conformidades ativas')}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '11px',
-              padding: '12px 14px',
-              background: alpha(si.col, 0.1),
-              border: '1px solid ' + alpha(si.col, 0.3),
-              borderRadius: '11px',
-            }}
-          >
-            {icon('M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z M12 9v4 M12 17h.01', 18, si.col)}
-            <div>
-              <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--txt)' }}>
-                {p.status === 'crit' ? 'pH acima da faixa CONAMA' : 'DQO em tendência de alta'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--txt3)', marginTop: '2px' }}>Vence em 23 h · severidade {si.label.toLowerCase()}</div>
-            </div>
-          </div>
-        </div>
-      )
-
-    const scroll = (
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 20px' }}>
-        {sectionTitle('Tendência de pH · 7 dias')}
-        {trendBlock}
-        {sectionTitle('Últimas 5 leituras')}
-        {readingsBlock}
-        {ncBlock}
-      </div>
-    )
-
-    const footer = (
-      <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px' }}>
-        <button
-          style={{
-            flex: 1,
-            background: 'var(--brand)',
-            color: 'var(--on-brand)',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '11px',
-            fontSize: '13px',
-            fontWeight: 600,
-            fontFamily: F.body,
-            cursor: 'pointer',
-          }}
-        >
-          + Registrar leitura
-        </button>
-        <button
-          style={{
-            flex: 1,
-            background: 'transparent',
-            color: 'var(--txt)',
-            border: '1px solid var(--border2)',
-            borderRadius: '10px',
-            padding: '11px',
-            fontSize: '13px',
-            fontWeight: 500,
-            fontFamily: F.body,
-            cursor: 'pointer',
-          }}
-        >
-          Lançar análise
-        </button>
-      </div>
-    )
-
-    return (
-      <div>
-        <div
-          onClick={close}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 40, animation: 'fadeIn .2s ease' }}
-          className="animate-fade-in"
-        />
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '400px',
-            maxWidth: '92vw',
-            background: 'var(--s1)',
-            borderLeft: '1px solid var(--border)',
-            boxShadow: '-12px 0 40px rgba(0,0,0,.3)',
-            zIndex: 50,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          className="animate-slide-in-right"
-        >
-          {header}
-          {scroll}
-          {footer}
-        </div>
-      </div>
-    )
-  }
+  // Removed renderDrawer as per Option B
 
 
 
@@ -1030,6 +865,22 @@ export function DashboardClient({
           </div>
         </div>
 
+        {/* Banner de filtro */}
+        {activePointName && (
+          <div style={{ background: alpha('var(--brand)', 0.1), border: '1px solid ' + alpha('var(--brand)', 0.3), padding: '12px 16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {icon('M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z', 16, 'var(--brand)')}
+              <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Filtrando o painel por <strong style={{ fontWeight: 600 }}>{activePointName}</strong></span>
+            </div>
+            <Link 
+              href={`/gestor/dashboard?dias=${diasNum}${paramId ? `&paramId=${paramId}` : ''}`}
+              style={{ fontSize: '12px', color: 'var(--brand)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              Limpar filtro
+            </Link>
+          </div>
+        )}
+
         {/* Row 1: KPIs */}
         {renderKpis()}
 
@@ -1053,9 +904,6 @@ export function DashboardClient({
           {renderSlaWidget()}
         </div>
       </main>
-
-      {/* Option A Drawer details sheet */}
-      {renderDrawer()}
     </div>
   )
 }

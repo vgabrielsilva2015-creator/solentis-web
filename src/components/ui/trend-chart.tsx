@@ -2,8 +2,8 @@
 
 import React from 'react'
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -68,7 +68,13 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border border-blue-400 bg-blue-500 inline-block" /> Laudo Externo</span>
       </div>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorBrand" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-brand, #14b8a6)" stopOpacity={0.3}/>
+              <stop offset="95%" stopColor="var(--color-brand, #14b8a6)" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-slate-800)" vertical={false} />
           <XAxis 
             dataKey="time" 
@@ -95,13 +101,13 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
             }}
           />
 
-          {/* Cenário 1: Tem Min e Max (ex: pH) -> Faixa Permitida é Cinza entre eles */}
+          {/* Cenário 1: Tem Min e Max (ex: pH) -> Faixa Permitida é Verde Clara entre eles */}
           {hasMin && hasMax && (
             <ReferenceArea
               y1={minLimit}
               y2={maxLimit}
-              fill="var(--color-slate-800)"
-              fillOpacity={0.3}
+              fill="var(--color-status-ok, #10b981)"
+              fillOpacity={0.07}
             />
           )}
 
@@ -112,7 +118,7 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
                 y1={maxLimit}
                 // não definimos y2 para ir "até o infinito" visual do eixo
                 fill="var(--color-status-danger)"
-                fillOpacity={0.15}
+                fillOpacity={0.07}
               />
               <ReferenceLine y={maxLimit} stroke="var(--color-status-danger)" strokeDasharray="3 3" opacity={0.5} />
             </>
@@ -124,17 +130,19 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
               <ReferenceArea
                 y2={minLimit}
                 fill="var(--color-status-danger)"
-                fillOpacity={0.15}
+                fillOpacity={0.07}
               />
               <ReferenceLine y={minLimit} stroke="var(--color-status-danger)" strokeDasharray="3 3" opacity={0.5} />
             </>
           )}
 
-          <Line
+          <Area
             type="monotone"
             dataKey="value"
-            stroke="var(--color-slate-300)"
+            stroke="var(--color-brand, #14b8a6)"
             strokeWidth={2}
+            fillOpacity={1}
+            fill="url(#colorBrand)"
             dot={(props: any) => {
               const { cx, cy, payload } = props
               if (!cx || !cy) return <g key={`dot-${props.key}`} />
@@ -146,14 +154,14 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
                   cy={cy}
                   r={isExternal ? 5 : 3}
                   fill={isExternal ? '#3b82f6' : 'var(--color-slate-900)'}
-                  stroke={isExternal ? '#60a5fa' : 'var(--color-slate-300)'}
+                  stroke={isExternal ? '#60a5fa' : 'var(--color-brand, #14b8a6)'}
                   strokeWidth={2}
                 />
               )
             }}
             activeDot={{ r: 5, fill: 'var(--color-accent)' }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   )
