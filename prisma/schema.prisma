@@ -45,6 +45,8 @@ model Tenant {
   chemical_stock_counts   ChemicalStockCount[]
   parameter_aliases       ParameterAlias[]
   parameter_limits        ParameterLimit[]
+  external_analyses       ExternalAnalysis[]
+  monitoring_schedules    MonitoringSchedule[]
 
   @@map("tenants")
 }
@@ -101,6 +103,8 @@ model User {
   chemical_stock_entries  ChemicalStockEntry[]
   chemical_stock_exits    ChemicalStockExit[]
   chemical_stock_counts   ChemicalStockCount[]
+  external_collections    ExternalAnalysis[]   @relation("ExternalCollector")
+  schedules_created       MonitoringSchedule[] @relation("ScheduleCreator")
 
   @@unique([tenant_id, email])
   @@index([tenant_id, role, is_active])
@@ -174,6 +178,8 @@ model QualityParameter {
 
   readings          Reading[]
   analyses          Analysis[]
+  external_analyses ExternalAnalysis[]
+  schedules         MonitoringSchedule[]
   history           ParameterHistory[]
   aliases           ParameterAlias[]
   collection_points CollectionPoint[]
@@ -282,6 +288,8 @@ model CollectionPoint {
   tenant     Tenant             @relation(fields: [tenant_id], references: [id])
   readings    Reading[]
   analyses    Analysis[]
+  external_analyses ExternalAnalysis[]
+  schedules   MonitoringSchedule[]
   parameters  QualityParameter[]
   occurrences Occurrence[]
 
@@ -455,6 +463,64 @@ model Analysis {
   @@index([recorded_by])
   @@index([collected_at])
   @@map("analyses")
+}
+
+model ExternalAnalysis {
+  id                  String    @id @default(cuid())
+  tenant_id           String
+  collection_point_id String
+  parameter_id        String
+  value               Float?
+  raw_value           String?
+  is_detected         Boolean   @default(true)
+  unit                String
+  min_limit_applied   Float?
+  max_limit_applied   Float?
+  report_text         String?
+  laboratory_name     String?
+  laudo_number        String?
+  is_non_conformant   Boolean?
+  status              String    @default("PENDING_LAB") // PENDING_LAB, COMPLETED
+  origin              String    @default("MANUAL")
+  collected_at        DateTime
+  collected_by        String
+  completed_at        DateTime?
+  created_at          DateTime  @default(now())
+
+  tenant           Tenant           @relation(fields: [tenant_id], references: [id])
+  collection_point CollectionPoint  @relation(fields: [collection_point_id], references: [id])
+  parameter        QualityParameter @relation(fields: [parameter_id], references: [id])
+  collector        User             @relation("ExternalCollector", fields: [collected_by], references: [id])
+
+  @@index([tenant_id, parameter_id, collected_at])
+  @@index([collection_point_id])
+  @@index([status])
+  @@map("external_analyses")
+}
+
+model MonitoringSchedule {
+  id                  String   @id @default(cuid())
+  tenant_id           String
+  collection_point_id String
+  parameter_id        String
+  executor_role       String   // OPERATOR, TECHNICIAN
+  sample_type         String   // FIELD, INTERNAL, EXTERNAL
+  frequency           String   // PER_SHIFT, DAILY, WEEKLY, MONTHLY
+  days_of_week        Int[]    // 0=Sun, 1=Mon, ..., 6=Sat
+  days_of_month       Int[]    // 1-31
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now())
+  created_by          String
+
+  tenant           Tenant           @relation(fields: [tenant_id], references: [id])
+  collection_point CollectionPoint  @relation(fields: [collection_point_id], references: [id], onDelete: Cascade)
+  parameter        QualityParameter @relation(fields: [parameter_id], references: [id], onDelete: Cascade)
+  creator          User             @relation("ScheduleCreator", fields: [created_by], references: [id])
+
+  @@index([tenant_id, executor_role, is_active])
+  @@index([collection_point_id])
+  @@index([parameter_id])
+  @@map("monitoring_schedules")
 }
 
 model PreventiveMaintenance {

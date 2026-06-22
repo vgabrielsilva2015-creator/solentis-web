@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 
 const styles = StyleSheet.create({
   page: {
@@ -151,9 +151,7 @@ export function RdoDocument({
         <View style={styles.header}>
           <View>
             <View style={styles.logoContainer}>
-              <View style={styles.logoBox}>
-                <Text style={styles.logoText}>SOL</Text>
-              </View>
+              <Image src="/logo.png" style={{ width: 28, height: 28, marginRight: 8 }} />
               <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0f172a' }}>SOLENTIS</Text>
             </View>
             <Text style={styles.title}>Relatório Diário de Operação (RDO)</Text>
