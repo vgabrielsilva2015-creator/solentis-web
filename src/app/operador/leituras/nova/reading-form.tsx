@@ -48,7 +48,6 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
 
   // Controle de hidratação: impede salvar rascunho com estado vazio antes de carregar o draft
   const [mounted, setMounted]     = useState(false)
-  const [offlineError, setOfflineError] = useState(false)
 
   const [collectionPointId, setCollectionPointId] = useState('')
   const [parameterId, setParameterId]             = useState('')
@@ -134,16 +133,27 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
         onSubmit={(e) => {
           if (!navigator.onLine) {
             e.preventDefault()
-            setOfflineError(true)
+            const offlineQueueRaw = localStorage.getItem('solentis_offline_leituras')
+            const queue = offlineQueueRaw ? JSON.parse(offlineQueueRaw) : []
+            
+            queue.push({
+              collection_point_id: collectionPointId,
+              parameter_id: parameterId,
+              value: valueStr,
+              unit: selectedParam?.unit,
+              notes,
+              recorded_at: recordedAt
+            })
+            
+            localStorage.setItem('solentis_offline_leituras', JSON.stringify(queue))
+            localStorage.removeItem(DRAFT_KEY)
+            
+            alert('Você está offline. Leitura salva localmente e será sincronizada assim que a internet voltar.')
+            router.push('/operador/leituras')
           }
         }}
         className="space-y-5"
       >
-        {offlineError && (
-          <p className="rounded-md border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-400">
-            Sem conexão. Verifique sua internet e tente novamente.
-          </p>
-        )}
 
         {/* ── Ponto de coleta ───────────────────────────────────────────── */}
         <div className="space-y-1.5">

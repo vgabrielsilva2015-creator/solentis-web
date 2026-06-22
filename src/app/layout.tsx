@@ -4,6 +4,9 @@ import "./globals.css";
 import { CommandMenu } from "@/components/ui/command-menu";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeScript } from "@/components/theme-provider";
+import { OfflineIndicator } from "@/components/offline-indicator";
+import { SyncManager } from "@/components/sync-manager";
+import type { Viewport } from "next";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -26,6 +29,19 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Solentis",
   description: "Sistema de gestão de Estação de Tratamento de Efluentes",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Solentis",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({
@@ -43,6 +59,8 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body className="min-h-full flex flex-col">
+        <OfflineIndicator />
+        <SyncManager />
         {children}
         <CommandMenu />
         <Analytics />
