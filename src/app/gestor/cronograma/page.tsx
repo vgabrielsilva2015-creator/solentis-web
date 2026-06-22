@@ -46,7 +46,7 @@ export default async function CronogramaPage() {
       {/* Cabeçalho */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Cronograma Analítico (Plano de Monitoramento)</h1>
+          <h1 className="text-xl font-semibold">Agendamento de Análises</h1>
           <p className="text-sm text-slate-400">Gerencie a frequência de amostragens de Campo, Internas e Externas.</p>
         </div>
         <Link href="/gestor/cronograma/novo">
@@ -60,7 +60,7 @@ export default async function CronogramaPage() {
       <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
         {schedules.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">
-            Nenhum agendamento cadastrado no Plano de Monitoramento.
+            Nenhum agendamento cadastrado no Agendamento de Análises.
           </div>
         ) : (
           <table className="w-full text-sm">

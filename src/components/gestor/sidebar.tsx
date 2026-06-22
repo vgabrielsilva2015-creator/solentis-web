@@ -29,7 +29,7 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Dashboard',           href: '/gestor/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
   { type: 'link',    label: 'Usuários',             href: '/gestor/usuarios', icon: <Users className="w-4 h-4" /> },
   { type: 'section', label: 'Configurações' },
-  { type: 'link',    label: 'Plano de Monitoramento', href: '/gestor/cronograma', icon: <Settings className="w-4 h-4" /> },
+  { type: 'link',    label: 'Agendamento de Análises', href: '/gestor/cronograma', icon: <Settings className="w-4 h-4" /> },
   { type: 'link',    label: 'Parâmetros (Limites)', href: '/gestor/parametros', icon: <Settings className="w-4 h-4" /> },
   { type: 'link',    label: 'Categorias',           href: '/gestor/categorias', icon: <Tags className="w-4 h-4" /> },
   { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/tarefas', icon: <Clock className="w-4 h-4" /> },
