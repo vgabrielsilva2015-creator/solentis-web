@@ -9,6 +9,7 @@ import fs from 'fs/promises'
 import { logAudit } from '@/lib/audit'
 import { getTenantId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
+import { sendWhatsAppAlert } from '@/lib/whatsapp'
 
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -148,6 +149,29 @@ export async function registrarOcorrencia(
       after:     { description: parsed.data.description, severity: parsed.data.severity, status: 'OPEN', deadline },
     })
   })
+
+  // Disparo de WhatsApp para gestores se for CRÍTICA ou ALTA
+  if (parsed.data.severity === 'CRITICAL' || parsed.data.severity === 'HIGH') {
+    // Buscar gerentes deste tenant que têm telefone cadastrado
+    const managers = await prisma.user.findMany({
+      where: {
+        tenant_id: await getTenantId(),
+        role: 'MANAGER',
+        phone: { not: null }
+      },
+      select: { phone: true, name: true }
+    })
+
+    const point = parsed.data.collection_point_id 
+      ? await prisma.collectionPoint.findUnique({ where: { id: parsed.data.collection_point_id }, select: { name: true } })
+      : null
+
+    const locationText = point ? `no local: ${point.name}` : ''
+    const msg = `🚨 *Alerta Solentis*\nNova Ocorrência *${parsed.data.severity === 'CRITICAL' ? 'CRÍTICA' : 'ALTA'}* reportada ${locationText}\n\n*Descrição:* ${parsed.data.description}\n\nAcesse o painel para mais detalhes.`
+
+    // Disparar assincronamente (não precisa travar a requisição com await Promise.all total)
+    Promise.all(managers.map(m => sendWhatsAppAlert(m.phone!, msg))).catch(console.error)
+  }
 
   revalidatePath('/operador/ocorrencias')
   revalidatePath('/tecnico/ocorrencias')
