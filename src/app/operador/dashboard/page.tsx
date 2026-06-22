@@ -17,7 +17,7 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount] =
+  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings] =
     await Promise.all([
       userRecord
         ? prisma.occurrence.count({
@@ -84,7 +84,41 @@ export default async function OperadorDashboard() {
             },
           })
         : Promise.resolve(0),
+
+      // Agendamentos (Checklist do dia)
+      prisma.monitoringSchedule.findMany({
+        where: {
+          tenant_id: (await getTenantId()),
+          executor_role: 'OPERATOR',
+          is_active: true,
+        },
+        include: {
+          collection_point: { select: { name: true } },
+          parameter: { select: { name: true } },
+        }
+      }),
+
+      // Leituras feitas hoje (para checar o que já foi feito do checklist)
+      prisma.reading.findMany({
+        where: {
+          tenant_id: (await getTenantId()),
+          recorded_at: { gte: today },
+        },
+        select: { collection_point_id: true, parameter_id: true }
+      })
     ])
+
+  // Filtrar checklist do dia
+  const dayOfWeek = today.getDay()
+  const todaySchedules = schedules.filter(s => 
+    s.days_of_week.length === 0 || s.days_of_week.includes(dayOfWeek)
+  )
+
+  const pendingChecklist = todaySchedules.filter(s => {
+    return !doneReadings.some(
+      r => r.collection_point_id === s.collection_point_id && r.parameter_id === s.parameter_id
+    )
+  })
 
   const SHORTCUTS = [
     { title: 'Leituras',       desc: 'Registrar leitura de campo',            href: '/operador/leituras'    },
@@ -180,6 +214,49 @@ export default async function OperadorDashboard() {
             <p className="text-xs text-slate-700 mt-0.5">Abra um turno primeiro</p>
           </div>
         )}
+
+        {/* Checklist de Coletas Diárias */}
+        <div className="space-y-2 pt-2">
+          <h2 className="text-sm font-medium text-slate-400">Checklist de Coletas (Hoje)</h2>
+          {todaySchedules.length === 0 ? (
+             <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+               <p className="text-sm text-slate-500">Nenhuma coleta agendada para hoje.</p>
+             </div>
+          ) : pendingChecklist.length === 0 ? (
+             <div className="rounded-xl border border-green-900/40 bg-green-950/20 p-4 flex items-center justify-between">
+               <div>
+                 <p className="text-sm font-medium text-green-400">Tudo concluído!</p>
+                 <p className="text-xs text-green-500/70 mt-0.5">Você finalizou todas as {todaySchedules.length} coletas de hoje.</p>
+               </div>
+               <span className="text-green-500 text-2xl">✓</span>
+             </div>
+          ) : (
+             <div className="grid gap-2">
+               {pendingChecklist.map(s => (
+                 <Link
+                   key={s.id}
+                   href={`/operador/leituras/nova?point=${s.collection_point_id}&param=${s.parameter_id}`}
+                   className="flex items-center justify-between rounded-xl border border-blue-900/40 bg-blue-950/20 p-4 hover:bg-blue-900/30 transition-colors"
+                 >
+                   <div>
+                     <p className="text-sm font-medium text-blue-100">{s.parameter.name}</p>
+                     <p className="text-xs text-blue-400/80 mt-0.5">{s.collection_point.name}</p>
+                   </div>
+                   <div className="flex shrink-0 items-center gap-2">
+                     <span className="text-xs font-medium text-blue-400">Registrar</span>
+                     <span className="text-blue-500">→</span>
+                   </div>
+                 </Link>
+               ))}
+               
+               {todaySchedules.length - pendingChecklist.length > 0 && (
+                 <div className="text-center pt-2">
+                   <p className="text-xs text-slate-500">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} coletas realizadas.</p>
+                 </div>
+               )}
+             </div>
+          )}
+        </div>
 
         {/* Leituras de hoje + Ocorrências em aberto */}
         <div className="grid grid-cols-2 gap-3">
