@@ -7,17 +7,18 @@ import { RdoDownloadBtn } from './rdo-download-btn'
 export default async function RelatoriosPage({
   searchParams,
 }: {
-  searchParams: { data?: string }
+  searchParams: Promise<{ data?: string }>
 }) {
   const session = await auth()
   if (!session || session.user.role !== 'MANAGER') redirect('/acesso-negado')
   
   const tenantId = await getTenantId()
+  const params = await searchParams
   
   // Resolve data alvo
   let targetDate = new Date()
-  if (searchParams.data) {
-    const parsed = new Date(searchParams.data)
+  if (params.data) {
+    const parsed = new Date(params.data)
     if (!isNaN(parsed.getTime())) targetDate = parsed
   }
   
