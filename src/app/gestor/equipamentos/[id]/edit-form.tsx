@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { editarEquipamento, type EquipamentoFormState } from '../actions'
+import { editarEquipamento, type EquipamentoFormState } from '@/app/tecnico/equipamentos/actions'
 import { Button } from '@/components/ui/button'
 
 type Category = { id: string; name: string }

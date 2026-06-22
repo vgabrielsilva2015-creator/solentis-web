@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { resolverOcorrencia, type ResolucaoFormState } from '../actions'
+import { resolverOcorrencia, type ResolucaoFormState } from '@/app/tecnico/ocorrencias/actions'
 import { Button } from '@/components/ui/button'
 
 const INITIAL: ResolucaoFormState = {}

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { registrarCorretiva, type CorretivaFormState } from '../actions'
+import { registrarCorretiva, type CorretivaFormState } from '@/app/tecnico/equipamentos/actions'
 import { Button } from '@/components/ui/button'
 
 const INITIAL: CorretivaFormState = {}

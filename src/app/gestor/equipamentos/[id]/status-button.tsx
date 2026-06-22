@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { atualizarStatusCorretiva } from '../actions'
+import { atualizarStatusCorretiva } from '@/app/tecnico/equipamentos/actions'
 import { Button } from '@/components/ui/button'
 
 export function StatusButton({
