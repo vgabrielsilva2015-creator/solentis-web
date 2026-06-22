@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 
 interface DashboardClientProps {
   dbReadingsToday: number
+  dbAnalysesToday: number
+  dbExternalToday: number
   dbReadingsDelta: number | null
   dbOpenOccurrences: number
   dbSlaAtRisk: number
@@ -31,6 +33,8 @@ interface DashboardClientProps {
 
 export function DashboardClient({
   dbReadingsToday,
+  dbAnalysesToday,
+  dbExternalToday,
   dbReadingsDelta,
   dbOpenOccurrences,
   dbSlaAtRisk,
@@ -732,6 +736,29 @@ export function DashboardClient({
     )
   }
 
+  const renderAnalysesStatusWidget = () => {
+    return cardFrame(
+      'Progresso Analítico',
+      'Atividades Executadas Hoje',
+      null,
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Coletas de Campo</span>
+          <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--brand)' }}>{dbReadingsToday}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+          <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Análises Internas (Técnico)</span>
+          <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--warn)' }}>{dbAnalysesToday}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Laudos Externos</span>
+          <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--ok)' }}>{dbExternalToday}</span>
+        </div>
+      </div>,
+      'Execução'
+    )
+  }
+
   return (
     <div style={activeVars} className="min-h-screen">
       <main className="px-6 py-8 space-y-8 max-w-7xl mx-auto">
@@ -802,6 +829,7 @@ export function DashboardClient({
 
         {/* Row 3: Widgets (Feed, Maintenance, SLA) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px', paddingBottom: '40px' }}>
+          {renderAnalysesStatusWidget()}
           {renderFeedWidget()}
           {renderMaintenanceWidget()}
           {renderSlaWidget()}

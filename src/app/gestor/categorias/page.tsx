@@ -16,12 +16,19 @@ export default async function CategoriasPage({ searchParams }: { searchParams: P
     <main className="px-6 py-8 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Categorias de Equipamento</h1>
-          <p className="text-sm text-slate-400">Agrupamento de equipamentos por tipo.</p>
+          <h1 className="text-xl font-semibold">Categorias de Equipamentos</h1>
+          <p className="text-sm text-slate-400">Gerencie as famílias ou agrupamentos gerais.</p>
         </div>
         <Link href="/gestor/categorias/novo">
           <Button className="w-full bg-slate-100 text-slate-900 hover:bg-white sm:w-auto">+ Nova categoria</Button>
         </Link>
+      </div>
+
+      <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+        <p className="text-sm text-slate-300">
+          <strong>O que são Categorias?</strong> As categorias servem para agrupar máquinas do mesmo tipo (ex: "Bombas Centrífugas", "Aeradores", "Sopradores"). 
+          Você não cadastra a máquina física aqui. O equipamento físico (ex: "Bomba Elevatória 01") é cadastrado no menu <strong>Equipamentos</strong>, onde você indicará a qual categoria ele pertence.
+        </p>
       </div>
 
       <form method="GET" className="flex gap-2">

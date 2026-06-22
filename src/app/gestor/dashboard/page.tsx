@@ -66,6 +66,9 @@ export default async function GestorDashboard({
     totalChecksPrev,
     nonConformChecksPrev,
     
+    analysesToday,
+    externalToday,
+    
     // Sparkline de Leituras (últimos 7 dias - agregação feita no JS por conta de restrições do SQLite)
     readingsLast7Days,
   ] = await Promise.all([
@@ -82,6 +85,9 @@ export default async function GestorDashboard({
     prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoInicio }, ...pointCond } }),
     prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
     prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+    
+    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
+    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
     
     prisma.reading.findMany({
       where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond },
@@ -309,6 +315,8 @@ export default async function GestorDashboard({
   return (
     <DashboardClient 
       dbReadingsToday={readingsToday}
+      dbAnalysesToday={analysesToday}
+      dbExternalToday={externalToday}
       dbReadingsDelta={readingsDelta}
       dbOpenOccurrences={openOccurrences}
       dbSlaAtRisk={slaAtRisk}

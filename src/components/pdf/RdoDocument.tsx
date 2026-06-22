@@ -151,7 +151,7 @@ export function RdoDocument({
         <View style={styles.header}>
           <View>
             <View style={styles.logoContainer}>
-              <Image src="/logo.png" style={{ width: 28, height: 28, marginRight: 8 }} />
+              <Image src="/icon.png" style={{ width: 28, height: 28, marginRight: 8 }} />
               <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#0f172a' }}>SOLENTIS</Text>
             </View>
             <Text style={styles.title}>Relatório Diário de Operação (RDO)</Text>

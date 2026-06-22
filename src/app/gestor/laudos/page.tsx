@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Beaker, FileCheck, Search, SlidersHorizontal, Upload } from 'lucide-react'
+import { Beaker, FileCheck, Search, SlidersHorizontal, Upload, Download } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
@@ -45,6 +45,12 @@ export default async function LaudosExternosPage() {
           <Button variant="outline" size="icon" className="border-slate-800 bg-slate-900/50 text-slate-400 hover:text-slate-200">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
+          <Link href={`/api/export?type=external_analyses`} target="_blank">
+            <Button variant="outline" className="border-slate-800 bg-slate-900/50 text-slate-300 hover:text-slate-200 hover:bg-slate-800 h-10 px-3">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </Link>
         </div>
       </div>
 

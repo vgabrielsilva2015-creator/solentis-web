@@ -72,6 +72,7 @@ export async function criarParametro(
     min_limit:       formData.get('min_limit'),
     max_limit:       formData.get('max_limit'),
     legal_reference: formData.get('legal_reference'),
+    effective_date:  formData.get('effective_date'),
     default_method_name: formData.get('default_method_name'),
     collection_points: formData.get('collection_points'),
   })
@@ -156,6 +157,7 @@ export async function editarParametro(
     min_limit:       formData.get('min_limit'),
     max_limit:       formData.get('max_limit'),
     legal_reference: formData.get('legal_reference'),
+    effective_date:  formData.get('effective_date'),
     default_method_name: formData.get('default_method_name'),
     collection_points: formData.get('collection_points'),
   })

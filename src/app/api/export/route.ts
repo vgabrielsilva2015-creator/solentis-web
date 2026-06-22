@@ -141,6 +141,39 @@ export async function GET(request: Request) {
     }
 
     filename = `preventivas_${new Date().toISOString().slice(0, 10)}.csv`
+  } else if (type === 'external_analyses') {
+    const external = await prisma.externalAnalysis.findMany({
+      where: { tenant_id: tenantId },
+      include: {
+        collector: { select: { name: true } },
+        collection_point: { select: { name: true } },
+        parameter: { select: { name: true, unit: true } },
+      },
+      orderBy: { collected_at: 'desc' },
+      take: 1000
+    })
+
+    const headers = ['ID', 'Data Coleta', 'Laboratório', 'Laudo', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Coletado por', 'Status', 'Não Conforme']
+    csv += headers.join(';') + '\n'
+
+    for (const a of external) {
+      const row = [
+        a.id,
+        a.collected_at.toISOString(),
+        a.laboratory_name ?? '',
+        a.laudo_number ?? '',
+        a.collection_point.name,
+        a.parameter.name,
+        a.value ?? '',
+        a.parameter.unit,
+        a.collector.name,
+        a.status === 'COMPLETED' ? 'CONCLUÍDO' : 'AGUARDANDO LAUDO',
+        a.is_non_conformant ? 'SIM' : (a.is_non_conformant === false ? 'NÃO' : '')
+      ]
+      csv += row.join(';') + '\n'
+    }
+
+    filename = `laudos_externos_${new Date().toISOString().slice(0, 10)}.csv`
   } else {
     return new NextResponse('Invalid type', { status: 400 })
   }
