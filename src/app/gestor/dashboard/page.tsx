@@ -53,27 +53,48 @@ export default async function GestorDashboard({
   // 1. DADOS DOS KPIs (Paralelizados)
   // ─────────────────────────────────────────────────────────────────────────────
   const [
-    // KPI 1: Leituras
+    // KPI 1: Registros (Leituras + Análises)
     readingsToday,
     readingsYesterday,
+    analysesToday,
+    analysesYesterday,
+    externalToday,
+    externalYesterday,
+
     // KPI 2: Ocorrências
     openOccurrences,
     // KPI 3: SLA
     slaAtRisk,
+
     // KPI 4: Conformidade
-    totalChecksCurrent,
-    nonConformChecksCurrent,
-    totalChecksPrev,
-    nonConformChecksPrev,
+    totalReadsCurrent,
+    nonConformReadsCurrent,
+    totalReadsPrev,
+    nonConformReadsPrev,
+    totalAnalysesCurrent,
+    nonConformAnalysesCurrent,
+    totalAnalysesPrev,
+    nonConformAnalysesPrev,
+    totalExternalCurrent,
+    nonConformExternalCurrent,
+    totalExternalPrev,
+    nonConformExternalPrev,
     
-    analysesToday,
-    externalToday,
-    
-    // Sparkline de Leituras (últimos 7 dias - agregação feita no JS por conta de restrições do SQLite)
-    readingsLast7Days,
+    // Sparklines 7 days
+    readsLast7Days,
+    analysesLast7Days,
+    externalLast7Days,
+
+    // Monitoring Schedules for Today
+    schedules,
   ] = await Promise.all([
+    // Hoje
     prisma.reading.count({ where: { tenant_id, created_at: { gte: today }, ...pointCond } }),
     prisma.reading.count({ where: { tenant_id, created_at: { gte: yesterday, lt: today }, ...pointCond } }),
+    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
+    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: yesterday, lt: today }, ...pointCond } }),
+    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
+    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: yesterday, lt: today }, ...pointCond } }),
     
     prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond } }),
     
@@ -81,24 +102,47 @@ export default async function GestorDashboard({
       where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, deadline: { lt: new Date(now.getTime() + 2 * 60 * 60 * 1000) }, ...pointCond } 
     }),
 
+    // Conformity Readings
     prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond } }),
     prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoInicio }, ...pointCond } }),
     prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
     prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+
+    // Conformity Analyses
+    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: periodoInicio }, ...pointCond } }),
+    prisma.analysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoInicio }, ...pointCond } }),
+    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+    prisma.analysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+
+    // Conformity External
+    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: periodoInicio }, ...pointCond } }),
+    prisma.externalAnalysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoInicio }, ...pointCond } }),
+    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+    prisma.externalAnalysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
     
-    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
+    // Sparkline
+    prisma.reading.findMany({ where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond }, select: { created_at: true } }),
+    prisma.analysis.findMany({ where: { tenant_id, collected_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond }, select: { collected_at: true } }),
+    prisma.externalAnalysis.findMany({ where: { tenant_id, collected_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond }, select: { collected_at: true } }),
     
-    prisma.reading.findMany({
-      where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond },
-      select: { created_at: true }
-    }),
+    // Monitoring Schedule for Progress
+    prisma.monitoringSchedule.findMany({ where: { tenant_id, is_active: true } })
   ])
+
+  // Total Registers Top KPI
+  const totalRegistersToday = readingsToday + analysesToday + externalToday
+  const totalRegistersYesterday = readingsYesterday + analysesYesterday + externalYesterday
+  const registersDelta = calcDelta(totalRegistersToday, totalRegistersYesterday)
 
   // Sparkline Aggregation
   const sparklineData = Array(7).fill(0)
-  readingsLast7Days.forEach(r => {
-    const diffTime = Math.abs(now.getTime() - r.created_at.getTime())
+  const allEvents = [
+    ...readsLast7Days.map(r => r.created_at),
+    ...analysesLast7Days.map(a => a.collected_at),
+    ...externalLast7Days.map(e => e.collected_at)
+  ]
+  allEvents.forEach(date => {
+    const diffTime = Math.abs(now.getTime() - date.getTime())
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
     if (diffDays >= 0 && diffDays < 7) {
       sparklineData[6 - diffDays] += 1
@@ -106,9 +150,30 @@ export default async function GestorDashboard({
   })
 
   // Cálculos Conformidade
+  const totalChecksCurrent = totalReadsCurrent + totalAnalysesCurrent + totalExternalCurrent
+  const nonConformChecksCurrent = nonConformReadsCurrent + nonConformAnalysesCurrent + nonConformExternalCurrent
+  const totalChecksPrev = totalReadsPrev + totalAnalysesPrev + totalExternalPrev
+  const nonConformChecksPrev = nonConformReadsPrev + nonConformAnalysesPrev + nonConformExternalPrev
+
   const confCurrent = totalChecksCurrent > 0 ? ((totalChecksCurrent - nonConformChecksCurrent) / totalChecksCurrent) * 100 : null
   const confPrev = totalChecksPrev > 0 ? ((totalChecksPrev - nonConformChecksPrev) / totalChecksPrev) * 100 : null
   const confDelta = (confCurrent !== null && confPrev !== null) ? Math.round(confCurrent - confPrev) : null
+
+  // Progresso Analítico (Total scheduled for today vs done)
+  const dayOfWeek = today.getDay()
+  const todaySchedules = schedules.filter(s => 
+    s.days_of_week.length === 0 || s.days_of_week.includes(dayOfWeek)
+  )
+
+  const fieldSchedules = todaySchedules.filter(s => s.executor_role === 'OPERATOR').length
+  const internalSchedules = todaySchedules.filter(s => s.executor_role === 'TECHNICIAN' && s.sample_type === 'INTERNAL').length
+  const externalSchedules = todaySchedules.filter(s => s.executor_role === 'TECHNICIAN' && s.sample_type === 'EXTERNAL').length
+
+  const dbProgress = {
+    field: { done: readingsToday, scheduled: fieldSchedules },
+    internal: { done: analysesToday, scheduled: internalSchedules },
+    external: { done: externalToday, scheduled: externalSchedules },
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 2. DADOS DO HEATMAP & OCORRÊNCIAS CRÍTICAS
@@ -119,10 +184,9 @@ export default async function GestorDashboard({
       select: {
         id: true,
         name: true,
-        readings: {
-          where: { created_at: { gte: last24h } },
-          select: { is_non_conformant: true },
-        },
+        readings: { where: { created_at: { gte: last24h } }, select: { is_non_conformant: true } },
+        analyses: { where: { collected_at: { gte: last24h } }, select: { is_non_conformant: true } },
+        external_analyses: { where: { collected_at: { gte: last24h } }, select: { is_non_conformant: true } },
       },
     }),
     prisma.occurrence.findMany({
@@ -158,8 +222,11 @@ export default async function GestorDashboard({
   const chemicalConsumptionData = Array.from(chemicalConsumptionMap.values()).sort((a, b) => b.total - a.total)
 
   const heatmapPoints = collectionPointsRaw.map(cp => {
-    const hasNonConform = cp.readings.some(r => r.is_non_conformant)
-    const hasAnyReadings = cp.readings.length > 0
+    const hasNonConform = cp.readings.some(r => r.is_non_conformant) || 
+                          cp.analyses.some(a => a.is_non_conformant) || 
+                          cp.external_analyses.some(e => e.is_non_conformant)
+    
+    const hasAnyReadings = cp.readings.length > 0 || cp.analyses.length > 0 || cp.external_analyses.length > 0
     let status: 'OK' | 'WARNING' | 'DANGER' = 'OK'
     if (hasNonConform) status = 'DANGER'
     else if (!hasAnyReadings) status = 'WARNING' // Atenção se não mediu nas últimas 24h
@@ -198,19 +265,35 @@ export default async function GestorDashboard({
   let trendData: any[] = []
   
   if (selectedParam) {
-    const analysesForChart = await prisma.analysis.findMany({
-      where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
-      orderBy: { collected_at: 'asc' },
-      select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true, laboratory_type: true }
-    })
+    const [reads, analyses, externals] = await Promise.all([
+      prisma.reading.findMany({
+        where: { tenant_id, parameter_id: selectedParam.id, created_at: { gte: last24h }, ...pointCond },
+        select: { value: true, min_limit_applied: true, max_limit_applied: true, created_at: true }
+      }),
+      prisma.analysis.findMany({
+        where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
+        select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true, laboratory_type: true }
+      }),
+      prisma.externalAnalysis.findMany({
+        where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
+        select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true }
+      })
+    ])
     
-    trendData = analysesForChart.map(a => ({
-      time: formatDateDisplay(a.collected_at),
-      value: a.value,
-      minLimit: a.min_limit_applied,
-      maxLimit: a.max_limit_applied,
-      laboratoryType: a.laboratory_type
-    }))
+    trendData = [
+      ...reads.map(a => ({
+        time: a.created_at, timeStr: formatDateDisplay(a.created_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: 'FIELD'
+      })),
+      ...analyses.map(a => ({
+        time: a.collected_at, timeStr: formatDateDisplay(a.collected_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: a.laboratory_type
+      })),
+      ...externals.map(a => ({
+        time: a.collected_at, timeStr: formatDateDisplay(a.collected_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: 'EXTERNAL'
+      }))
+    ]
+    
+    // Ordena pelo tempo
+    trendData.sort((a, b) => a.time.getTime() - b.time.getTime())
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -237,8 +320,9 @@ export default async function GestorDashboard({
   const dbFeed = auditFeed.map(log => {
     let text = 'registrou uma atividade.'
     let type = 'ok'
-    if (log.table_name === 'readings') { text = 'registrou uma leitura.'; type = 'reading' }
-    if (log.table_name === 'analyses') { text = 'registrou análise de laboratório.'; type = 'reading' }
+    if (log.table_name === 'readings') { text = 'registrou uma leitura de campo.'; type = 'reading' }
+    if (log.table_name === 'analyses') { text = 'registrou análise interna.'; type = 'reading' }
+    if (log.table_name === 'external_analyses') { text = 'importou laudo externo.'; type = 'reading' }
     if (log.table_name === 'occurrences') { text = 'abriu/atualizou uma ocorrência.'; type = 'alert' }
     if (log.table_name === 'chemical_stock_exits') { text = 'lançou consumo de químicos.'; type = 'chem' }
     if (log.table_name === 'shift_instances') { text = 'atualizou status de um turno.'; type = 'shift' }
@@ -288,17 +372,15 @@ export default async function GestorDashboard({
     const outPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('saída') || p.name.toLowerCase().includes('tratado') || p.name.toLowerCase().includes('final'))
     
     if (inPoint && outPoint) {
-      const inAnalyses = await prisma.analysis.findMany({
-        where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } },
-        select: { value: true }
-      })
-      const outAnalyses = await prisma.analysis.findMany({
-        where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } },
-        select: { value: true }
-      })
+      const [inAnalyses, outAnalyses, inExt, outExt] = await Promise.all([
+        prisma.analysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } }),
+        prisma.analysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } }),
+        prisma.externalAnalysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } }),
+        prisma.externalAnalysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } })
+      ])
       
-      const inValid = inAnalyses.filter(a => a.value !== null)
-      const outValid = outAnalyses.filter(a => a.value !== null)
+      const inValid = [...inAnalyses, ...inExt].filter(a => a.value !== null)
+      const outValid = [...outAnalyses, ...outExt].filter(a => a.value !== null)
       
       const inAvg = inValid.length > 0 ? inValid.reduce((s, a) => s + (a.value || 0), 0) / inValid.length : 0
       const outAvg = outValid.length > 0 ? outValid.reduce((s, a) => s + (a.value || 0), 0) / outValid.length : 0
@@ -310,14 +392,11 @@ export default async function GestorDashboard({
     }
   }
 
-  const readingsDelta = calcDelta(readingsToday, readingsYesterday)
-
   return (
     <DashboardClient 
-      dbReadingsToday={readingsToday}
-      dbAnalysesToday={analysesToday}
-      dbExternalToday={externalToday}
-      dbReadingsDelta={readingsDelta}
+      dbTotalRegistersToday={totalRegistersToday}
+      dbRegistersDelta={registersDelta}
+      dbProgress={dbProgress}
       dbOpenOccurrences={openOccurrences}
       dbSlaAtRisk={slaAtRisk}
       dbConfCurrent={confCurrent}

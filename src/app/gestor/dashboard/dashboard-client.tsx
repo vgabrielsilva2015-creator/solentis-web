@@ -5,10 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 interface DashboardClientProps {
-  dbReadingsToday: number
-  dbAnalysesToday: number
-  dbExternalToday: number
-  dbReadingsDelta: number | null
+  dbTotalRegistersToday: number
+  dbRegistersDelta: number | null
+  dbProgress: {
+    field: { done: number; scheduled: number }
+    internal: { done: number; scheduled: number }
+    external: { done: number; scheduled: number }
+  }
   dbOpenOccurrences: number
   dbSlaAtRisk: number
   dbConfCurrent: number | null
@@ -32,10 +35,9 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({
-  dbReadingsToday,
-  dbAnalysesToday,
-  dbExternalToday,
-  dbReadingsDelta,
+  dbTotalRegistersToday,
+  dbRegistersDelta,
+  dbProgress,
   dbOpenOccurrences,
   dbSlaAtRisk,
   dbConfCurrent,
@@ -442,9 +444,9 @@ export function DashboardClient({
 
     const kpis = [
       {
-        title: 'Leituras Hoje',
-        val: dbReadingsToday,
-        delta: dbReadingsDelta,
+        title: 'Registros Hoje',
+        val: dbTotalRegistersToday,
+        delta: dbRegistersDelta,
         label: 'vs ontem',
         href: '/gestor/leituras',
         spark: dbSparklineData.length > 0 ? dbSparklineData : null,
@@ -737,22 +739,50 @@ export function DashboardClient({
   }
 
   const renderAnalysesStatusWidget = () => {
+    const pField = dbProgress.field
+    const pInternal = dbProgress.internal
+    const pExternal = dbProgress.external
+
+    const fieldPct = pField.scheduled > 0 ? Math.round((pField.done / pField.scheduled) * 100) : 0
+    const internalPct = pInternal.scheduled > 0 ? Math.round((pInternal.done / pInternal.scheduled) * 100) : 0
+    const externalPct = pExternal.scheduled > 0 ? Math.round((pExternal.done / pExternal.scheduled) * 100) : 0
+
     return cardFrame(
       'Progresso Analítico',
       'Atividades Executadas Hoje',
       null,
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Coletas de Campo</span>
-          <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--brand)' }}>{dbReadingsToday}</span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Coletas de Campo</span>
+            <span style={{ fontSize: '11px', color: 'var(--txt3)' }}>Agendado: {pField.scheduled}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--brand)' }}>{pField.done}</span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: fieldPct === 100 ? 'var(--ok)' : 'var(--txt3)', width: '32px', textAlign: 'right' }}>{fieldPct}%</span>
+          </div>
         </div>
+        
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Análises Internas (Técnico)</span>
-          <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--warn)' }}>{dbAnalysesToday}</span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Análises Internas (Técnico)</span>
+            <span style={{ fontSize: '11px', color: 'var(--txt3)' }}>Agendado: {pInternal.scheduled}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--warn)' }}>{pInternal.done}</span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: internalPct === 100 ? 'var(--ok)' : 'var(--txt3)', width: '32px', textAlign: 'right' }}>{internalPct}%</span>
+          </div>
         </div>
+        
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Laudos Externos</span>
-          <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--ok)' }}>{dbExternalToday}</span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '13px', color: 'var(--txt)' }}>Laudos Externos</span>
+            <span style={{ fontSize: '11px', color: 'var(--txt3)' }}>Agendado: {pExternal.scheduled}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontFamily: F.mono, fontSize: '14px', fontWeight: 600, color: 'var(--ok)' }}>{pExternal.done}</span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: externalPct === 100 ? 'var(--ok)' : 'var(--txt3)', width: '32px', textAlign: 'right' }}>{externalPct}%</span>
+          </div>
         </div>
       </div>,
       'Execução'
