@@ -63,11 +63,6 @@ export default async function EquipamentosPage({
             <h1 className="text-xl font-semibold">Equipamentos</h1>
             <p className="text-xs text-slate-400">{total} registro(s)</p>
           </div>
-          <Link href="/tecnico/equipamentos/novo">
-            <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
-              + Novo
-            </Button>
-          </Link>
         </div>
 
         {/* Filtros */}

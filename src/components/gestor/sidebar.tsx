@@ -43,6 +43,7 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Leituras Realizadas',  href: '/gestor/leituras', icon: <FileCheck2 className="w-4 h-4" /> },
   { type: 'link',    label: 'Ocorrências',         href: '/gestor/ocorrencias', icon: <AlertTriangle className="w-4 h-4" /> },
   { type: 'section', label: 'Manutenção' },
+  { type: 'link',    label: 'Equipamentos',        href: '/gestor/equipamentos', icon: <Wrench className="w-4 h-4" /> },
   { type: 'link',    label: 'Preventivas',         href: '/gestor/manutencao/preventivas', icon: <CalendarDays className="w-4 h-4" /> },
   { type: 'link',    label: 'Corretivas',          href: '/gestor/manutencao/corretivas', icon: <Wrench className="w-4 h-4" /> },
   { type: 'section', label: 'Governança' },

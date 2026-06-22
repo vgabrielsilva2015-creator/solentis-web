@@ -140,6 +140,7 @@ export async function criarEquipamento(
   })
 
   revalidatePath('/tecnico/equipamentos')
+  revalidatePath('/gestor/equipamentos')
   return { success: true }
 }
 
@@ -184,6 +185,8 @@ export async function editarEquipamento(
 
   revalidatePath('/tecnico/equipamentos')
   revalidatePath(`/tecnico/equipamentos/${equipamentoId}`)
+  revalidatePath('/gestor/equipamentos')
+  revalidatePath(`/gestor/equipamentos/${equipamentoId}`)
   return { success: true }
 }
 
@@ -204,6 +207,8 @@ export async function toggleAtivoEquipamento(
 
   revalidatePath('/tecnico/equipamentos')
   revalidatePath(`/tecnico/equipamentos/${equipamentoId}`)
+  revalidatePath('/gestor/equipamentos')
+  revalidatePath(`/gestor/equipamentos/${equipamentoId}`)
   return {}
 }
 
@@ -246,6 +251,8 @@ export async function concluirPreventiva(
 
   revalidatePath('/tecnico/equipamentos')
   revalidatePath(`/tecnico/equipamentos/${preventiva.equipment.id}`)
+  revalidatePath('/gestor/equipamentos')
+  revalidatePath(`/gestor/equipamentos/${preventiva.equipment.id}`)
   return {}
 }
 
@@ -287,6 +294,7 @@ export async function registrarCorretiva(
   })
 
   revalidatePath(`/tecnico/equipamentos/${equipamentoId}`)
+  revalidatePath(`/gestor/equipamentos/${equipamentoId}`)
   return { success: true }
 }
 
@@ -311,5 +319,6 @@ export async function atualizarStatusCorretiva(
   })
 
   revalidatePath(`/tecnico/equipamentos/${corretiva.equipment_id}`)
+  revalidatePath(`/gestor/equipamentos/${corretiva.equipment_id}`)
   return {}
 }
