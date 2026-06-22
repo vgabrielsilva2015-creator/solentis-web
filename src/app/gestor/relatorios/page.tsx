@@ -46,12 +46,12 @@ export default async function RelatoriosPage({
     prisma.chemicalStockExit.findMany({
       where: {
         tenant_id: tenantId,
-        exit_date: { gte: startOfDay, lte: endOfDay }
+        used_at: { gte: startOfDay, lte: endOfDay }
       },
       include: {
         product: { select: { name: true, unit: true } }
       },
-      orderBy: { exit_date: 'asc' }
+      orderBy: { used_at: 'asc' }
     }),
     // Ocorrências
     prisma.occurrence.findMany({
