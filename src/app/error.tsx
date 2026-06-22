@@ -33,9 +33,9 @@ export default function Error({
           >
             Tentar novamente
           </button>
-          <Link href="/" className="inline-flex h-11 items-center justify-center rounded-lg bg-sky-500 px-6 font-medium text-white transition-colors hover:bg-sky-400">
+          <a href="/" className="inline-flex h-11 items-center justify-center rounded-lg bg-sky-500 px-6 font-medium text-white transition-colors hover:bg-sky-400">
             Voltar ao início
-          </Link>
+          </a>
         </div>
       </div>
     </main>

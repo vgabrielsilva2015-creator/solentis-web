@@ -76,9 +76,9 @@ export default async function RelatoriosPage({
   const leituras = rawLeituras.map(l => ({
     time: timeFormatter.format(l.recorded_at),
     point: l.collection_point.name,
-    parameter: l.parameter.name,
-    value: l.value,
-    unit: l.parameter.unit
+    parameter: l.parameter?.name ?? 'Leitura Visual',
+    value: l.value ?? '-',
+    unit: l.parameter?.unit ?? ''
   }))
 
   const consumosMap = new Map<string, { product: string, quantity: number, unit: string }>()
