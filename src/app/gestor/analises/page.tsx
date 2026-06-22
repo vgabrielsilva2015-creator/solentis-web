@@ -58,7 +58,7 @@ export default async function GestorAnalisesPage({
         </Link>
       </div>
 
-      <div className="rounded-md border border-slate-800 bg-slate-900 overflow-hidden">
+      <div className="rounded-md border border-slate-800 bg-slate-900 overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-300">
           <thead className="bg-slate-800/50 text-xs uppercase text-slate-400">
             <tr>

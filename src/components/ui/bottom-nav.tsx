@@ -20,7 +20,7 @@ export function BottomNav({ items }: BottomNavProps) {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/60 pb-safe"
+      className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/60 pb-safe lg:hidden"
       aria-label="Navegação principal"
     >
       <ul className="flex h-14">

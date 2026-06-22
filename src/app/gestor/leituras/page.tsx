@@ -65,7 +65,7 @@ export default async function GestorLeiturasPage({
             Nenhuma leitura registrada ainda.
           </div>
         ) : (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-400">
               <thead className="bg-slate-950/50 text-xs uppercase font-medium text-slate-500 border-b border-slate-800">
                 <tr>

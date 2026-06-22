@@ -51,8 +51,8 @@ export default async function OperadorLayout({
 
       <TopNav />
 
-      {/* Conteúdo — pb-16 para não ficar atrás da bottom nav */}
-      <div className="pb-16">
+      {/* Conteúdo — pb-24 para não ficar atrás da bottom nav e notch */}
+      <div className="pb-24">
         {children}
       </div>
 

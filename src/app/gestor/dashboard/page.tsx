@@ -304,9 +304,12 @@ export default async function GestorDashboard({
     }
   }
 
+  const readingsDelta = calcDelta(readingsToday, readingsYesterday)
+
   return (
     <DashboardClient 
       dbReadingsToday={readingsToday}
+      dbReadingsDelta={readingsDelta}
       dbOpenOccurrences={openOccurrences}
       dbSlaAtRisk={slaAtRisk}
       dbConfCurrent={confCurrent}

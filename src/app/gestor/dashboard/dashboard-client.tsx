@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 
 interface DashboardClientProps {
   dbReadingsToday: number
+  dbReadingsDelta: number | null
   dbOpenOccurrences: number
   dbSlaAtRisk: number
   dbConfCurrent: number | null
@@ -30,6 +31,7 @@ interface DashboardClientProps {
 
 export function DashboardClient({
   dbReadingsToday,
+  dbReadingsDelta,
   dbOpenOccurrences,
   dbSlaAtRisk,
   dbConfCurrent,
@@ -53,9 +55,6 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const router = useRouter()
   const [period, setPeriod] = useState<string>('7d')
-
-  // Check if dashboard is empty
-  const isEmpty = dbReadingsToday === 0 && dbOpenOccurrences === 0 && dbTrendData.length === 0 && dbHeatmapPoints.length === 0
 
   const F = { sora: "'Sora', sans-serif", mono: "'IBM Plex Mono', monospace", body: "'IBM Plex Sans', sans-serif" }
 
@@ -410,11 +409,7 @@ export function DashboardClient({
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
             <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt3)' }}>Ponto de Coleta</span>
           </div>
-          {isEmpty ? (
-            <div style={{ height: '28px', borderRadius: '6px', border: '1px dashed var(--border2)' }} />
-          ) : (
-            <div style={{ height: '28px' }} />
-          )}
+          <div style={{ height: '28px' }} />
         </div>
       )
     })
@@ -438,36 +433,36 @@ export function DashboardClient({
 
   // KPI cards renderer
   const renderKpis = () => {
-    const confValue = isEmpty ? '—' : dbConfCurrent !== null ? `${dbConfCurrent.toFixed(1)}%` : '92.4%'
-    const confDeltaVal = isEmpty ? null : dbConfDelta !== null ? dbConfDelta : 4
+    const confValue = dbConfCurrent !== null ? `${dbConfCurrent.toFixed(1)}%` : '—'
+    const confDeltaVal = dbConfDelta !== null ? dbConfDelta : null
 
     const kpis = [
       {
         title: 'Leituras Hoje',
-        val: isEmpty ? 0 : dbReadingsToday > 0 ? dbReadingsToday : 42,
-        delta: isEmpty ? null : 12,
+        val: dbReadingsToday,
+        delta: dbReadingsDelta,
         label: 'vs ontem',
         href: '/gestor/leituras',
-        spark: isEmpty ? null : dbSparklineData.length > 0 ? dbSparklineData : [12, 14, 10, 15, 18, 16, 21],
+        spark: dbSparklineData.length > 0 ? dbSparklineData : null,
         alert: false,
       },
       {
         title: 'Ocorrências Abertas',
-        val: isEmpty ? 0 : dbOpenOccurrences > 0 ? dbOpenOccurrences : 3,
+        val: dbOpenOccurrences,
         delta: null,
         label: '',
         href: '/gestor/ocorrencias',
         spark: null,
-        alert: !isEmpty && (dbOpenOccurrences > 0 || true),
+        alert: dbOpenOccurrences > 0,
       },
       {
         title: 'SLA em Risco (< 2h)',
-        val: isEmpty ? 0 : dbSlaAtRisk > 0 ? dbSlaAtRisk : 1,
+        val: dbSlaAtRisk,
         delta: null,
         label: '',
         href: '/gestor/ocorrencias',
         spark: null,
-        alert: !isEmpty && (dbSlaAtRisk > 0 || true),
+        alert: dbSlaAtRisk > 0,
       },
       {
         title: 'Conformidade CONAMA',
@@ -525,8 +520,8 @@ export function DashboardClient({
 
   // Trend Chart Widget
   const renderTrend = () => {
-    if (isEmpty) return cardFrame('Tendência por Parâmetro', 'Sem leituras no período', null, emptyState('trend'))
-    let series = dbTrendData.length > 0 ? dbTrendData.map((d) => d.value) : []
+    if (dbTrendData.length === 0) return cardFrame('Tendência por Parâmetro', 'Sem leituras no período', null, emptyState('trend'))
+    let series = dbTrendData.map((d) => d.value)
 
     const dropdown = (
       <select
@@ -563,13 +558,13 @@ export function DashboardClient({
 
   // Consumption stacked chart widget
   const renderConsumption = () => {
-    if (isEmpty) return cardFrame('Consumo químico', 'Os lançamentos aparecerão aqui', null, emptyState('consumption'))
+    if (dbChemicalConsumptionData.length === 0) return cardFrame('Consumo químico', 'Os lançamentos aparecerão aqui', null, emptyState('consumption'))
     return cardFrame('Consumo químico', 'Lançamento acumulado por reagente · 7 dias', null, buildConsumption(), 'Estoque')
   }
 
   // Efficiency progress widget (Anéis de progresso)
   const renderEfficiency = () => {
-    if (isEmpty || !dbEfficiency) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída suficientes para calcular a eficiência.'), 'Performance')
+    if (!dbEfficiency) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída suficientes para calcular a eficiência.'), 'Performance')
     const val = dbEfficiency.val
     const center = (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -598,7 +593,7 @@ export function DashboardClient({
 
   // Occurrences Severity donut chart widget
   const renderOccurrencesWidget = () => {
-    if (isEmpty) return cardFrame('Ocorrências críticas', 'Severidade alta e crítica', null, miniEmpty('Nenhuma ocorrência aberta no período.'), 'Operação')
+    if (dbOccurrencesPieData.reduce((acc, d) => acc + d.value, 0) === 0) return cardFrame('Ocorrências críticas', 'Severidade alta e crítica', null, miniEmpty('Nenhuma ocorrência aberta no período.'), 'Operação')
     const list = dbCriticalOccurrences.map((o, i) => {
       const col = o.severity === 'CRITICAL' ? 'var(--danger)' : 'var(--warn)'
       const ago = 'recente'
@@ -641,7 +636,7 @@ export function DashboardClient({
 
   // Real-time timeline feed widget
   const renderFeedWidget = () => {
-    if (isEmpty) return cardFrame('Atividades recentes', 'Linha do tempo da ETE', null, miniEmpty('Sem atividades registradas hoje.'), 'Tempo real')
+    if (dbFeed.length === 0) return cardFrame('Atividades recentes', 'Linha do tempo da ETE', null, miniEmpty('Sem atividades registradas hoje.'), 'Tempo real')
     const typeCol = { ok: 'var(--ok)', chem: 'var(--brand)', reading: 'var(--brand)', alert: 'var(--danger)', shift: 'var(--txt3)' }
     const items = dbFeed.map((it, i) => (
       <div key={i} style={{ display: 'flex', gap: '12px' }}>
@@ -674,7 +669,7 @@ export function DashboardClient({
 
   // Maintenance Ring Indicator
   const renderMaintenanceWidget = () => {
-    if (isEmpty || dbMaintenance.length === 0) return cardFrame('Manutenção preventiva', 'Equipamentos críticos', null, miniEmpty('Sem manutenções pendentes.'), 'Ativos')
+    if (dbMaintenance.length === 0) return cardFrame('Manutenção preventiva', 'Equipamentos críticos', null, miniEmpty('Sem manutenções pendentes.'), 'Ativos')
     
     const rows = dbMaintenance.map((m, i) => {
       const col = m.days < 7 ? 'var(--danger)' : m.days < 30 ? 'var(--warn)' : 'var(--ok)'
@@ -704,7 +699,7 @@ export function DashboardClient({
 
   // SLA Resolution bar chart widget
   const renderSlaWidget = () => {
-    if (isEmpty || dbSla.length === 0) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
+    if (dbSla.every(s => s.avg === 0)) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
     const sevCol = { Crítica: 'var(--danger)', Alta: 'var(--warn)', Média: 'var(--brand)', Baixa: 'var(--txt3)' }
     const rows = dbSla.map((s, i) => {
       const within = s.avg <= s.meta

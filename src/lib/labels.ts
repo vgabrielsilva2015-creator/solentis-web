@@ -59,3 +59,19 @@ export const OCCURRENCE_CATEGORY_LABEL: Record<string, string> = {
   SEGURANCA: 'Segurança/Risco',
   OUTROS: 'Outros',
 }
+
+export const PRIORITY_LABEL: Record<string, string> = {
+  LOW: 'Baixa',
+  MEDIUM: 'Média',
+  NORMAL: 'Normal',
+  HIGH: 'Alta',
+  CRITICAL: 'Urgent/Crítica',
+}
+
+export const PRIORITY_COLOR: Record<string, string> = {
+  LOW: 'bg-slate-800 text-slate-400 border-slate-700',
+  MEDIUM: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
+  NORMAL: 'bg-blue-950/60 text-blue-400 border-blue-900/50',
+  HIGH: 'bg-orange-950/60 text-orange-400 border-orange-900/50',
+  CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
+}

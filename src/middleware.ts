@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 import { NextRequest, NextResponse } from 'next/server'
-import { ROLE_PREFIXES, getDashboardRoute } from '@/lib/auth-utils'
+import { isRouteAllowedForRole, getDashboardRoute } from '@/lib/auth-utils'
 
 const { auth } = NextAuth(authConfig)
 
@@ -12,7 +12,7 @@ export default auth((req) => {
   // Rotas públicas: login e troca de senha não exigem sessão
   if (pathname.startsWith('/login')) {
     // Usuário já autenticado não precisa ver a página de login
-    if (session) {
+    if (session && session.user) {
       const dest = session.user.mustChangePassword
         ? '/trocar-senha'
         : getDashboardRoute(session.user.role)
@@ -23,32 +23,21 @@ export default auth((req) => {
 
   // Rota de troca de senha: exige sessão (qualquer perfil)
   if (pathname.startsWith('/trocar-senha')) {
-    if (!session) return redirectToLogin(req)
+    if (!session || !session.user) return redirectToLogin(req)
     return NextResponse.next()
   }
 
   // Todas as demais rotas protegidas exigem sessão
-  if (!session) return redirectToLogin(req)
+  if (!session || !session.user) return redirectToLogin(req)
 
   // Usuário com senha provisória só pode acessar /trocar-senha
   if (session.user.mustChangePassword) {
     return NextResponse.redirect(new URL('/trocar-senha', req.url))
   }
 
-  // Verifica permissão por prefixo de rota
-  for (const [prefix, requiredRole] of Object.entries(ROLE_PREFIXES)) {
-    if (pathname.startsWith(prefix)) {
-      if (session.user.role === 'SUPER_ADMIN') {
-        break // Super Admin tem acesso a tudo
-      }
-      if (session.user.role !== requiredRole) {
-        return NextResponse.redirect(new URL('/acesso-negado', req.url))
-      }
-      if (requiredRole === 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
-        return NextResponse.redirect(new URL('/acesso-negado', req.url))
-      }
-      break
-    }
+  // Verifica permissão por papel para as rotas
+  if (!isRouteAllowedForRole(pathname, session.user.role)) {
+    return NextResponse.redirect(new URL('/acesso-negado', req.url))
   }
 
   return NextResponse.next()

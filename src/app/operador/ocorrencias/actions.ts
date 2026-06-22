@@ -154,3 +154,49 @@ export async function registrarOcorrencia(
   revalidatePath('/gestor/ocorrencias')
   return { success: true }
 }
+
+// ─── Resolver ocorrência ──────────────────────────────────────────────────────
+
+export async function resolverOcorrencia(formData: FormData) {
+  const session = await requireAuthenticated()
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) throw new Error('Sessão inválida.')
+
+  const occurrenceId = formData.get('id') as string
+  const notes = formData.get('notes') as string
+
+  if (!occurrenceId) throw new Error('ID não informado')
+
+  await prisma.$transaction(async (tx) => {
+    const occurrence = await tx.occurrence.findUnique({
+      where: { id: occurrenceId, tenant_id: await getTenantId() },
+    })
+    if (!occurrence) throw new Error('Ocorrência não encontrada.')
+
+    await tx.occurrence.update({
+      where: { id: occurrenceId },
+      data: {
+        status: 'RESOLVED',
+        resolved_at: new Date(),
+        resolved_by: userId,
+        resolution_notes: notes,
+      },
+    })
+
+    await logAudit(tx, {
+      userId,
+      action: 'UPDATE',
+      tableName: 'occurrences',
+      recordId: occurrence.id,
+      before: { status: occurrence.status },
+      after: { status: 'RESOLVED', resolved_by: userId, resolution_notes: notes },
+    })
+  })
+
+  revalidatePath('/operador/ocorrencias')
+  revalidatePath('/tecnico/ocorrencias')
+  revalidatePath('/gestor/ocorrencias')
+  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
+  redirect(`/operador/ocorrencias/${occurrenceId}`)
+}
+

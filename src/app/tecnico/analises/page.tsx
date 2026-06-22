@@ -61,7 +61,7 @@ export default async function AnalisesPage({
               </Button>
             </Link>
             {session.user.role === 'MANAGER' && (
-              <Link href="/gestor/metodos">
+              <Link href="/gestor/parametros">
                 <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs h-8">
                   Config. Analíticas
                 </Button>
