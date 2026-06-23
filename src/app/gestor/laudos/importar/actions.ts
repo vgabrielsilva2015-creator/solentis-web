@@ -108,7 +108,7 @@ export async function getMappingContext() {
   })
   
   const points = await prisma.collectionPoint.findMany({
-    where: { tenant_id: tenantId, is_active: true },
+    where: { tenant_id: tenantId, is_active: true, is_external: true },
     select: { id: true, name: true },
     orderBy: { name: 'asc' }
   })

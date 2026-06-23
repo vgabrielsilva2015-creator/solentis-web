@@ -268,7 +268,7 @@ export default async function GestorDashboard({
     const [reads, analyses, externals] = await Promise.all([
       prisma.reading.findMany({
         where: { tenant_id, parameter_id: selectedParam.id, created_at: { gte: last24h }, ...pointCond },
-        select: { value: true, min_limit_applied: true, max_limit_applied: true, created_at: true }
+        select: { value: true, created_at: true }
       }),
       prisma.analysis.findMany({
         where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
@@ -282,7 +282,7 @@ export default async function GestorDashboard({
     
     trendData = [
       ...reads.map(a => ({
-        time: a.created_at, timeStr: formatDateDisplay(a.created_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: 'FIELD'
+        time: a.created_at, timeStr: formatDateDisplay(a.created_at), value: a.value, minLimit: null, maxLimit: null, laboratoryType: 'FIELD'
       })),
       ...analyses.map(a => ({
         time: a.collected_at, timeStr: formatDateDisplay(a.collected_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: a.laboratory_type

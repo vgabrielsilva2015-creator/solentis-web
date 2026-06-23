@@ -268,12 +268,12 @@ describe('Cenário 11 — must_change_password: dashboard correto após troca de
     expect(getDashboardRoute('MANAGER')).toBe('/gestor/dashboard')
   })
 
-  it('TECHNICIAN é direcionado para /tecnico/dashboard', () => {
-    expect(getDashboardRoute('TECHNICIAN')).toBe('/tecnico/dashboard')
+  it('TECHNICIAN é direcionado para /tecnico/analises', () => {
+    expect(getDashboardRoute('TECHNICIAN')).toBe('/tecnico/analises')
   })
 
-  it('OPERATOR é direcionado para /operador/dashboard', () => {
-    expect(getDashboardRoute('OPERATOR')).toBe('/operador/dashboard')
+  it('OPERATOR é direcionado para /operador/turnos', () => {
+    expect(getDashboardRoute('OPERATOR')).toBe('/operador/turnos')
   })
 
   it('role desconhecida cai no /login (fallback seguro)', () => {
@@ -289,8 +289,8 @@ describe('Cenário 12 — Acesso com perfil errado é bloqueado sem expor detalh
     expect(isRouteAllowedForRole('/gestor/usuarios', 'OPERATOR')).toBe(false)
   })
 
-  it('TECHNICIAN bloqueado em /operador/leituras', () => {
-    expect(isRouteAllowedForRole('/operador/leituras', 'TECHNICIAN')).toBe(false)
+  it('TECHNICIAN tem acesso a /operador/leituras (para monitoramento)', () => {
+    expect(isRouteAllowedForRole('/operador/leituras', 'TECHNICIAN')).toBe(true)
   })
 
   it('rotas sem prefixo de perfil são livres para qualquer role', () => {

@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { concluirManutencao } from '@/app/tecnico/equipamentos/actions'
+import { concluirPreventiva } from '@/app/tecnico/equipamentos/actions'
 import { Button } from '@/components/ui/button'
 
 export function ConcludeButton({ preventivaId }: { preventivaId: string }) {

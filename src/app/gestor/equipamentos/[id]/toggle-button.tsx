@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { inativarEquipamento } from '@/app/tecnico/equipamentos/actions'
+import { toggleAtivoEquipamento } from '@/app/tecnico/equipamentos/actions'
 import { Button } from '@/components/ui/button'
 
 export function ToggleButton({

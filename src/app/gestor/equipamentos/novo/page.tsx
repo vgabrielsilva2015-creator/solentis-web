@@ -23,7 +23,6 @@ export default async function GestorNovoEquipamentoPage() {
         <PageHeader 
           title="Novo Equipamento" 
           description="Cadastre um novo ativo físico na infraestrutura."
-          className="mt-4"
         />
       </div>
 

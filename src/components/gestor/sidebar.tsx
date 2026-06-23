@@ -32,6 +32,7 @@ const NAV: NavItem[] = [
   { type: 'link',    label: 'Agendamento de Análises', href: '/gestor/cronograma', icon: <Settings className="w-4 h-4" /> },
   { type: 'link',    label: 'Parâmetros (Limites)', href: '/gestor/parametros', icon: <Settings className="w-4 h-4" /> },
   { type: 'link',    label: 'Categorias',           href: '/gestor/categorias', icon: <Tags className="w-4 h-4" /> },
+  { type: 'link',    label: 'Pontos de Coleta',     href: '/gestor/pontos-de-coleta', icon: <MapPin className="w-4 h-4" /> },
   { type: 'link',    label: 'Turnos',               href: '/gestor/turnos', excludePrefix: '/gestor/turnos/tarefas', icon: <Clock className="w-4 h-4" /> },
   { type: 'link',    label: 'Tarefas do Turno',  href: '/gestor/turnos/tarefas', icon: <CalendarDays className="w-4 h-4" /> },
   { type: 'link',    label: 'Prazos de Ocorrência', href: '/gestor/prazos-ocorrencia', icon: <Timer className="w-4 h-4" /> },

@@ -164,16 +164,21 @@ async function main() {
 
   // ── Pontos de coleta ──────────────────────────────────────────────────────
   const collectionPoints = [
-    { id: 'seed-cp-entrada', name: 'Entrada ETE',      location: 'Calha Parshall - entrada',      description: 'Efluente bruto antes de qualquer tratamento', matrix: 'EFLUENTE' },
-    { id: 'seed-cp-reator',  name: 'Reator Biologico', location: 'Tanque de aeracao - saida',     description: 'Efluente apos tratamento biologico aerobio', matrix: 'EFLUENTE' },
-    { id: 'seed-cp-saida',   name: 'Saida Final',      location: 'Calha de saida - apos filtros', description: 'Efluente tratado lancado no corpo receptor', matrix: 'EFLUENTE' },
-    { id: 'seed-cp-poco-1',  name: 'Poço de Monitoramento 1', location: 'Montante', description: 'Água subterrânea', matrix: 'SUBTERRANEA' },
+    { id: 'seed-cp-entrada', name: 'Entrada ETE',      location: 'Calha Parshall - entrada',      description: 'Efluente bruto antes de qualquer tratamento', matrix: 'EFLUENTE', is_field: true, is_internal: true, is_external: true },
+    { id: 'seed-cp-reator',  name: 'Reator Biologico', location: 'Tanque de aeracao - saida',     description: 'Efluente apos tratamento biologico aerobio', matrix: 'EFLUENTE', is_field: true, is_internal: true, is_external: false },
+    { id: 'seed-cp-saida',   name: 'Saida Final',      location: 'Calha de saida - apos filtros', description: 'Efluente tratado lancado no corpo receptor', matrix: 'EFLUENTE', is_field: true, is_internal: true, is_external: true },
+    { id: 'seed-cp-poco-1',  name: 'Poço de Monitoramento 1', location: 'Montante', description: 'Água subterrânea', matrix: 'SUBTERRANEA', is_field: false, is_internal: false, is_external: true },
   ]
 
   for (const cp of collectionPoints) {
     await prisma.collectionPoint.upsert({
       where: { id: cp.id },
-      update: { matrix: cp.matrix },
+      update: { 
+        matrix: cp.matrix,
+        is_field: cp.is_field,
+        is_internal: cp.is_internal,
+        is_external: cp.is_external,
+      },
       create: {
         id: cp.id,
         tenant_id: 'default',
@@ -182,6 +187,9 @@ async function main() {
         location: cp.location,
         description: cp.description,
         is_active: true,
+        is_field: cp.is_field,
+        is_internal: cp.is_internal,
+        is_external: cp.is_external,
       },
     })
   }

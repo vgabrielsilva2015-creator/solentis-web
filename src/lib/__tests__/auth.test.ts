@@ -55,8 +55,8 @@ describe('isRouteAllowedForRole — acesso por prefixo de rota', () => {
     expect(isRouteAllowedForRole('/operador/dashboard', 'OPERATOR')).toBe(true)
   })
 
-  it('MANAGER é bloqueado em /operador', () => {
-    expect(isRouteAllowedForRole('/operador/dashboard', 'MANAGER')).toBe(false)
+  it('MANAGER acessa /operador', () => {
+    expect(isRouteAllowedForRole('/operador/dashboard', 'MANAGER')).toBe(true)
   })
 
   it('rotas sem prefixo de perfil são livres para qualquer role', () => {

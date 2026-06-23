@@ -12,7 +12,7 @@ export default async function NovaAnalisePage() {
 
   const [collectionPoints, parameters, methods] = await Promise.all([
     prisma.collectionPoint.findMany({
-      where:   { tenant_id: (await getTenantId()), is_active: true },
+      where:   { tenant_id: (await getTenantId()), is_active: true, is_internal: true },
       select:  { id: true, name: true },
       orderBy: { name: 'asc' },
     }),

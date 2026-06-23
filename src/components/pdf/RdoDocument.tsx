@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
 export interface LeiturasData {
   time: string;
   parameter: string;
-  value: number;
+  value: number | string;
   unit: string;
   point: string;
 }

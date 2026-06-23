@@ -1,7 +1,8 @@
 const fs = require('fs');
+const path = require('path');
 
 try {
-  let exportCompleto = fs.readFileSync('C:/Users/Vitor/projetos/meu-projeto/docs/EXPORT_COMPLETO.md', 'utf8');
+  let exportCompleto = fs.readFileSync(path.resolve(__dirname, '../docs/EXPORT_COMPLETO.md'), 'utf8');
 
   const filesToUpdate = [
     'src/app/gestor/turnos/novo/page.tsx',
@@ -17,7 +18,7 @@ try {
   let modified = false;
 
   for (const file of filesToUpdate) {
-    const fileContent = fs.readFileSync(`C:/Users/Vitor/projetos/meu-projeto/${file}`, 'utf8');
+    const fileContent = fs.readFileSync(path.resolve(__dirname, `../${file}`), 'utf8');
     
     // Create a regex to match the section for this file. 
     // It looks for: ### `filename`\n```tsx\n ... \n```\n
@@ -34,7 +35,7 @@ try {
   }
 
   if (modified) {
-    fs.writeFileSync('C:/Users/Vitor/projetos/meu-projeto/docs/EXPORT_COMPLETO.md', exportCompleto);
+    fs.writeFileSync(path.resolve(__dirname, '../docs/EXPORT_COMPLETO.md'), exportCompleto);
     console.log('Successfully updated file contents in EXPORT_COMPLETO.md!');
   }
 } catch (e) {

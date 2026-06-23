@@ -132,10 +132,10 @@ export async function GET(request: Request) {
         `"${m.equipment.name}"`,
         m.equipment.serial_number ?? '',
         m.scheduled_date.toISOString(),
-        m.completed_at ? m.completed_at.toISOString() : '',
+        m.completed_date ? m.completed_date.toISOString() : '',
         m.status,
         m.completer?.name ?? '',
-        m.completion_notes ? `"${m.completion_notes.replace(/"/g, '""')}"` : ''
+        m.notes ? `"${m.notes.replace(/"/g, '""')}"` : ''
       ]
       csv += row.join(';') + '\n'
     }

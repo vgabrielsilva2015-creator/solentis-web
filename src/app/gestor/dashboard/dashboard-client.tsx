@@ -423,7 +423,7 @@ export function DashboardClient({
     const hint = 'Clique em um ponto para abrir os detalhes →'
     const body = (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>{cards}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">{cards}</div>
         <div style={{ marginTop: '13px', fontSize: '11.5px', color: 'var(--txt3)', display: 'flex', alignItems: 'center', gap: '6px' }}>
           {icon('M13 2 3 14h9l-1 8 10-12h-9l1-8z', 13, 'var(--brand)')}
           {hint}
@@ -845,7 +845,7 @@ export function DashboardClient({
         {renderKpis()}
 
         {/* Row 2: Charts (pH Trend / stacked chemicals / collection points / efficiency / occurrences donut) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 1fr', gap: '18px', alignItems: 'start' }}>
+        <div className="flex flex-col lg:grid lg:grid-cols-[1.7fr_1fr] gap-[18px] items-start">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
             {renderTrend()}
             {renderConsumption()}

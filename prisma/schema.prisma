@@ -283,6 +283,9 @@ model CollectionPoint {
   location    String?
   description String?
   is_active   Boolean  @default(true)
+  is_field    Boolean  @default(true)
+  is_internal Boolean  @default(true)
+  is_external Boolean  @default(true)
   created_at  DateTime @default(now())
 
   tenant     Tenant             @relation(fields: [tenant_id], references: [id])

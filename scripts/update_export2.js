@@ -1,7 +1,8 @@
 const fs = require('fs');
+const path = require('path');
 
 try {
-  let exportCompleto = fs.readFileSync('C:/Users/Vitor/projetos/meu-projeto/docs/EXPORT_COMPLETO.md', 'utf8');
+  let exportCompleto = fs.readFileSync(path.resolve(__dirname, '../docs/EXPORT_COMPLETO.md'), 'utf8');
 
   const filesToUpdate = [
     'src/app/gestor/categorias/[id]/edit-form.tsx',
@@ -17,7 +18,7 @@ try {
   let modified = false;
 
   for (const file of filesToUpdate) {
-    const fileContent = fs.readFileSync(`C:/Users/Vitor/projetos/meu-projeto/${file}`, 'utf8');
+    const fileContent = fs.readFileSync(path.resolve(__dirname, `../${file}`), 'utf8');
     
     const regex = new RegExp(`(### \`${file.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\`\\r?\\n\`\`\`[a-z]*\\r?\\n)[\\s\\S]*?(\`\`\`\\r?\\n)`, 'i');
     
@@ -31,7 +32,7 @@ try {
   }
 
   if (modified) {
-    fs.writeFileSync('C:/Users/Vitor/projetos/meu-projeto/docs/EXPORT_COMPLETO.md', exportCompleto);
+    fs.writeFileSync(path.resolve(__dirname, '../docs/EXPORT_COMPLETO.md'), exportCompleto);
     console.log('Successfully updated file contents in EXPORT_COMPLETO.md!');
   }
 } catch (e) {

@@ -583,7 +583,7 @@ Estações de Tratamento de Efluentes (ETEs) de pequeno e médio porte no Brasil
 
 ### 2.2 Localização e como rodar
 ```
-Pasta:    C:\Users\Vitor\projetos\meu-projeto  (Windows, pt-BR)
+Pasta:    C:\Users\Vitor\projetos\solentis  (Windows, pt-BR)
 Subir:    npm run dev           → localhost:3000
 Reset DB: npx prisma migrate reset   (recria seed)
 Dados demo: npx tsx prisma/seed-demo.ts   (6 meses de dados p/ gráficos)
@@ -822,7 +822,7 @@ Estações de Tratamento de Efluentes (ETEs) de pequeno e médio porte no Brasil
 
 ### 2.2 Localização e como rodar
 ```
-Pasta:    C:\Users\Vitor\projetos\meu-projeto  (Windows, pt-BR)
+Pasta:    C:\Users\Vitor\projetos\solentis  (Windows, pt-BR)
 Subir:    npm run dev           → localhost:3000
 Reset DB: npx prisma migrate reset   (recria seed)
 Dados demo: npx tsx prisma/seed-demo.ts   (6 meses de dados p/ gráficos)
