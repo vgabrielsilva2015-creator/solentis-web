@@ -13,7 +13,6 @@ interface DashboardClientProps {
     external: { done: number; scheduled: number }
   }
   dbOpenOccurrences: number
-  dbSlaAtRisk: number
   dbConfCurrent: number | null
   dbConfDelta: number | null
   dbSparklineData: number[]
@@ -24,14 +23,12 @@ interface DashboardClientProps {
   dbTrendData: any[]
   dbFeed: any[]
   dbMaintenance: any[]
-  dbSla: any[]
   dbParameters: { id: string; name: string; unit: string }[]
   dbSelectedParam: any
   diasNum: number
   paramId?: string
   pontoId?: string
   activePointName?: string | null
-  dbEfficiency: { in: number; out: number; val: number } | null
 }
 
 export function DashboardClient({
@@ -39,7 +36,6 @@ export function DashboardClient({
   dbRegistersDelta,
   dbProgress,
   dbOpenOccurrences,
-  dbSlaAtRisk,
   dbConfCurrent,
   dbConfDelta,
   dbSparklineData,
@@ -50,14 +46,12 @@ export function DashboardClient({
   dbTrendData,
   dbFeed,
   dbMaintenance,
-  dbSla,
   dbParameters,
   dbSelectedParam,
   diasNum,
   paramId,
   pontoId,
   activePointName,
-  dbEfficiency,
 }: DashboardClientProps) {
   const router = useRouter()
   const [period, setPeriod] = useState<string>('7d')
@@ -462,13 +456,13 @@ export function DashboardClient({
         alert: dbOpenOccurrences > 0,
       },
       {
-        title: 'SLA em Risco (< 2h)',
-        val: dbSlaAtRisk,
+        title: 'Coletas Pendentes Hoje',
+        val: Math.max(0, (dbProgress.field.scheduled + dbProgress.internal.scheduled + dbProgress.external.scheduled) - (dbProgress.field.done + dbProgress.internal.done + dbProgress.external.done)),
         delta: null,
-        label: '',
-        href: '/gestor/ocorrencias',
+        label: `de ${dbProgress.field.scheduled + dbProgress.internal.scheduled + dbProgress.external.scheduled} agendadas`,
+        href: null,
         spark: null,
-        alert: dbSlaAtRisk > 0,
+        alert: Math.max(0, (dbProgress.field.scheduled + dbProgress.internal.scheduled + dbProgress.external.scheduled) - (dbProgress.field.done + dbProgress.internal.done + dbProgress.external.done)) > 0,
       },
       {
         title: 'Conformidade CONAMA',
@@ -568,34 +562,6 @@ export function DashboardClient({
     return cardFrame('Consumo químico', 'Lançamento acumulado por reagente · 7 dias', null, buildConsumption(), 'Estoque')
   }
 
-  // Efficiency progress widget (Anéis de progresso)
-  const renderEfficiency = () => {
-    if (!dbEfficiency) return cardFrame('Eficiência da ETE', 'Remoção de DQO', null, miniEmpty('Sem leituras de entrada e saída suficientes para calcular a eficiência.'), 'Performance')
-    const val = dbEfficiency.val
-    const center = (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <span style={{ fontFamily: F.sora, fontSize: '26px', fontWeight: 700, color: 'var(--txt)', lineHeight: 1 }}>{val}%</span>
-      </div>
-    )
-    const stat = (l: string, v: string, ok?: boolean) => (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '12px', color: 'var(--txt2)' }}>{l}</span>
-        <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: F.mono, color: ok ? 'var(--ok)' : 'var(--txt)' }}>{v}</span>
-      </div>
-    )
-    const body = (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        {buildRing(val, 'var(--brand)', 116, 12, center)}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {stat('Entrada ETE', `${dbEfficiency.in} mg/L`)}
-          {stat('Saída Final', `${dbEfficiency.out} mg/L`)}
-          <div style={{ height: '1px', background: 'var(--border)' }} />
-          {stat('Meta CONAMA', '≥ 80% ✓', val >= 80)}
-        </div>
-      </div>
-    )
-    return cardFrame('Eficiência da ETE', 'Remoção de DQO · Entrada vs Saída', null, body, 'Performance')
-  }
 
   // Occurrences Severity donut chart widget
   const renderOccurrencesWidget = () => {
@@ -703,40 +669,6 @@ export function DashboardClient({
     return cardFrame('Manutenção preventiva', 'Equipamentos críticos', null, <div>{rows}</div>, 'Ativos')
   }
 
-  // SLA Resolution bar chart widget
-  const renderSlaWidget = () => {
-    if (dbSla.every(s => s.avg === 0)) return cardFrame('Resolução por SLA', 'Tempo médio vs meta', null, miniEmpty('Sem ocorrências resolvidas no período.'), 'Governança')
-    const sevCol = { Crítica: 'var(--danger)', Alta: 'var(--warn)', Média: 'var(--brand)', Baixa: 'var(--txt3)' }
-    const rows = dbSla.map((s, i) => {
-      const within = s.avg <= s.meta
-      const pct = Math.min(100, (s.avg / s.meta) * 100)
-      const col = within ? 'var(--ok)' : 'var(--danger)'
-      const fmt = (v: number) => (v >= 1000 ? (v / 24).toFixed(0) + 'd' : v >= 72 ? (v / 24).toFixed(0) + 'd' : v + 'h')
-      return (
-        <div key={i}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: 600, color: 'var(--txt)' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: sevCol[s.sev as keyof typeof sevCol] || 'var(--txt3)' }} />
-              {s.sev}
-            </span>
-            <span style={{ fontFamily: F.mono, fontSize: '11px', color: 'var(--txt2)' }}>
-              {fmt(s.avg)} · meta {fmt(s.meta)}
-            </span>
-          </div>
-          <div style={{ height: '7px', borderRadius: '4px', background: 'var(--s3)', overflow: 'hidden' }}>
-            <div style={{ width: pct + '%', height: '100%', borderRadius: '4px', background: col }} />
-          </div>
-        </div>
-      )
-    })
-    return cardFrame(
-      'Resolução por SLA',
-      'Tempo médio vs meta',
-      null,
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>{rows}</div>,
-      'Governança'
-    )
-  }
 
   const renderAnalysesStatusWidget = () => {
     const pField = dbProgress.field
@@ -844,7 +776,7 @@ export function DashboardClient({
         {/* Row 1: KPIs */}
         {renderKpis()}
 
-        {/* Row 2: Charts (pH Trend / stacked chemicals / collection points / efficiency / occurrences donut) */}
+        {/* Row 2: Charts */}
         <div className="flex flex-col lg:grid lg:grid-cols-[1.7fr_1fr] gap-[18px] items-start">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
             {renderTrend()}
@@ -852,17 +784,15 @@ export function DashboardClient({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0 }}>
             {renderPoints()}
-            {renderEfficiency()}
             {renderOccurrencesWidget()}
           </div>
         </div>
 
-        {/* Row 3: Widgets (Feed, Maintenance, SLA) */}
+        {/* Row 3: Widgets */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px', paddingBottom: '40px' }}>
           {renderAnalysesStatusWidget()}
           {renderFeedWidget()}
           {renderMaintenanceWidget()}
-          {renderSlaWidget()}
         </div>
       </main>
     </div>

@@ -63,9 +63,6 @@ export default async function GestorDashboard({
 
     // KPI 2: Ocorrências
     openOccurrences,
-    // KPI 3: SLA
-    slaAtRisk,
-
     // KPI 4: Conformidade
     totalReadsCurrent,
     nonConformReadsCurrent,
@@ -97,10 +94,6 @@ export default async function GestorDashboard({
     prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: yesterday, lt: today }, ...pointCond } }),
     
     prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond } }),
-    
-    prisma.occurrence.count({ 
-      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, deadline: { lt: new Date(now.getTime() + 2 * 60 * 60 * 1000) }, ...pointCond } 
-    }),
 
     // Conformity Readings
     prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond } }),
@@ -341,56 +334,7 @@ export default async function GestorDashboard({
     return { name: m.equipment.name, days: days < 0 ? 0 : days }
   })
 
-  const slaTargets: Record<string, number> = { CRITICAL: 24, HIGH: 72, MEDIUM: 168, LOW: 720 }
-  
-  const slaMap = new Map<string, { totalHours: number, count: number }>()
-  resolvedOccurrences.forEach(o => {
-    if (o.resolved_at) {
-      const hours = (o.resolved_at.getTime() - o.created_at.getTime()) / (1000 * 60 * 60)
-      const data = slaMap.get(o.severity) || { totalHours: 0, count: 0 }
-      data.totalHours += hours
-      data.count += 1
-      slaMap.set(o.severity, data)
-    }
-  })
 
-  const dbSla = Object.keys(slaTargets).map(severity => {
-    const meta = slaTargets[severity]
-    const data = slaMap.get(severity)
-    const avg = data && data.count > 0 ? Math.round(data.totalHours / data.count) : 0
-    return { sev: severityLabels[severity] || severity, avg, meta }
-  })
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // 6. CÁLCULO DE EFICIÊNCIA (DQO / DBO)
-  // ─────────────────────────────────────────────────────────────────────────────
-  let dbEfficiency = null
-  const dqoParam = parameters.find(p => p.name.toLowerCase().includes('dqo') || p.name.toLowerCase().includes('demanda química'))
-  if (dqoParam) {
-    // Busca média de entrada e saída
-    const inPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('entrada') || p.name.toLowerCase().includes('bruto'))
-    const outPoint = collectionPointsRaw.find(p => p.name.toLowerCase().includes('saída') || p.name.toLowerCase().includes('tratado') || p.name.toLowerCase().includes('final'))
-    
-    if (inPoint && outPoint) {
-      const [inAnalyses, outAnalyses, inExt, outExt] = await Promise.all([
-        prisma.analysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } }),
-        prisma.analysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } }),
-        prisma.externalAnalysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: inPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } }),
-        prisma.externalAnalysis.findMany({ where: { tenant_id, parameter_id: dqoParam.id, collection_point_id: outPoint.id, collected_at: { gte: periodoInicio } }, select: { value: true } })
-      ])
-      
-      const inValid = [...inAnalyses, ...inExt].filter(a => a.value !== null)
-      const outValid = [...outAnalyses, ...outExt].filter(a => a.value !== null)
-      
-      const inAvg = inValid.length > 0 ? inValid.reduce((s, a) => s + (a.value || 0), 0) / inValid.length : 0
-      const outAvg = outValid.length > 0 ? outValid.reduce((s, a) => s + (a.value || 0), 0) / outValid.length : 0
-      
-      if (inAvg > 0) {
-        const val = Math.max(0, Math.round(((inAvg - outAvg) / inAvg) * 100))
-        dbEfficiency = { in: Math.round(inAvg), out: Math.round(outAvg), val }
-      }
-    }
-  }
 
   return (
     <DashboardClient 
@@ -398,7 +342,6 @@ export default async function GestorDashboard({
       dbRegistersDelta={registersDelta}
       dbProgress={dbProgress}
       dbOpenOccurrences={openOccurrences}
-      dbSlaAtRisk={slaAtRisk}
       dbConfCurrent={confCurrent}
       dbConfDelta={confDelta}
       dbSparklineData={sparklineData}
@@ -409,14 +352,12 @@ export default async function GestorDashboard({
       dbTrendData={trendData}
       dbFeed={dbFeed}
       dbMaintenance={dbMaintenance}
-      dbSla={dbSla}
       dbParameters={parameters}
       dbSelectedParam={selectedParam}
       diasNum={diasNum}
       paramId={paramId}
       pontoId={pontoId}
       activePointName={activePointName}
-      dbEfficiency={dbEfficiency}
     />
   )
 }
