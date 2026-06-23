@@ -7,8 +7,11 @@ function calcDelta(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100)
 }
 
-function formatDateDisplay(d: Date) {
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+function formatDateDisplay(d: Date, diasNum?: number) {
+  if (diasNum === 1 || !diasNum) {
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  }
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 export default async function GestorDashboard({
@@ -48,6 +51,8 @@ export default async function GestorDashboard({
 
   // Filtro por ponto
   const pointCond = pontoId ? { collection_point_id: pontoId } : {}
+  
+  // ─── [Rest of code is unchanged until trendData] ───
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. DADOS DOS KPIs (Paralelizados)
@@ -171,7 +176,7 @@ export default async function GestorDashboard({
   // ─────────────────────────────────────────────────────────────────────────────
   // 2. DADOS DO HEATMAP & OCORRÊNCIAS CRÍTICAS
   // ─────────────────────────────────────────────────────────────────────────────
-  const [collectionPointsRaw, criticalOccurrences, occurrencesBySeverity] = await Promise.all([
+  const [collectionPointsRaw, occurrencesBySeverity] = await Promise.all([
     prisma.collectionPoint.findMany({
       where: { tenant_id, is_active: true },
       select: {
@@ -181,12 +186,6 @@ export default async function GestorDashboard({
         analyses: { where: { collected_at: { gte: last24h } }, select: { is_non_conformant: true } },
         external_analyses: { where: { collected_at: { gte: last24h } }, select: { is_non_conformant: true } },
       },
-    }),
-    prisma.occurrence.findMany({
-      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond },
-      orderBy: { deadline: 'asc' },
-      take: 6,
-      include: { reporter: { select: { name: true } } }
     }),
     // Ocorrencias por severidade (todas no periodo)
     prisma.occurrence.groupBy({
@@ -251,7 +250,7 @@ export default async function GestorDashboard({
   // ─────────────────────────────────────────────────────────────────────────────
   const parameters = await prisma.qualityParameter.findMany({
     where: { tenant_id, is_active: true },
-    select: { id: true, name: true, unit: true },
+    select: { id: true, name: true, unit: true, min_limit: true, max_limit: true },
   })
   
   const selectedParam = parameters.find(p => p.id === paramId) || parameters[0]
@@ -260,28 +259,28 @@ export default async function GestorDashboard({
   if (selectedParam) {
     const [reads, analyses, externals] = await Promise.all([
       prisma.reading.findMany({
-        where: { tenant_id, parameter_id: selectedParam.id, created_at: { gte: last24h }, ...pointCond },
+        where: { tenant_id, parameter_id: selectedParam.id, created_at: { gte: periodoInicio }, ...pointCond },
         select: { value: true, created_at: true }
       }),
       prisma.analysis.findMany({
-        where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
+        where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: periodoInicio }, ...pointCond },
         select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true, laboratory_type: true }
       }),
       prisma.externalAnalysis.findMany({
-        where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: last24h }, ...pointCond },
+        where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: periodoInicio }, ...pointCond },
         select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true }
       })
     ])
     
     trendData = [
       ...reads.map(a => ({
-        time: a.created_at, timeStr: formatDateDisplay(a.created_at), value: a.value, minLimit: null, maxLimit: null, laboratoryType: 'FIELD'
+        time: a.created_at, timeStr: formatDateDisplay(a.created_at, diasNum), value: a.value, minLimit: null, maxLimit: null, laboratoryType: 'FIELD'
       })),
       ...analyses.map(a => ({
-        time: a.collected_at, timeStr: formatDateDisplay(a.collected_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: a.laboratory_type
+        time: a.collected_at, timeStr: formatDateDisplay(a.collected_at, diasNum), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: a.laboratory_type
       })),
       ...externals.map(a => ({
-        time: a.collected_at, timeStr: formatDateDisplay(a.collected_at), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: 'EXTERNAL'
+        time: a.collected_at, timeStr: formatDateDisplay(a.collected_at, diasNum), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: 'EXTERNAL'
       }))
     ]
     
@@ -290,25 +289,220 @@ export default async function GestorDashboard({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 5. WIDGETS (FEED, MAINTENANCE, SLA)
+  // 5. WIDGETS (FEED, MAINTENANCE, SHIFTS, STATUS)
   // ─────────────────────────────────────────────────────────────────────────────
-  const [auditFeed, pendingMaintenances, resolvedOccurrences] = await Promise.all([
+  const maxPreventiveDate = new Date()
+  maxPreventiveDate.setDate(maxPreventiveDate.getDate() + 30)
+
+  const [
+    auditFeed,
+    pendingMaintenances,
+    shiftScales,
+    openCriticalOccCount,
+    openOtherOccCount,
+    nonConformReadingsTodayCount,
+    nonConformAnalysesTodayCount,
+    nonConformExternalTodayCount,
+    latestReading,
+    latestAnalysis,
+    latestExternal,
+    latestNCReading,
+    latestNCAnalysis,
+    latestNCExternal,
+  ] = await Promise.all([
     prisma.auditLog.findMany({
       orderBy: { timestamp: 'desc' },
       take: 5,
       include: { user: { select: { name: true } } }
     }),
     prisma.preventiveMaintenance.findMany({
-      where: { tenant_id, status: 'SCHEDULED' },
+      where: {
+        tenant_id,
+        status: 'SCHEDULED',
+        scheduled_date: { lte: maxPreventiveDate }
+      },
       orderBy: { scheduled_date: 'asc' },
-      take: 4,
-      include: { equipment: { select: { name: true } } }
+      include: { equipment: { select: { id: true, name: true } } }
     }),
-    prisma.occurrence.findMany({
-      where: { tenant_id, status: 'RESOLVED', resolved_at: { not: null } },
-      select: { severity: true, created_at: true, resolved_at: true }
+    prisma.shiftScale.findMany({
+      where: { tenant_id, date: today },
+      include: {
+        operator: { select: { name: true } },
+        shift: { select: { name: true, start_time: true, end_time: true, crosses_midnight: true } }
+      }
+    }),
+    // Ocorrências críticas abertas
+    prisma.occurrence.count({
+      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, severity: 'CRITICAL' }
+    }),
+    // Outras ocorrências abertas
+    prisma.occurrence.count({
+      where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, severity: { in: ['HIGH', 'MEDIUM', 'LOW'] } }
+    }),
+    // Leituras não conformes hoje
+    prisma.reading.count({
+      where: { tenant_id, created_at: { gte: today }, is_non_conformant: true }
+    }),
+    // Análises internas não conformes hoje
+    prisma.analysis.count({
+      where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true }
+    }),
+    // Análises externas não conformes hoje
+    prisma.externalAnalysis.count({
+      where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true }
+    }),
+    // Últimos lançamentos gerais
+    prisma.reading.findFirst({
+      where: { tenant_id },
+      orderBy: { recorded_at: 'desc' },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } }
+    }),
+    prisma.analysis.findFirst({
+      where: { tenant_id },
+      orderBy: { collected_at: 'desc' },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } }
+    }),
+    prisma.externalAnalysis.findFirst({
+      where: { tenant_id },
+      orderBy: { collected_at: 'desc' },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } }
+    }),
+    // Últimos lançamentos não conformes hoje
+    prisma.reading.findFirst({
+      where: { tenant_id, created_at: { gte: today }, is_non_conformant: true },
+      orderBy: { recorded_at: 'desc' },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } }
+    }),
+    prisma.analysis.findFirst({
+      where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true },
+      orderBy: { collected_at: 'desc' },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } }
+    }),
+    prisma.externalAnalysis.findFirst({
+      where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true },
+      orderBy: { collected_at: 'desc' },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } }
     })
   ])
+
+  // Determinar operador ativo
+  function isTimeInShift(startStr: string, endStr: string, crossesMidnight: boolean, currentHour: number, currentMinute: number): boolean {
+    const [sh, sm] = startStr.split(':').map(Number)
+    const [eh, em] = endStr.split(':').map(Number)
+    const currentMinutes = currentHour * 60 + currentMinute
+    const startMinutes = sh * 60 + sm
+    const endMinutes = eh * 60 + em
+    if (crossesMidnight) {
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes
+    } else {
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes
+    }
+  }
+
+  const currentHour = now.getHours()
+  const currentMinute = now.getMinutes()
+  const activeScale = shiftScales.find(sc => 
+    isTimeInShift(sc.shift.start_time, sc.shift.end_time, sc.shift.crosses_midnight, currentHour, currentMinute)
+  )
+  const activeOperatorName = activeScale?.operator.name || null
+  const activeShiftName = activeScale?.shift.name || null
+
+  // Determinar status ETE
+  let eteStatus: 'OK' | 'WARNING' | 'DANGER' = 'OK'
+  if (openCriticalOccCount > 0) {
+    eteStatus = 'DANGER'
+  } else if (openOtherOccCount > 0 || nonConformReadingsTodayCount > 0 || nonConformAnalysesTodayCount > 0 || nonConformExternalTodayCount > 0) {
+    eteStatus = 'WARNING'
+  }
+
+  // Determinar última leitura absoluta
+  const candidates = [
+    latestReading && {
+      date: latestReading.recorded_at,
+      parameterName: latestReading.parameter?.name || 'Observação',
+      pointName: latestReading.collection_point.name,
+      value: latestReading.value,
+      unit: latestReading.unit || '',
+      isNonConformant: latestReading.is_non_conformant ?? false
+    },
+    latestAnalysis && {
+      date: latestAnalysis.collected_at,
+      parameterName: latestAnalysis.parameter.name,
+      pointName: latestAnalysis.collection_point.name,
+      value: latestAnalysis.value,
+      unit: latestAnalysis.unit,
+      isNonConformant: latestAnalysis.is_non_conformant
+    },
+    latestExternal && {
+      date: latestExternal.collected_at,
+      parameterName: latestExternal.parameter.name,
+      pointName: latestExternal.collection_point.name,
+      value: latestExternal.value,
+      unit: latestExternal.unit,
+      isNonConformant: latestExternal.is_non_conformant ?? false
+    }
+  ].filter(Boolean) as any[]
+
+  let absoluteLatest: any = null
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => b.date.getTime() - a.date.getTime())
+    absoluteLatest = candidates[0]
+  }
+
+  // Determinar última leitura não conforme de hoje
+  const ncCandidates = [
+    latestNCReading && {
+      date: latestNCReading.recorded_at,
+      parameterName: latestNCReading.parameter?.name || 'Observação',
+      pointName: latestNCReading.collection_point.name,
+      value: latestNCReading.value,
+      unit: latestNCReading.unit || ''
+    },
+    latestNCAnalysis && {
+      date: latestNCAnalysis.collected_at,
+      parameterName: latestNCAnalysis.parameter.name,
+      pointName: latestNCAnalysis.collection_point.name,
+      value: latestNCAnalysis.value,
+      unit: latestNCAnalysis.unit
+    },
+    latestNCExternal && {
+      date: latestNCExternal.collected_at,
+      parameterName: latestNCExternal.parameter.name,
+      pointName: latestNCExternal.collection_point.name,
+      value: latestNCExternal.value,
+      unit: latestNCExternal.unit
+    }
+  ].filter(Boolean) as any[]
+
+  let latestNCToday: any = null
+  if (ncCandidates.length > 0) {
+    ncCandidates.sort((a, b) => b.date.getTime() - a.date.getTime())
+    latestNCToday = ncCandidates[0]
+  }
+
+  // Alertas ativos ordenados por severidade decrescente
+  const activeOccurrences = await prisma.occurrence.findMany({
+    where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond },
+    orderBy: { created_at: 'desc' },
+    include: {
+      reporter: { select: { name: true } },
+      collection_point: { select: { name: true } }
+    }
+  })
+
+  const severityWeights: Record<string, number> = {
+    CRITICAL: 4,
+    HIGH: 3,
+    MEDIUM: 2,
+    LOW: 1
+  }
+
+  const sortedOccurrences = [...activeOccurrences].sort((a, b) => {
+    const wA = severityWeights[a.severity] || 0
+    const wB = severityWeights[b.severity] || 0
+    if (wA !== wB) return wB - wA
+    return b.created_at.getTime() - a.created_at.getTime()
+  })
 
   const dbFeed = auditFeed.map(log => {
     let text = 'registrou uma atividade.'
@@ -331,10 +525,14 @@ export default async function GestorDashboard({
   const dbMaintenance = pendingMaintenances.map(m => {
     const diffTime = m.scheduled_date.getTime() - now.getTime()
     const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return { name: m.equipment.name, days: days < 0 ? 0 : days }
+    return {
+      id: m.id,
+      name: m.equipment.name,
+      equipmentId: m.equipment_id,
+      scheduledDate: m.scheduled_date.toISOString(),
+      days // could be negative (late)
+    }
   })
-
-
 
   return (
     <DashboardClient 
@@ -346,7 +544,7 @@ export default async function GestorDashboard({
       dbConfDelta={confDelta}
       dbSparklineData={sparklineData}
       dbHeatmapPoints={heatmapPoints}
-      dbCriticalOccurrences={criticalOccurrences}
+      dbCriticalOccurrences={sortedOccurrences}
       dbOccurrencesPieData={occurrencesPieData}
       dbChemicalConsumptionData={chemicalConsumptionData}
       dbTrendData={trendData}
@@ -358,6 +556,11 @@ export default async function GestorDashboard({
       paramId={paramId}
       pontoId={pontoId}
       activePointName={activePointName}
+      eteStatus={eteStatus}
+      activeOperatorName={activeOperatorName}
+      activeShiftName={activeShiftName}
+      absoluteLatestReading={absoluteLatest}
+      latestNCToday={latestNCToday}
     />
   )
 }

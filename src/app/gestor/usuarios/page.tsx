@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
+import { UserSearch } from './user-search'
 
 const ROLE_LABELS: Record<string, string> = {
   MANAGER:    'Gestor',
@@ -26,16 +27,34 @@ function formatDate(date: Date | null): string {
 export default async function UsuariosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
-  const { q } = await searchParams
+  const tenant_id = await getTenantId()
+  const { q, page } = await searchParams
   const search = q?.trim() ?? ''
+
+  // Paginação
+  const currentPage = Number(page) > 0 ? Number(page) : 1
+  const pageSize = 20
+  const skip = (currentPage - 1) * pageSize
+
+  // Busca o total para cálculo de páginas
+  const totalCount = await prisma.user.count({
+    where: {
+      tenant_id,
+      ...(search
+        ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }] }
+        : {}),
+    },
+  })
+
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   const users = await prisma.user.findMany({
     where: {
-      tenant_id: (await getTenantId()),
+      tenant_id,
       ...(search
-        ? { OR: [{ name: { contains: search } }, { email: { contains: search } }] }
+        ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }] }
         : {}),
     },
     orderBy: { created_at: 'desc' },
@@ -43,6 +62,8 @@ export default async function UsuariosPage({
       id: true, name: true, email: true, role: true,
       is_active: true, last_login_at: true, must_change_password: true,
     },
+    skip,
+    take: pageSize,
   })
 
   return (
@@ -61,16 +82,8 @@ export default async function UsuariosPage({
       </div>
 
       {/* Busca */}
-      <form method="GET" className="flex gap-2">
-        <input
-          name="q"
-          defaultValue={search}
-          placeholder="Buscar por nome ou e-mail…"
-          className="h-10 flex-1 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
-        />
-        <Button type="submit" variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-          Buscar
-        </Button>
+      <div className="flex gap-2">
+        <UserSearch defaultValue={search} />
         {search && (
           <Link href="/gestor/usuarios">
             <Button variant="ghost" className="text-slate-400 hover:text-slate-200">
@@ -78,7 +91,7 @@ export default async function UsuariosPage({
             </Button>
           </Link>
         )}
-      </form>
+      </div>
 
       {/* Tabela */}
       <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
@@ -104,7 +117,7 @@ export default async function UsuariosPage({
                     <div className="font-medium text-slate-100">{u.name}</div>
                     <div className="text-xs text-slate-500">{u.email}</div>
                     {u.must_change_password && (
-                      <span className="text-xs text-amber-500">Senha provisória</span>
+                      <span className="text-xs text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded ml-2">Senha provisória</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -140,7 +153,38 @@ export default async function UsuariosPage({
         )}
       </div>
 
-      <p className="text-right text-xs text-slate-600">{users.length} usuário(s) encontrado(s)</p>
+      {/* Paginação */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <p className="text-xs text-slate-500">
+          Mostrando {users.length} de {totalCount} usuário(s) encontrado(s)
+        </p>
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/gestor/usuarios?page=${currentPage - 1}${search ? `&q=${search}` : ''}`}
+              className={currentPage <= 1 ? 'pointer-events-none opacity-40' : ''}
+            >
+              <Button variant="outline" size="sm" disabled={currentPage <= 1} className="border-slate-700 text-slate-300">
+                Anterior
+              </Button>
+            </Link>
+
+            <span className="text-xs text-slate-400 px-2">
+              Página {currentPage} de {totalPages}
+            </span>
+
+            <Link
+              href={`/gestor/usuarios?page=${currentPage + 1}${search ? `&q=${search}` : ''}`}
+              className={currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''}
+            >
+              <Button variant="outline" size="sm" disabled={currentPage >= totalPages} className="border-slate-700 text-slate-300">
+                Próximo
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </main>
   )
 }

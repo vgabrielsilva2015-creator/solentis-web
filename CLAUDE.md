@@ -10,37 +10,39 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Item (d) — Decisões antes do código tomadas (ver seção 17 do BRIEFING.md)
 ✅ Adição pós-d — Preparo para sensores (sem implementação no MVP)
 ✅ Item (e) — PLANO em 12 fases aprovado (29–44h) — ver /docs/PLANO.md
-✅ Item (f) — Modelo de dados aprovado (21 tabelas, 9 enums, multi-tenant) — ver /docs/MODELO_DE_DADOS.md
-✅ Item (g) — Fase 1 (scaffold) 100% CONCLUÍDA — ver seção abaixo
-✅ Fase 5 — Leituras de campo CONCLUÍDA — ver seção abaixo
-✅ Fase 6 — Análises laboratoriais CONCLUÍDA — ver seção abaixo
-✅ Fase 7 — Equipamentos e manutenções CONCLUÍDA — ver seção abaixo
-✅ Fase 8 — Ocorrências CONCLUÍDA — ver seção abaixo
-✅ Fase 9 — Turnos CONCLUÍDA — ver seção abaixo
-✅ Feature extra — Tarefas por Turno CONCLUÍDA — ver seção abaixo
-✅ Feature extra — Controle de Estoque de Produtos Químicos CONCLUÍDA — ver seção abaixo
-✅ Fase 10 — Dashboards CONCLUÍDA — ver seção abaixo
-✅ Fase 11 — Auditoria, Testes e Hardening CONCLUÍDA — ver seção abaixo
-✅ Fase 12 — Polish Mobile CONCLUÍDA — ver seção abaixo
+✅ Item (f) — Modelo de dados aprovado (multi-tenant) — ver /docs/MODELO_DE_DADOS.md
+✅ Fase 1 — Scaffold 100% CONCLUÍDA
+✅ Fase 2 — Autenticação e Usuários CONCLUÍDA
+✅ Fase 3 — Schema Completo + Seed CONCLUÍDA
+✅ Fase 4 — Listas Gerenciadas pelo Gestor CONCLUÍDA
+✅ Fase 5 — Leituras de Campo CONCLUÍDA
+✅ Fase 6 — Análises Laboratoriais CONCLUÍDA
+✅ Fase 7 — Equipamentos e Manutenções CONCLUÍDA
+✅ Fase 8 — Ocorrências CONCLUÍDA
+✅ Fase 9 — Turnos CONCLUÍDA
+✅ Feature extra — Tarefas por Turno CONCLUÍDA
+✅ Feature extra — Controle de Estoque de Produtos Químicos CONCLUÍDA
+✅ Fase 10 — Dashboards CONCLUÍDA
+✅ Fase 11 — Auditoria, Testes e Hardening CONCLUÍDA
+✅ Fase 12 — Polish Mobile CONCLUÍDA
+✅ Ciclo 3 — Notificações, Filtros, Exportação para CSV, Ponto de Coleta e Categoria na Ocorrência CONCLUÍDA
+✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
-- Stack: Next.js 14+, TypeScript, Tailwind, SQLite+Prisma, NextAuth, Zod, Recharts, shadcn/ui
+- Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
-- Modo offline: NÃO no MVP (talvez v1.0, "a avaliar")
+- Modo offline e PWA: IMPLEMENTADO com Serwist (sincronização automática de leituras ao voltar online)
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
 - Credencial inicial seed: admin@solentis.local / Admin@123 (sistema obriga troca no 1º login)
-- Multi-tenant desde o MVP via tenant_id + middleware Prisma (seed: id="default")
-- Servidor Next.js validado em :3000 — Fase 1 100% concluída
+- Multi-tenant desde o MVP via tenant_id + middleware Prisma
+- Servidor Next.js validado na porta :3000
 - Tailwind v4 instalado (config no CSS, não em tailwind.config.ts)
-- shadcn/ui v4.7 preset Nova + Radix + base neutral (ver seção "Descobertas" abaixo)
+- shadcn/ui v4.7 preset Nova + Radix + base neutral
 
-### Tabelas (21)
-tenants, users, sessions, login_attempts, quality_parameters, analysis_methods,
-equipment_categories, collection_points, shifts, occurrence_severity_defaults,
-readings, analyses, equipment, preventive_maintenances, corrective_maintenances,
-occurrences, occurrence_photos, shift_instances, shift_handovers, audit_logs, parameter_history
+### Tabelas (33)
+tenants, users, login_attempts, sessions, push_subscriptions, quality_parameters, parameter_limits, parameter_history, parameter_aliases, analysis_methods, equipment_categories, collection_points, shifts, shift_schedules, occurrence_severity_defaults, equipment, shift_instances, readings, analyses, external_analyses, monitoring_schedules, preventive_maintenances, corrective_maintenances, occurrences, occurrence_photos, shift_handovers, shift_tasks, shift_task_photos, chemical_products, chemical_stock_entries, chemical_stock_exits, chemical_stock_counts, audit_logs
 
 ### Enums (9)
 Role, DataOrigin, OccurrenceSeverity, OccurrenceStatus, MaintenanceStatus,

@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation'
 
 async function requireOperator() {
   const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
+  if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
     redirect('/login')
   }
   return session
@@ -64,7 +64,6 @@ export async function registrarLeitura(
   formData: FormData,
 ): Promise<LeituraFormState> {
   const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar leituras.' }
 
   const parsed = LeituraSchema.safeParse({
     collection_point_id: formData.get('collection_point_id'),
@@ -166,5 +165,8 @@ export async function registrarLeitura(
 
   revalidatePath('/operador/leituras')
   revalidatePath('/operador/ocorrencias')
+  revalidatePath('/operador/dashboard')
+  revalidatePath('/tecnico/dashboard')
+  revalidatePath('/gestor/dashboard')
   return { success: true }
 }
