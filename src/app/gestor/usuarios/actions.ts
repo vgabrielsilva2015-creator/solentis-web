@@ -45,27 +45,27 @@ export async function criarUsuario(
   _prev: UsuarioFormState,
   formData: FormData,
 ): Promise<UsuarioFormState> {
-  const session = await requireRole(['MANAGER'])
-  const tenantId = await getTenantId()
-
-  const parsed = UsuarioSchema.safeParse({
-    name:  formData.get('name'),
-    email: formData.get('email'),
-    role:  formData.get('role'),
-  })
-  if (!parsed.success) {
-    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
-  }
-
-  const managerId = await resolveUserId(session.user.email!, tenantId)
-  if (!managerId) {
-    return { error: 'Sessão inválida, faça login novamente.' }
-  }
-
-  const tempPassword = gerarSenhaProvisoria()
-  const passwordHash = await hashPassword(tempPassword)
-
   try {
+    const session = await requireRole(['MANAGER'])
+    const tenantId = await getTenantId()
+
+    const parsed = UsuarioSchema.safeParse({
+      name:  formData.get('name'),
+      email: formData.get('email'),
+      role:  formData.get('role'),
+    })
+    if (!parsed.success) {
+      return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+    }
+
+    const managerId = await resolveUserId(session.user.email!, tenantId)
+    if (!managerId) {
+      return { error: 'Sessão inválida, faça login novamente.' }
+    }
+
+    const tempPassword = gerarSenhaProvisoria()
+    const passwordHash = await hashPassword(tempPassword)
+
     await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
@@ -88,16 +88,19 @@ export async function criarUsuario(
         after:     { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role, is_active: true },
       })
     })
-  } catch (e) {
+
+    revalidatePath('/gestor/usuarios')
+    return { tempPassword }
+  } catch (e: any) {
+    if (e && typeof e === 'object' && 'message' in e && e.message === 'NEXT_REDIRECT') {
+      throw e // let Next.js handle redirects
+    }
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     const errorMessage = e instanceof Error ? e.message : String(e)
-    return { error: 'Erro ao criar: ' + errorMessage }
+    return { error: 'Erro geral (Crash interceptado): ' + errorMessage + ' ' + (e.stack || '') }
   }
-
-  revalidatePath('/gestor/usuarios')
-  return { tempPassword }
 }
 
 // ─── Editar ──────────────────────────────────────────────────────────────────
