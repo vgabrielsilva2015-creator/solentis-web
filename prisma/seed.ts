@@ -13,10 +13,11 @@ async function main() {
   console.log(`Tenant: ${tenant.name}`)
 
   // ── Usuários (hashes em paralelo) ─────────────────────────────────────────
-  const [adminHash, tecnicoHash, operadorHash] = await Promise.all([
+  const [adminHash, tecnicoHash, operadorHash, manutencaoHash] = await Promise.all([
     hashPassword('Admin@123'),
     hashPassword('Tecnico@123'),
     hashPassword('Operador@123'),
+    hashPassword('Manutencao@123'),
   ])
 
   const admin = await prisma.user.upsert({
@@ -65,6 +66,22 @@ async function main() {
     },
   })
   console.log(`Usuario: ${operador.email} (${operador.role})`)
+
+  const manutencao = await prisma.user.upsert({
+    where: { tenant_id_email: { tenant_id: 'default', email: 'manutencao@solentis.local' } },
+    update: {},
+    create: {
+      tenant_id: 'default',
+      email: 'manutencao@solentis.local',
+      password_hash: manutencaoHash,
+      name: 'Manutencao Padrao',
+      role: 'MAINTENANCE',
+      must_change_password: false,
+      is_active: true,
+      created_by: admin.id,
+    },
+  })
+  console.log(`Usuario: ${manutencao.email} (${manutencao.role})`)
 
   // ── Parâmetros de qualidade CONAMA ────────────────────────────────────────
   const effectiveDate = new Date('2025-01-01T00:00:00.000Z')

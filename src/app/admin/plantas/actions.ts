@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
-import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -87,7 +87,7 @@ export async function criarPlanta(
     return { success: true, tempPassword, gestorEmail }
     
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    if (e instanceof PrismaClientKnownRequestError) {
       if (e.code === 'P2002') {
         const target = e.meta?.target as string[] | string
         if (target && target.includes('slug')) {

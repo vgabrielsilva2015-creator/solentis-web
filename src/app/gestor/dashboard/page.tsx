@@ -311,6 +311,7 @@ export default async function GestorDashboard({
     latestNCExternal,
   ] = await Promise.all([
     prisma.auditLog.findMany({
+      where: { user: { tenant_id } },
       orderBy: { timestamp: 'desc' },
       take: 5,
       include: { user: { select: { name: true } } }

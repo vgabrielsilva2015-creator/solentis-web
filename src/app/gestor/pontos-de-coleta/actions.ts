@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -73,7 +73,7 @@ export async function criarPontoColeta(
       },
     })
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+    if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { name: ['Já existe um ponto de coleta com este nome'] } }
     }
     return { error: 'Erro ao criar ponto de coleta. Tente novamente.' }
@@ -118,7 +118,7 @@ export async function editarPontoColeta(
       },
     })
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+    if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { name: ['Já existe um ponto de coleta com este nome'] } }
     }
     return { error: 'Erro ao salvar alterações. Tente novamente.' }
