@@ -3,7 +3,6 @@
 import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -95,7 +94,7 @@ export async function criarUsuario(
     if (e && typeof e === 'object' && 'message' in e && e.message === 'NEXT_REDIRECT') {
       throw e // let Next.js handle redirects
     }
-    if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+    if (e && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     const errorMessage = e instanceof Error ? e.message : String(e)
@@ -147,8 +146,8 @@ export async function editarUsuario(
         after:     { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
       })
     })
-  } catch (e) {
-    if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+  } catch (e: any) {
+    if (e && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     const errorMessage = e instanceof Error ? e.message : String(e)
