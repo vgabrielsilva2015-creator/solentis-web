@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "export:code": "node scripts/export-code.js"
+    "export:code": "node scripts/export-code.js",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

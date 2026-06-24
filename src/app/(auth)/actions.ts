@@ -13,7 +13,6 @@ function decodeToken(token: string) {
 
 export async function sendPasswordResetLink(email: string) {
 
-  // @tenant-safe: Login/Reset busca globalmente o primeiro usuário pelo email
   const user = await prisma.user.findFirst({
     where: { email, is_active: true }
   })
@@ -38,7 +37,6 @@ export async function resetPassword(token: string, newPassword: string) {
   try {
     const email = decodeToken(token)
     
-    // @tenant-safe: Login/Reset busca globalmente o primeiro usuário pelo email
     const user = await prisma.user.findFirst({
       where: { email, is_active: true }
     })

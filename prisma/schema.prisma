@@ -58,7 +58,7 @@ model Tenant {
 model User {
   id                   String    @id @default(cuid())
   tenant_id            String
-  email                String
+  email                String   @unique
   password_hash        String
   name                 String
   phone                String?

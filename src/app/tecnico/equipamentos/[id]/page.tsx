@@ -300,7 +300,7 @@ export default async function EquipamentoDetailPage({
                       corretivaId={c.id}
                       currentStatus={c.status as any}
                       userRole={session.user.role}
-                      estimatedCost={c.estimated_cost}
+                      estimatedCost={c.estimated_cost ? Number(c.estimated_cost) : null}
                       initialNotes={c.notes}
                     />
                   </div>

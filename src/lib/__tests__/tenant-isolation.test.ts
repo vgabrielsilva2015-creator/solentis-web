@@ -188,13 +188,13 @@ describe('isolamento multi-tenant — guardião de segurança', () => {
     const violations = scan()
     if (violations.length > 0) {
       const report = violations
-        .map(v => `  ❌ ${v.file}:${v.line}  ${v.delegate}.${v.op}()  →  { ${v.snippet} }`)
-        .join('\n')
+          .map(v => `  ❌ ${v.file}:${v.line}  ${v.delegate}.${v.op}()  →  { ${v.snippet} }`)
+          .join('\n')
       throw new Error(
-        `\n\n🚨 VAZAMENTO DE TENANT DETECTADO — ${violations.length} query(s) sem isolamento:\n\n${report}\n\n` +
-        `Cada query acima lê/escreve dados de um modelo com tenant_id mas NÃO filtra por tenant.\n` +
-        `Isso permite que uma planta acesse dados de outra (incidente LGPD).\n` +
-        `Corrija adicionando 'tenant_id' ao where, ou usando a PK composta (tenant_id_*).\n`,
+          `\n\n🚨 VAZAMENTO DE TENANT DETECTADO — ${violations.length} query(s) sem isolamento:\n\n${report}\n\n` +
+          `Cada query acima lê/escreve dados de um modelo com tenant_id mas NÃO filtra por tenant.\n` +
+          `Isso permite que uma planta acesse dados de outra (incidente LGPD).\n` +
+          `Corrija adicionando 'tenant_id' ao where, ou usando a PK composta (tenant_id_*).\n`,
       )
     }
     expect(violations).toHaveLength(0)
