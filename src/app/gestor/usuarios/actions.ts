@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requireRole } from '@/lib/auth-utils'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
@@ -10,22 +10,15 @@ import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
 import { getTenantId } from '@/lib/tenant'
 
-
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    redirect('/login')
-  }
-  return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
+async function resolveUserId(email: string, tenantId: string): Promise<string | null> {
+  const user = await prisma.user.findFirst({
+    where:  { email, tenant_id: tenantId },
     select: { id: true },
   })
   return user?.id ?? null
 }
+
+
 
 function gerarSenhaProvisoria(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
@@ -52,7 +45,8 @@ export async function criarUsuario(
   _prev: UsuarioFormState,
   formData: FormData,
 ): Promise<UsuarioFormState> {
-  const session = await requireManager()
+  const session = await requireRole(['MANAGER'])
+  const tenantId = await getTenantId()
 
   const parsed = UsuarioSchema.safeParse({
     name:  formData.get('name'),
@@ -63,17 +57,19 @@ export async function criarUsuario(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const [managerId, tempPassword] = [
-    await resolveUserId(session.user.email!),
-    gerarSenhaProvisoria(),
-  ]
+  const managerId = await resolveUserId(session.user.email!, tenantId)
+  if (!managerId) {
+    return { error: 'Sessão inválida, faça login novamente.' }
+  }
+
+  const tempPassword = gerarSenhaProvisoria()
   const passwordHash = await hashPassword(tempPassword)
 
   try {
     await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
-          tenant_id:            (await getTenantId()),
+          tenant_id:            tenantId,
           name:                 parsed.data.name,
           email:                parsed.data.email,
           role:                 parsed.data.role,
@@ -84,7 +80,7 @@ export async function criarUsuario(
         select: { id: true },
       })
       await logAudit(tx, {
-        tenantId: (await getTenantId()),
+        tenantId: tenantId,
         userId:    managerId,
         action:    'CREATE',
         tableName: 'users',
@@ -94,7 +90,7 @@ export async function criarUsuario(
     })
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-      return { fieldErrors: { email: ['E-mail já cadastrado'] } }
+      return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     return { error: 'Erro ao criar usuário. Tente novamente.' }
   }
@@ -110,7 +106,8 @@ export async function editarUsuario(
   _prev: UsuarioFormState,
   formData: FormData,
 ): Promise<UsuarioFormState> {
-  const session = await requireManager()
+  const session = await requireRole(['MANAGER'])
+  const tenantId = await getTenantId()
 
   const parsed = UsuarioSchema.safeParse({
     name:  formData.get('name'),
@@ -121,20 +118,23 @@ export async function editarUsuario(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const [current, managerId] = await Promise.all([
-    prisma.user.findFirst({ where: { id: userId , tenant_id: (await getTenantId()) },
-      select: { name: true, email: true, role: true },
-    }),
-    resolveUserId(session.user.email!),
-  ])
+  const managerId = await resolveUserId(session.user.email!, tenantId)
+  if (!managerId) return { error: 'Sessão inválida.' }
+
+  const current = await prisma.user.findFirst({
+    where: { id: userId, tenant_id: tenantId },
+    select: { name: true, email: true, role: true },
+  })
   if (!current) return { error: 'Usuário não encontrado.' }
 
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
+      await tx.user.updateMany({
+        where: { id: userId, tenant_id: tenantId },
+        data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
       })
       await logAudit(tx, {
-        tenantId: (await getTenantId()),
+        tenantId: tenantId,
         userId:    managerId,
         action:    'UPDATE',
         tableName: 'users',
@@ -145,7 +145,7 @@ export async function editarUsuario(
     })
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-      return { fieldErrors: { email: ['E-mail já cadastrado'] } }
+      return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     return { error: 'Erro ao salvar alterações. Tente novamente.' }
   }
@@ -159,27 +159,37 @@ export async function editarUsuario(
 export async function toggleAtivo(
   userId: string,
 ): Promise<{ error?: string }> {
-  const session = await requireManager()
+  const session = await requireRole(['MANAGER'])
+  const tenantId = await getTenantId()
 
-  const [user, managerId] = await Promise.all([
-    prisma.user.findFirst({ where: { id: userId , tenant_id: (await getTenantId()) }, select: { is_active: true } }),
-    resolveUserId(session.user.email!),
-  ])
+  const managerId = await resolveUserId(session.user.email!, tenantId)
+  if (!managerId) return { error: 'Sessão inválida.' }
+
+  const user = await prisma.user.findFirst({
+    where: { id: userId, tenant_id: tenantId },
+    select: { is_active: true }
+  })
   if (!user) return { error: 'Usuário não encontrado.' }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { is_active: !user.is_active },
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
+        where: { id: userId, tenant_id: tenantId },
+        data:  { is_active: !user.is_active },
+      })
+      await logAudit(tx, {
+        tenantId: tenantId,
+        userId:    managerId,
+        action:    'UPDATE',
+        tableName: 'users',
+        recordId:  userId,
+        before:    { is_active:  user.is_active  },
+        after:     { is_active: !user.is_active  },
+      })
     })
-    await logAudit(tx, {
-      tenantId: (await getTenantId()),
-      userId:    managerId,
-      action:    'UPDATE',
-      tableName: 'users',
-      recordId:  userId,
-      before:    { is_active:  user.is_active  },
-      after:     { is_active: !user.is_active  },
-    })
-  })
+  } catch (e) {
+    return { error: 'Erro ao alterar status do usuário.' }
+  }
 
   revalidatePath('/gestor/usuarios')
   revalidatePath(`/gestor/usuarios/${userId}`)
@@ -191,29 +201,39 @@ export async function toggleAtivo(
 export async function resetarSenha(
   userId: string,
 ): Promise<{ error?: string; tempPassword?: string }> {
-  const session = await requireManager()
+  const session = await requireRole(['MANAGER'])
+  const tenantId = await getTenantId()
 
-  const [user, managerId] = await Promise.all([
-    prisma.user.findFirst({ where: { id: userId , tenant_id: (await getTenantId()) }, select: { id: true } }),
-    resolveUserId(session.user.email!),
-  ])
+  const managerId = await resolveUserId(session.user.email!, tenantId)
+  if (!managerId) return { error: 'Sessão inválida.' }
+
+  const user = await prisma.user.findFirst({
+    where: { id: userId, tenant_id: tenantId },
+    select: { id: true }
+  })
   if (!user) return { error: 'Usuário não encontrado.' }
 
   const tempPassword = gerarSenhaProvisoria()
   const passwordHash = await hashPassword(tempPassword)
 
-  await prisma.$transaction(async (tx) => {
-    await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { password_hash: passwordHash, must_change_password: true },
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
+        where: { id: userId, tenant_id: tenantId },
+        data:  { password_hash: passwordHash, must_change_password: true },
+      })
+      await logAudit(tx, {
+        tenantId: tenantId,
+        userId:    managerId,
+        action:    'UPDATE',
+        tableName: 'users',
+        recordId:  userId,
+        after:     { must_change_password: true },
+      })
     })
-    await logAudit(tx, {
-      tenantId: (await getTenantId()),
-      userId:    managerId,
-      action:    'UPDATE',
-      tableName: 'users',
-      recordId:  userId,
-      after:     { must_change_password: true },
-    })
-  })
+  } catch (e) {
+    return { error: 'Erro ao resetar senha do usuário.' }
+  }
 
   return { tempPassword }
 }

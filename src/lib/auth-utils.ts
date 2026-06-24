@@ -39,3 +39,14 @@ export function isRouteAllowedForRole(pathname: string, userRole: string): boole
   }
   return true
 }
+
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+
+export async function requireRole(roles: string[]) {
+  const session = await auth()
+  if (!session || !roles.includes(session.user.role)) {
+    redirect('/login')
+  }
+  return session
+}
