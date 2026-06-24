@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { BackButton } from '@/components/back-button'
 import { Input } from '@/components/ui/input'
-import { editarUsuario, toggleAtivo, resetarSenha, type UsuarioFormState } from '../actions'
+import { editarUsuario, toggleAtivo, resetarSenha } from '../actions'
+import { type UsuarioFormState } from '../schema'
 
 type User = {
   id:                   string

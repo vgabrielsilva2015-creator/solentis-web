@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { criarUsuario, UsuarioSchema, type UsuarioFormState } from '../actions'
+import { criarUsuario } from '../actions'
+import { UsuarioSchema, type UsuarioFormState } from '../schema'
 
 const initialState: UsuarioFormState = {}
 
