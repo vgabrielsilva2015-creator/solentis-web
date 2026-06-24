@@ -58,6 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Para evitar timing attacks, consultamos o usuário primeiro,
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
+        // @tenant-safe: fluxo de auth busca usuario pelo email globalmente
         const user = await prisma.user.findFirst({
           where: { 
             email: { equals: email, mode: 'insensitive' }, 
