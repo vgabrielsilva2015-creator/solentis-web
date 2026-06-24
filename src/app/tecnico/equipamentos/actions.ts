@@ -460,8 +460,8 @@ export async function atualizarStatusCorretiva(
 
     // Se validado, cria log de manutenção automática
     if (status === 'VALIDATED') {
-      const respUser = await tx.user.findUnique({
-        where: { id: corretiva.responsible_id },
+      const respUser = await tx.user.findFirst({
+        where: { id: corretiva.responsible_id, tenant_id: tenantId },
         select: { name: true }
       })
       await tx.maintenanceLog.create({

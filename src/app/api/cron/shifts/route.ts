@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const currentDayOfWeek = today.getDay()
     const targetDate = startOfDay(today)
 
-    // Busca os agendamentos ativos
+    // @tenant-safe: Job de sistema que gera turnos para todos os tenants
     const schedules = await prisma.shiftSchedule.findMany({
       where: {
         is_active: true,

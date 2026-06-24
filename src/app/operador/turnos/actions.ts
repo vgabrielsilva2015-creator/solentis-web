@@ -85,6 +85,7 @@ export async function aplicarTimeouts(): Promise<void> {
   const now = new Date()
   await prisma.shiftHandover.updateMany({
     where: {
+      tenant_id:  await getTenantId(),
       status:     'PENDING',
       timeout_at: { lt: now },
     },
