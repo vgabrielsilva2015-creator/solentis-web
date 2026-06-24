@@ -74,7 +74,9 @@ function getDashboard(role: string): string {
   switch (role) {
     case 'MANAGER':    return '/gestor/dashboard'
     case 'TECHNICIAN': return '/tecnico/dashboard'
-    case 'OPERATOR':   return '/operador/dashboard'
+    case 'OPERATOR':   return '/operador/turnos'
+    case 'MAINTENANCE': return '/manutencao/dashboard'
+    case 'SUPER_ADMIN': return '/admin/plantas'
     default:           return '/login'
   }
 }

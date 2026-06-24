@@ -1,8 +1,8 @@
-﻿import { z } from 'zod'
+import { z } from 'zod'
 
 export const UsuarioSchema = z.object({
   name:  z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('E-mail inválido'),
+  email: z.string().trim().toLowerCase().email('E-mail inválido'),
   role:  z.enum(['OPERATOR', 'TECHNICIAN', 'MANAGER', 'MAINTENANCE']),
 })
 

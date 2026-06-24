@@ -11,7 +11,10 @@ import { getTenantId } from '@/lib/tenant'
 
 async function resolveUserId(email: string, tenantId: string): Promise<string | null> {
   const user = await prisma.user.findFirst({
-    where:  { email, tenant_id: tenantId },
+    where:  { 
+      email: { equals: email.trim(), mode: 'insensitive' }, 
+      tenant_id: tenantId 
+    },
     select: { id: true },
   })
   return user?.id ?? null

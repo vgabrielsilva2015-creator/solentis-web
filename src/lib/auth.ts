@@ -59,7 +59,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Para evitar timing attacks, consultamos o usuário primeiro,
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
         const user = await prisma.user.findFirst({
-          where: { email, is_active: true },
+          where: { 
+            email: { equals: email.trim(), mode: 'insensitive' }, 
+            is_active: true 
+          },
         })
 
         // Hash pré-computado dummy (exemplo: bcrypt de "dummy")
