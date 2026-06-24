@@ -37,7 +37,7 @@ declare module '@auth/core/jwt' {
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.trim().toLowerCase()),
   password: z.string().min(1),
 })
 
@@ -60,7 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
         const user = await prisma.user.findFirst({
           where: { 
-            email: { equals: email.trim(), mode: 'insensitive' }, 
+            email: { equals: email, mode: 'insensitive' }, 
             is_active: true 
           },
         })
@@ -70,7 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user) {
           // Usuário não existe:
-          // Fazemos a verificação do hash dummy para prevenir timing attacks
+          // Fazemos a verificação do hash dummy para prevenir timing attacks e não tentamos logar auditoria.
           await verifyPassword(password, dummyHash).catch(() => {})
           return null
         }
@@ -78,17 +78,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const tenantIdForLog = user.tenant_id
 
         const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
-        const recentFailures = await prisma.loginAttempt.count({
-          where: {
-            tenant_id: tenantIdForLog,
-            email,
-            success: false,
-            attempted_at: { gte: windowStart },
-          },
-        })
+        try {
+          const recentFailures = await prisma.loginAttempt.count({
+            where: {
+              tenant_id: tenantIdForLog,
+              email,
+              success: false,
+              attempted_at: { gte: windowStart },
+            },
+          })
 
-        if (isRateLimited(recentFailures)) {
-          throw new Error('RATE_LIMITED')
+          if (isRateLimited(recentFailures)) {
+            throw new Error('RATE_LIMITED')
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message === 'RATE_LIMITED') {
+            throw error // Propaga apenas o bloqueio
+          }
+          console.error("Falha ao checar rate limit", error)
         }
 
         const isValid = await verifyPassword(password, user.password_hash)
@@ -108,10 +115,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isValid) return null
 
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { last_login_at: new Date() },
-        })
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { last_login_at: new Date() },
+          })
+        } catch (error) {
+          console.error("Falha ao atualizar last_login_at", error)
+        }
 
         return {
           id:                  user.id,

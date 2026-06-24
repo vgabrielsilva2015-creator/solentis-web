@@ -5,7 +5,7 @@ import { AuthError } from 'next-auth'
 import { z } from 'zod'
 
 const LoginSchema = z.object({
-  email:    z.string().trim().toLowerCase().email(),
+  email:    z.string().email().transform(v => v.trim().toLowerCase()),
   password: z.string().min(1),
 })
 

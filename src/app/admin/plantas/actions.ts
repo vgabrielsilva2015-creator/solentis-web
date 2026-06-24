@@ -27,7 +27,7 @@ const PlantaSchema = z.object({
   tenantName:  z.string().min(2, 'Nome da planta muito curto'),
   slug:        z.string().min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
   gestorName:  z.string().min(2, 'Nome do gestor muito curto'),
-  gestorEmail: z.string().email('E-mail inválido'),
+  gestorEmail: z.string().email('E-mail inválido').transform(v => v.trim().toLowerCase()),
 })
 
 export type PlantaFormState = {
