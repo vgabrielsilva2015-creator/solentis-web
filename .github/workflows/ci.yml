@@ -1,0 +1,56 @@
+name: CI
+
+# Roda em todo push e em todo PR para a main.
+# O objetivo principal é o GUARDIÃO DE ISOLAMENTO MULTI-TENANT:
+# se qualquer query esquecer o tenant_id, o build falha aqui e bloqueia o merge.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela execuções antigas do mesmo branch/PR quando um novo push chega.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolamento-e-qualidade:
+    name: Isolamento multi-tenant + Testes + Typecheck
+    runs-on: ubuntu-latest
+
+    # Os testes NÃO conectam ao banco (são puros / análise estática).
+    # Estas variáveis são apenas placeholders para o Prisma não reclamar de env ausente.
+    # NÃO são credenciais reais e nunca conectam a lugar nenhum.
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci?schema=public"
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+        # O postinstall do projeto roda "prisma generate". Em CI sem DATABASE_URL isso
+        # ainda funciona para gerar o client (não precisa de conexão), mas garantimos abaixo.
+
+      - name: Gerar Prisma Client
+        run: npx prisma generate
+
+      - name: 🔒 GUARDIÃO — Isolamento multi-tenant + suite de testes
+        # --no-cache é OBRIGATÓRIO: o teste de isolamento lê arquivos do disco via fs,
+        # e o cache do Vitest poderia mascarar um vazamento recém-introduzido.
+        run: npx vitest run --no-cache
+
+      - name: Verificação de tipos (TypeScript)
+        # Não falha o build por erros de tipo pré-existentes (implicit any).
+        # Roda como informativo até a limpeza de tipos estar concluída.
+        run: npx tsc --noEmit || echo "::warning::Há erros de TypeScript a revisar (não bloqueante por enquanto)"
+        continue-on-error: true
