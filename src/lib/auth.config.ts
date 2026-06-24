@@ -15,6 +15,7 @@ export const authConfig = {
         token.role               = user.role
         token.mustChangePassword = user.mustChangePassword
         token.tenantId           = user.tenantId
+        token.email              = user.email // Garante que a sessão use o e-mail exato do banco de dados
 
         // Timeout de sessão diferente por perfil
         token.exp = Math.floor(Date.now() / 1000) + getSessionMaxAge(user.role)
