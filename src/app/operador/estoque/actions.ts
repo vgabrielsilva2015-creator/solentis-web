@@ -107,6 +107,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   revalidatePath(`/operador/estoque/${product_id}`)
   revalidatePath('/tecnico/estoque')
   revalidatePath(`/tecnico/estoque/${product_id}`)
+  revalidatePath('/gestor/dashboard')
 
   return { success: true }
 }
@@ -136,5 +137,6 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
 
   revalidatePath('/operador/estoque')
   revalidatePath(`/operador/estoque/${product_id}`)
+  revalidatePath('/gestor/dashboard')
   return { success: true }
 }

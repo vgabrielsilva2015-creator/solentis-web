@@ -103,6 +103,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
   })
 
   revalidatePath('/gestor/produtos-quimicos')
+  revalidatePath('/gestor/dashboard')
   return { success: true }
 }
 
@@ -127,6 +128,7 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath(`/gestor/produtos-quimicos/${id}`)
+  revalidatePath('/gestor/dashboard')
   return { success: true }
 }
 
@@ -138,6 +140,7 @@ export async function toggleAtivoProduto(id: string, is_active: boolean) {
 
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath(`/gestor/produtos-quimicos/${id}`)
+  revalidatePath('/gestor/dashboard')
 }
 
 export async function registrarEntrada(_prev: unknown, formData: FormData) {
@@ -166,5 +169,6 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
 
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath(`/gestor/produtos-quimicos/${product_id}`)
+  revalidatePath('/gestor/dashboard')
   return { success: true }
 }

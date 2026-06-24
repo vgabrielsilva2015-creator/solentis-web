@@ -81,7 +81,6 @@ export function DashboardClient({
   latestNCToday,
 }: DashboardClientProps) {
   const router = useRouter()
-  const [period, setPeriod] = useState<string>('7d')
 
   // Toast notification state
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null)
@@ -141,6 +140,17 @@ export function DashboardClient({
     e.preventDefault()
     setIsSubmitting(true)
     setModalError(null)
+
+    if (!modalCollectionPointId) {
+      setModalError('Selecione um ponto de coleta')
+      setIsSubmitting(false)
+      return
+    }
+    if (!modalRecordedAt) {
+      setModalError('Data/hora da coleta é obrigatória')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       const formData = new FormData()
@@ -302,9 +312,15 @@ export function DashboardClient({
         <div style={{ fontFamily: F.sora, fontSize: '15px', fontWeight: 600, color: 'var(--txt)' }}>{m.title}</div>
         <div style={{ fontSize: '12.5px', color: 'var(--txt3)', marginTop: '5px', maxWidth: '300px', lineHeight: 1.5 }}>{m.sub}</div>
         <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-          <button style={{ background: 'var(--brand)', color: 'var(--on-brand)', border: 'none', borderRadius: '9px', padding: '9px 15px', fontSize: '12.5px', fontWeight: 600, fontFamily: F.body, cursor: 'pointer' }}>
-            {m.cta}
-          </button>
+          {kind === 'trend' ? (
+            <button onClick={() => setIsReadingModalOpen(true)} style={{ background: 'var(--brand)', color: 'var(--on-brand)', border: 'none', borderRadius: '9px', padding: '9px 15px', fontSize: '12.5px', fontWeight: 600, fontFamily: F.body, cursor: 'pointer' }}>
+              {m.cta}
+            </button>
+          ) : (
+            <Link href="/gestor/produtos-quimicos" style={{ background: 'var(--brand)', color: 'var(--on-brand)', border: 'none', borderRadius: '9px', padding: '9px 15px', fontSize: '12.5px', fontWeight: 600, fontFamily: F.body, cursor: 'pointer', textDecoration: 'none' }}>
+              {m.cta}
+            </Link>
+          )}
         </div>
       </div>
     )
@@ -1892,6 +1908,7 @@ export function DashboardClient({
             {[1, 7, 30].map((d) => (
               <Link
                 key={d}
+                scroll={false}
                 href={`/gestor/dashboard?dias=${d}${paramId ? `&paramId=${paramId}` : ''}`}
                 style={{
                   padding: '5px 11px',
