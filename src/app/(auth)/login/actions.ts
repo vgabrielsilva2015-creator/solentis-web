@@ -39,7 +39,11 @@ export async function loginAction(
           return { error: 'E-mail ou senha incorretos.' }
         case 'CallbackRouteError':
           // Rate limit ou conta inativa — mensagem do authorize()
-          return { error: err.cause?.err?.message ?? 'Acesso bloqueado temporariamente.' }
+          const msg = err.cause?.err?.message
+          if (msg === 'RATE_LIMITED') {
+            return { error: 'Muitas tentativas falhas. Tente novamente mais tarde.' }
+          }
+          return { error: msg ?? 'Acesso bloqueado temporariamente.' }
         default:
           return { error: 'Erro ao tentar entrar. Tente novamente.' }
       }

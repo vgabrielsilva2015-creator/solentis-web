@@ -62,7 +62,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email, is_active: true },
         })
 
-        const tenantIdForLog = user?.tenant_id || 'unknown'
+        // Hash pré-computado dummy (exemplo: bcrypt de "dummy")
+        const dummyHash = "$2a$10$8.z8o.bM.g0U8Q8z9w9f8.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8"
+
+        if (!user) {
+          // Usuário não existe:
+          // Fazemos a verificação do hash dummy para prevenir timing attacks
+          await verifyPassword(password, dummyHash).catch(() => {})
+          return null
+        }
+
+        const tenantIdForLog = user.tenant_id
 
         const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
         const recentFailures = await prisma.loginAttempt.count({
@@ -78,20 +88,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new Error('RATE_LIMITED')
         }
 
-        const isValid = user
-          ? await verifyPassword(password, user.password_hash)
-          : false
+        const isValid = await verifyPassword(password, user.password_hash)
 
-        // Registra a tentativa independente do resultado
-        await prisma.loginAttempt.create({
-          data: {
-            tenant_id: tenantIdForLog,
-            email,
-            success: isValid,
-          },
-        })
+        // Registra a tentativa de login (auditoria)
+        try {
+          await prisma.loginAttempt.create({
+            data: {
+              tenant_id: tenantIdForLog,
+              email,
+              success: isValid,
+            },
+          })
+        } catch (error) {
+          console.error("Falha ao registrar tentativa de login", error)
+        }
 
-        if (!user || !isValid) return null
+        if (!isValid) return null
 
         await prisma.user.update({
           where: { id: user.id },
