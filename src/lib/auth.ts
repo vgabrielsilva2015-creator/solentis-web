@@ -122,3 +122,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 })
+
+import { redirect } from 'next/navigation'
+
+export async function requireRole(roles: string[]) {
+  const session = await auth()
+  if (!session || !roles.includes(session.user.role)) {
+    redirect('/login')
+  }
+  return session
+}

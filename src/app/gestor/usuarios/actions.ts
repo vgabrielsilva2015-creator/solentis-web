@@ -1,6 +1,6 @@
 'use server'
 
-import { requireRole } from '@/lib/auth-utils'
+import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
