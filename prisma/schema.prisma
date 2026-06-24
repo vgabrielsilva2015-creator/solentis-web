@@ -49,7 +49,8 @@ model Tenant {
   monitoring_schedules    MonitoringSchedule[]
   maintenance_logs        MaintenanceLog[]
   shift_scales            ShiftScale[]
-  maintenance_days        MaintenanceDay[]
+  maintenance_days           MaintenanceDay[]
+  occurrence_severity_defaults OccurrenceSeverityDefault[]
 
   @@map("tenants")
 }
@@ -346,13 +347,16 @@ model ShiftSchedule {
 
 // 4 linhas fixas (uma por severidade) — PK é o próprio severity; sem tenant_id (global)
 model OccurrenceSeverityDefault {
-  severity       String   @id
+  tenant_id      String
+  severity       String
   deadline_hours Int
   updated_at     DateTime @updatedAt
   updated_by     String
 
-  updater User @relation(fields: [updated_by], references: [id])
+  tenant  Tenant @relation(fields: [tenant_id], references: [id])
+  updater User   @relation(fields: [updated_by], references: [id])
 
+  @@id([tenant_id, severity])
   @@map("occurrence_severity_defaults")
 }
 
@@ -877,11 +881,12 @@ model ShiftScale {
 model MaintenanceDay {
   id          String   @id @default(cuid())
   tenant_id   String
-  date        DateTime @unique
+  date        DateTime
   description String?
   created_at  DateTime @default(now())
 
   tenant      Tenant   @relation(fields: [tenant_id], references: [id])
 
+  @@unique([tenant_id, date])
   @@map("maintenance_days")
 }
