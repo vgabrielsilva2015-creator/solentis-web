@@ -7,6 +7,7 @@ import { ArrowLeft, Clock, AlertTriangle, User, CheckCircle2, History, MapPin } 
 import { PageHeader } from '@/components/ui/page-header'
 import { SEVERITY_LABEL, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
 import { resolverOcorrencia } from '../actions'
+import { OccurrenceTimeline } from '@/components/occurrence-timeline'
 
 export default async function OperadorOcorrenciaDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -21,7 +22,13 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
       responsible: { select: { name: true } },
       resolver: { select: { name: true } },
       collection_point: { select: { name: true } },
-      photos: { select: { id: true }, take: 1 },
+      photos: { select: { id: true }, take: 3 },
+      comments: {
+        include: {
+          user: { select: { name: true, role: true } }
+        },
+        orderBy: { created_at: 'asc' }
+      }
     }
   })
 
@@ -72,14 +79,24 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
             <p className="text-foreground leading-relaxed whitespace-pre-wrap">{occurrence.description}</p>
             
             {occurrence.photos.length > 0 && (
-              <div className="pt-2">
-                <Link
-                  href={`/api/occurrences/${occurrence.id}/photo`}
-                  target="_blank"
-                  className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-soft"
-                >
-                  Ver foto anexada →
-                </Link>
+              <div className="pt-2 flex flex-wrap gap-2">
+                {occurrence.photos.map((photo, i) => (
+                  <Link
+                    key={photo.id}
+                    href={`/api/occurrences/${occurrence.id}/photo?index=${i}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-soft border border-slate-800 bg-slate-900 px-2 py-1 rounded"
+                  >
+                    Ver foto {i + 1} anexada →
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {occurrence.immediate_action && (
+              <div className="mt-3 p-3 rounded-lg bg-amber-955/20 border border-amber-900/30">
+                <span className="block text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">Ação Imediata Executada</span>
+                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
               </div>
             )}
 
@@ -99,52 +116,16 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
           </div>
 
           <div className="bg-surface-1 border border-border rounded-xl p-5 shadow-sm space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <History className="w-4 h-4" /> Timeline de Resolução
-            </h2>
-            
-            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-              
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface-1 bg-primary text-primary-foreground shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                  <AlertTriangle className="w-4 h-4" />
-                </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl bg-surface-2 border border-border shadow-sm">
-                  <div className="flex items-center justify-between space-x-2 mb-1">
-                    <div className="font-bold text-foreground text-sm">Abertura</div>
-                    <time className="font-mono text-xs text-muted-foreground">{occurrence.created_at.toLocaleString('pt-BR')}</time>
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
-                    <User className="w-3.5 h-3.5" />
-                    Por {occurrence.reporter?.name}
-                  </div>
-                </div>
-              </div>
-
-              {occurrence.status === 'RESOLVED' && occurrence.resolved_at && (
-                <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-surface-1 bg-emerald-500 text-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl bg-surface-2 border border-border shadow-sm">
-                    <div className="flex items-center justify-between space-x-2 mb-1">
-                      <div className="font-bold text-foreground text-sm">Resolvida</div>
-                      <time className="font-mono text-xs text-muted-foreground">{occurrence.resolved_at.toLocaleString('pt-BR')}</time>
-                    </div>
-                    {occurrence.resolution_notes && (
-                      <div className="text-sm text-foreground mt-2 p-3 bg-surface-1 rounded-md border border-border">
-                        {occurrence.resolution_notes}
-                      </div>
-                    )}
-                    <div className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
-                      <User className="w-3.5 h-3.5" />
-                      Por {occurrence.resolver?.name || 'Desconhecido'}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
+            <OccurrenceTimeline
+              occurrenceId={occurrence.id}
+              reporterName={occurrence.reporter.name}
+              createdAt={occurrence.created_at}
+              status={occurrence.status}
+              resolvedAt={occurrence.resolved_at}
+              resolverName={occurrence.resolver?.name}
+              resolutionNotes={occurrence.resolution_notes}
+              comments={occurrence.comments}
+            />
 
             {/* Formulário de Resolução via Server Action */}
             {occurrence.status !== 'RESOLVED' && (
@@ -152,16 +133,16 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
                 <form className="space-y-4" action={resolverOcorrencia}>
                   <input type="hidden" name="id" value={occurrence.id} />
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Adicionar Notas de Resolução</label>
+                    <label className="text-sm font-medium text-slate-300">Adicionar Notas de Resolução</label>
                     <textarea 
                       name="notes"
-                      className="w-full p-3 rounded-lg border border-border bg-surface-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40" 
+                      className="w-full p-3 rounded-lg border border-slate-800 bg-slate-900 text-slate-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-700 text-xs" 
                       rows={3} 
                       placeholder="Descreva o que foi feito para resolver o problema..."
                     ></textarea>
                   </div>
                   <div className="flex justify-end">
-                    <button type="submit" className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2">
+                    <button type="submit" className="px-4 py-2 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0">
                       <CheckCircle2 className="w-4 h-4" />
                       Marcar como Resolvida
                     </button>

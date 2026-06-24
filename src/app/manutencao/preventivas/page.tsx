@@ -105,7 +105,9 @@ export default async function PreventivasPage({
                 return (
                   <tr key={prev.id} className="bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-slate-200 font-medium">{prev.equipment.name}</p>
+                      <Link href={`/manutencao/equipamentos/${prev.equipment_id}`} className="text-blue-400 hover:underline font-medium">
+                        {prev.equipment.name}
+                      </Link>
                       <p className="text-xs text-slate-500 mt-0.5">{prev.equipment.location || 'Sem localização'}</p>
                     </td>
                     <td className={`px-4 py-3 ${atrasado ? 'text-red-400 font-medium' : 'text-slate-400'}`}>

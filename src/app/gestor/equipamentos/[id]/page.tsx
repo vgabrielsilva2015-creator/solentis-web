@@ -22,6 +22,13 @@ const PRIORITY_LABEL: Record<string, string> = {
   CRITICAL: 'Crítica',
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  OPERATING: 'Operando',
+  MAINTENANCE: 'Em Manutenção',
+  INACTIVE: 'Inativo',
+  SCRAPPED: 'Sucateado',
+}
+
 const PRIORITY_COLOR: Record<string, string> = {
   LOW:      'text-slate-400',
   MEDIUM:   'text-amber-400',
@@ -38,24 +45,48 @@ export default async function EquipamentoDetailPage({
   if (!session || session.user.role !== 'MANAGER') redirect('/acesso-negado')
 
   const { id } = await params
+  const tenantId = await getTenantId()
 
-  const equipment = await prisma.equipment.findFirst({ where: { id, tenant_id: (await getTenantId()) },
-    include: {
-      category: { select: { name: true } },
-      preventive_maintenances: {
-        orderBy: { scheduled_date: 'desc' },
-        take:    10,
-        select:  { id: true, scheduled_date: true, status: true, completed_date: true },
+  const [equipment, categories, responsibles] = await Promise.all([
+    prisma.equipment.findFirst({
+      where: { id, tenant_id: tenantId },
+      include: {
+        category: { select: { name: true } },
+        responsible: { select: { name: true } },
+        preventive_maintenances: {
+          orderBy: { scheduled_date: 'desc' },
+          take:    10,
+          select:  { id: true, scheduled_date: true, status: true, completed_date: true },
+        },
+        corrective_maintenances: {
+          orderBy: { start_date: 'desc' },
+          take:    10,
+          include: { responsible: { select: { name: true } } },
+        },
+        maintenance_logs: {
+          orderBy: { logged_at: 'desc' },
+          take: 10
+        }
       },
-      corrective_maintenances: {
-        orderBy: { start_date: 'desc' },
-        take:    10,
-        include: { responsible: { select: { name: true } } },
+    }),
+    prisma.equipmentCategory.findMany({
+      where:   { tenant_id: tenantId, is_active: true },
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.user.findMany({
+      where: {
+        tenant_id: tenantId,
+        role: { in: ['TECHNICIAN', 'MANAGER', 'MAINTENANCE'] },
+        is_active: true,
+        deleted_at: null,
       },
-    },
-  })
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    })
+  ])
 
-  if (!equipment || equipment.tenant_id !== (await getTenantId())) notFound()
+  if (!equipment || equipment.tenant_id !== tenantId) notFound()
 
   const today    = new Date()
   today.setHours(0, 0, 0, 0)
@@ -65,12 +96,6 @@ export default async function EquipamentoDetailPage({
   const isOverdue = nextScheduled
     ? new Date(nextScheduled.scheduled_date) < today
     : false
-
-  const categories = await prisma.equipmentCategory.findMany({
-    where:   { tenant_id: (await getTenantId()), is_active: true },
-    select:  { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-6">
@@ -103,14 +128,30 @@ export default async function EquipamentoDetailPage({
             </div>
           </div>
 
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
             <div>
-              <dt className="text-slate-500">Nº série</dt>
+              <dt className="text-slate-500">Fabricante</dt>
+              <dd className="text-slate-300">{equipment.manufacturer ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Modelo</dt>
+              <dd className="text-slate-300">{equipment.model_name ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Nº série / Patrimônio</dt>
               <dd className="text-slate-300">{equipment.serial_number ?? '—'}</dd>
             </div>
             <div>
               <dt className="text-slate-500">Localização</dt>
               <dd className="text-slate-300">{equipment.location ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Status Operacional</dt>
+              <dd className="text-slate-300">{STATUS_LABEL[equipment.status] ?? equipment.status}</dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Responsável Técnico</dt>
+              <dd className="text-slate-300">{equipment.responsible?.name ?? '—'}</dd>
             </div>
             <div>
               <dt className="text-slate-500">Instalação</dt>
@@ -120,15 +161,46 @@ export default async function EquipamentoDetailPage({
               <dt className="text-slate-500">Freq. preventiva</dt>
               <dd className="text-slate-300">{equipment.preventive_frequency_days} dias</dd>
             </div>
-            <div>
+            <div className="col-span-2">
               <dt className="text-slate-500">Próxima preventiva</dt>
-              <dd className={isOverdue ? 'text-red-400 font-medium' : 'text-slate-300'}>
+              <dd className={isOverdue ? 'text-red-400 font-semibold mt-0.5' : 'text-slate-300 mt-0.5'}>
                 {nextScheduled ? formatDate(new Date(nextScheduled.scheduled_date)) : '—'}
+                {isOverdue && ' (ATRASADA)'}
               </dd>
             </div>
           </dl>
 
-          <div className="flex justify-end">
+          {/* Foto e Manual */}
+          {(equipment.photo_url || equipment.manual_url) && (
+            <div className="flex flex-col sm:flex-row gap-4 border-t border-slate-800 pt-3">
+              {equipment.photo_url && (
+                <div className="w-full sm:w-1/2">
+                  <span className="text-[10px] text-slate-500 block font-bold mb-1 uppercase tracking-wider">Foto do Equipamento</span>
+                  <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950/40">
+                    <img 
+                      src={`/api/equipments/${equipment.id}/files?type=photo`} 
+                      alt={equipment.name} 
+                      className="w-full h-auto object-cover max-h-48"
+                    />
+                  </div>
+                </div>
+              )}
+              {equipment.manual_url && (
+                <div className="w-full sm:w-1/2 flex flex-col justify-end">
+                  <span className="text-[10px] text-slate-500 block font-bold mb-1 uppercase tracking-wider">Documento Técnico</span>
+                  <a 
+                    href={`/api/equipments/${equipment.id}/files?type=manual`}
+                    target="_blank"
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-800 bg-slate-900/60 p-3 hover:bg-slate-850 hover:border-slate-700 transition-colors text-xs font-semibold text-sky-400 gap-1.5 w-full text-center"
+                  >
+                    📄 Visualizar Manual (PDF)
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
             <ToggleButton equipamentoId={equipment.id} isActive={equipment.is_active} />
           </div>
         </div>
@@ -202,7 +274,11 @@ export default async function EquipamentoDetailPage({
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
-                    {c.status === 'IN_PROGRESS' ? (
+                    {c.status === 'OPEN' ? (
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                        Aberta
+                      </span>
+                    ) : c.status === 'IN_PROGRESS' ? (
                       <span className="rounded px-2 py-0.5 text-xs font-medium bg-amber-950/60 text-amber-400 border border-amber-900/50">
                         Em andamento
                       </span>
@@ -210,18 +286,23 @@ export default async function EquipamentoDetailPage({
                       <span className="rounded px-2 py-0.5 text-xs font-medium bg-green-950/60 text-green-400 border border-green-900/50">
                         Concluída
                       </span>
+                    ) : c.status === 'VALIDATED' ? (
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-purple-950/60 text-purple-400 border border-purple-900/50">
+                        Validada (Fechada)
+                      </span>
                     ) : (
-                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-500 border border-slate-700">
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-red-950/60 text-red-400 border border-red-900/50">
                         Cancelada
                       </span>
                     )}
 
-                    {c.status === 'IN_PROGRESS' && (
-                      <div className="flex gap-2">
-                        <StatusButton corretivaId={c.id} action="COMPLETED" />
-                        <StatusButton corretivaId={c.id} action="CANCELLED" />
-                      </div>
-                    )}
+                    <StatusButton
+                      corretivaId={c.id}
+                      currentStatus={c.status as any}
+                      userRole={session.user.role}
+                      estimatedCost={c.estimated_cost}
+                      initialNotes={c.notes}
+                    />
                   </div>
 
                   {c.notes && (
@@ -235,6 +316,43 @@ export default async function EquipamentoDetailPage({
           {/* Formulário de nova corretiva — só se equipamento ativo */}
           {equipment.is_active && (
             <CorrectiveForm equipamentoId={equipment.id} />
+          )}
+        </section>
+
+        {/* Histórico de Manutenção */}
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">Histórico de Manutenções (Logs)</h2>
+          {equipment.maintenance_logs.length === 0 ? (
+            <p className="text-sm text-slate-500">Nenhum log de manutenção registrado.</p>
+          ) : (
+            <div className="space-y-2">
+              {equipment.maintenance_logs.map((log) => (
+                <div
+                  key={log.id}
+                  className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 space-y-1 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-200 uppercase tracking-wide">
+                      {log.type === 'PREVENTIVE' ? 'Preventiva' : log.type === 'CORRECTIVE' ? 'Corretiva' : log.type}
+                    </span>
+                    <span className="text-slate-500">
+                      {formatDate(log.logged_at)}
+                    </span>
+                  </div>
+                  <p className="text-slate-300 text-sm mt-1">{log.description}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-400 pt-1">
+                    {log.cost && (
+                      <p>
+                        <span className="text-slate-500">Custo:</span> R$ {Number(log.cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    )}
+                    <p>
+                      <span className="text-slate-500">Executado por:</span> {log.performed_by}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </section>
 
@@ -252,8 +370,15 @@ export default async function EquipamentoDetailPage({
                 installation_date:         equipment.installation_date,
                 preventive_frequency_days: equipment.preventive_frequency_days,
                 is_active:                 equipment.is_active,
+                manufacturer:              equipment.manufacturer,
+                model_name:                equipment.model_name,
+                status:                    equipment.status,
+                responsible_id:            equipment.responsible_id,
+                photo_url:                 equipment.photo_url,
+                manual_url:                equipment.manual_url,
               }}
               categories={categories}
+              responsibles={responsibles}
             />
           </div>
         </section>

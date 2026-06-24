@@ -5,7 +5,10 @@ import { getTenantId } from '@/lib/tenant'
 import { deleteMonitoringSchedule, toggleMonitoringSchedule } from './actions'
 import { Trash2, Power } from 'lucide-react'
 
+export const revalidate = 60
+
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const PAGE_SIZE = 25
 
 function formatDays(days: number[]): string {
   if (!days || days.length === 0) return 'Todo dia'
@@ -26,20 +29,36 @@ function translateType(type: string) {
   return type
 }
 
-export default async function CronogramaPage() {
-  const schedules = await prisma.monitoringSchedule.findMany({
-    where: {
-      tenant_id: (await getTenantId()),
-    },
-    include: {
-      collection_point: { select: { name: true } },
-      parameter: { select: { name: true, unit: true } }
-    },
-    orderBy: [
-      { executor_role: 'asc' },
-      { collection_point: { name: 'asc' } },
-    ]
-  })
+export default async function CronogramaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const tenantId = await getTenantId()
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const skip = (page - 1) * PAGE_SIZE
+
+  const where = { tenant_id: tenantId }
+
+  const [schedules, total] = await Promise.all([
+    prisma.monitoringSchedule.findMany({
+      where,
+      include: {
+        collection_point: { select: { name: true } },
+        parameter: { select: { name: true, unit: true } }
+      },
+      orderBy: [
+        { executor_role: 'asc' },
+        { collection_point: { name: 'asc' } },
+      ],
+      take: PAGE_SIZE,
+      skip,
+    }),
+    prisma.monitoringSchedule.count({ where })
+  ])
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
     <main className="px-6 py-8 space-y-6">
@@ -127,7 +146,35 @@ export default async function CronogramaPage() {
         )}
       </div>
 
-      <p className="text-right text-xs text-slate-600">{schedules.length} agendamento(s) cadastrado(s)</p>
+      {/* Paginação */}
+      <div className="flex items-center justify-between pt-2">
+        <p className="text-xs text-slate-600">Total: {total} agendamento(s) · Página {page} de {totalPages || 1}</p>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-4 text-sm">
+            {page > 1 ? (
+              <Link
+                href={`/gestor/cronograma?page=${page - 1}`}
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                ← Anterior
+              </Link>
+            ) : (
+              <span className="text-slate-600">← Anterior</span>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={`/gestor/cronograma?page=${page + 1}`}
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Próxima →
+              </Link>
+            ) : (
+              <span className="text-slate-600">Próxima →</span>
+            )}
+          </div>
+        )}
+      </div>
     </main>
   )
 }

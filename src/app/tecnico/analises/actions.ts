@@ -90,26 +90,60 @@ export async function registrarAnalise(
   const isNonConformant =
     calcularNaoConformidade(parsed.data.value, param.min_limit, param.max_limit) ?? false
 
-  await prisma.analysis.create({
-    data: {
-      tenant_id:           (await getTenantId()),
-      collection_point_id: parsed.data.collection_point_id,
-      parameter_id:        parsed.data.parameter_id,
-      method_id:           param.default_method_id,
-      value:               parsed.data.value,
-      unit:                param.unit,
-      min_limit_applied:   param.min_limit,   // snapshot imutável
-      max_limit_applied:   param.max_limit,   // snapshot imutável
-      report_text:         parsed.data.report_text,
-      laboratory_type:     parsed.data.laboratory_type,
-      is_non_conformant:   isNonConformant,
-      approved_by:         null,
-      approved_at:         null,
-      origin:              'MANUAL',
-      metadata_origin:     null,
-      collected_at:        new Date(parsed.data.collected_at),
-      recorded_by:         userId,
-    },
+  const tenantId = await getTenantId()
+
+  await prisma.$transaction(async (tx) => {
+    await tx.analysis.create({
+      data: {
+        tenant_id:           tenantId,
+        collection_point_id: parsed.data.collection_point_id,
+        parameter_id:        parsed.data.parameter_id,
+        method_id:           param.default_method_id,
+        value:               parsed.data.value,
+        unit:                param.unit,
+        min_limit_applied:   param.min_limit,   // snapshot imutável
+        max_limit_applied:   param.max_limit,   // snapshot imutável
+        report_text:         parsed.data.report_text,
+        laboratory_type:     parsed.data.laboratory_type,
+        is_non_conformant:   isNonConformant,
+        approved_by:         null,
+        approved_at:         null,
+        origin:              'MANUAL',
+        metadata_origin:     null,
+        collected_at:        new Date(parsed.data.collected_at),
+        recorded_by:         userId,
+      },
+    })
+
+    if (isNonConformant) {
+      const point = await tx.collectionPoint.findUnique({
+        where: { id: parsed.data.collection_point_id },
+        select: { name: true }
+      })
+      const paramName = await tx.qualityParameter.findFirst({
+        where: { id: parsed.data.parameter_id, tenant_id: tenantId },
+        select: { name: true }
+      })
+
+      const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
+        where: { severity: 'HIGH' }
+      })
+      const deadlineHours = defaultSeverity?.deadline_hours || 24
+      const deadline = new Date()
+      deadline.setHours(deadline.getHours() + deadlineHours)
+
+      await tx.occurrence.create({
+        data: {
+          tenant_id:   tenantId,
+          description: `Não Conformidade (${paramName?.name}): Análise registrada = ${parsed.data.value} ${param.unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${point?.name || parsed.data.collection_point_id}`,
+          severity:    'HIGH',
+          status:      'OPEN',
+          type:        'LABORATORY',
+          deadline,
+          reported_by: userId,
+        }
+      })
+    }
   })
 
   // Enviar notificações push

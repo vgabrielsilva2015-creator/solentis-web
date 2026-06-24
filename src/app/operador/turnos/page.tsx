@@ -90,11 +90,18 @@ export default async function TurnosPage() {
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">Turnos</h1>
-          <Link href="/operador/turnos/abrir">
-            <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
-              + Abrir turno
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/operador/turnos/escala">
+              <Button className="border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+                Ver escala
+              </Button>
+            </Link>
+            <Link href="/operador/turnos/abrir">
+              <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
+                + Abrir turno
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* ─── Passagens aguardando minha confirmação ─── */}

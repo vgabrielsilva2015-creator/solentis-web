@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
 import { ResolveForm } from './resolve-form'
 import { getTenantId } from '@/lib/tenant'
+import { OccurrenceTimeline } from '@/components/occurrence-timeline'
 
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -39,7 +40,13 @@ export default async function OcorrenciaDetailPage({
       reporter:    { select: { name: true } },
       resolver:    { select: { name: true } },
       responsible: { select: { name: true } },
-      photos:      { select: { id: true }, take: 1 },
+      photos:      { select: { id: true }, take: 3 },
+      comments: {
+        include: {
+          user: { select: { name: true, role: true } }
+        },
+        orderBy: { created_at: 'asc' }
+      }
     },
   })
 
@@ -115,33 +122,49 @@ export default async function OcorrenciaDetailPage({
             )}
           </dl>
 
-          {/* Foto */}
+          {/* Fotos */}
           {hasPhoto && (
-            <div className="pt-1">
-              <Link
-                href={`/api/occurrences/${occurrence.id}/photo`}
-                target="_blank"
-                className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300"
-              >
-                Ver foto anexada →
-              </Link>
+            <div className="pt-2 flex flex-wrap gap-2">
+              {occurrence.photos.map((photo, i) => (
+                <Link
+                  key={photo.id}
+                  href={`/api/occurrences/${occurrence.id}/photo?index=${i}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 border border-slate-800 bg-slate-950 px-2 py-1 rounded"
+                >
+                  Ver foto {i + 1} anexada →
+                </Link>
+              ))}
             </div>
           )}
 
-          {/* Resolução (se encerrada) */}
-          {occurrence.status === 'RESOLVED' && (
-            <div className="rounded-md border border-green-900/40 bg-green-950/20 px-3 py-2.5 space-y-1">
-              <p className="text-xs font-medium text-green-400">Resolução</p>
-              <p className="text-sm text-slate-300">{occurrence.resolution_notes ?? '—'}</p>
-              <p className="text-xs text-slate-600">
-                Por {occurrence.resolver?.name ?? '—'} em {occurrence.resolved_at ? formatDatetime(occurrence.resolved_at) : '—'}
-              </p>
+          {/* Ação Imediata */}
+          {occurrence.immediate_action && (
+            <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4 space-y-1">
+              <span className="block text-[10px] font-bold text-amber-400 uppercase tracking-wider">Ação Imediata Executada</span>
+              <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
             </div>
           )}
+
+          {/* Timeline e Comentários */}
+          <div className="border-t border-slate-800 pt-4 mt-4">
+            <OccurrenceTimeline
+              occurrenceId={occurrence.id}
+              reporterName={occurrence.reporter.name}
+              createdAt={occurrence.created_at}
+              status={occurrence.status}
+              resolvedAt={occurrence.resolved_at}
+              resolverName={occurrence.resolver?.name}
+              resolutionNotes={occurrence.resolution_notes}
+              comments={occurrence.comments}
+            />
+          </div>
 
           {/* Formulário de resolução (só se aberta) */}
           {occurrence.status !== 'RESOLVED' && (
-            <ResolveForm ocorrenciaId={occurrence.id} />
+            <div className="border-t border-slate-800 pt-4">
+              <ResolveForm ocorrenciaId={occurrence.id} />
+            </div>
           )}
         </div>
     </main>

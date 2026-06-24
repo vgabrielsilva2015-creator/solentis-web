@@ -113,7 +113,9 @@ export default async function CorretivasPage({
                 return (
                   <tr key={corr.id} className="bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="text-slate-200 font-medium">{corr.equipment.name}</p>
+                      <Link href={`/manutencao/equipamentos/${corr.equipment_id}`} className="text-blue-400 hover:underline font-medium">
+                        {corr.equipment.name}
+                      </Link>
                       <p className="text-xs text-slate-500 mt-0.5">{corr.equipment.location || 'Sem localização'}</p>
                     </td>
                     <td className="px-4 py-3 max-w-xs">

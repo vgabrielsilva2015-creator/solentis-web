@@ -957,7 +957,7 @@ export function DashboardClient({
         'Próximos 30 dias', 
         null, 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--ok-soft)', display: 'flex', alignItems: 'center', justify: 'center', marginBottom: '10px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--ok-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
             {icon('M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 20, 'var(--ok)')}
           </div>
           <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--txt)' }}>Tudo em ordem</div>
@@ -1022,9 +1022,13 @@ export function DashboardClient({
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--txt)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Link
+              href={`/gestor/equipamentos/${m.equipmentId}`}
+              style={{ fontSize: '13px', fontWeight: 600, color: 'var(--brand)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              className="hover:underline"
+            >
               {m.name}
-            </div>
+            </Link>
             <div style={{ fontSize: '11px', color: 'var(--txt3)', marginTop: '2px' }}>
               Agendado: {formattedSchedDate}
             </div>

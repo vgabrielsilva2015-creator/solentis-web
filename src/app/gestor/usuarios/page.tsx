@@ -8,12 +8,14 @@ const ROLE_LABELS: Record<string, string> = {
   MANAGER:    'Gestor',
   TECHNICIAN: 'Técnico',
   OPERATOR:   'Operador',
+  MAINTENANCE: 'Manutenção',
 }
 
 const ROLE_COLORS: Record<string, string> = {
   MANAGER:    'bg-emerald-900/60 text-emerald-400',
   TECHNICIAN: 'bg-sky-900/60 text-sky-400',
   OPERATOR:   'bg-amber-900/60 text-amber-400',
+  MAINTENANCE: 'bg-blue-900/60 text-blue-400',
 }
 
 function formatDate(date: Date | null): string {

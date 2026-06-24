@@ -16,14 +16,20 @@ export async function GET(
   }
 
   const { id } = await params
+  const reqUrl = new URL(_req.url)
+  const indexStr = reqUrl.searchParams.get('index') || '0'
+  const index = parseInt(indexStr, 10)
 
-  const photo = await prisma.occurrencePhoto.findFirst({
+  const photos = await prisma.occurrencePhoto.findMany({
     where: {
       occurrence_id: id,
       tenant_id:     (await getTenantId()),
     },
     select: { filename: true, mime_type: true },
+    orderBy: { uploaded_at: 'asc' }
   })
+
+  const photo = photos[index]
 
   if (!photo) {
     return NextResponse.json({ error: 'Foto não encontrada' }, { status: 404 })

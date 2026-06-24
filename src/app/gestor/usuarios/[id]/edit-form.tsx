@@ -136,6 +136,7 @@ export function EditForm({ user }: { user: User }) {
               <option value="OPERATOR">Operador</option>
               <option value="TECHNICIAN">Técnico</option>
               <option value="MANAGER">Gestor</option>
+              <option value="MAINTENANCE">Manutenção</option>
             </select>
             {state.fieldErrors?.role && (
               <p className="text-xs text-red-400">{state.fieldErrors.role[0]}</p>

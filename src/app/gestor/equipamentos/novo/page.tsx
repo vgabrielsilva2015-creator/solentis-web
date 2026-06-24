@@ -10,11 +10,23 @@ export default async function GestorNovoEquipamentoPage() {
   const session = await auth()
   if (!session || session.user.role !== 'MANAGER') redirect('/acesso-negado')
 
-  const categories = await prisma.equipmentCategory.findMany({
-    where:   { tenant_id: (await getTenantId()), is_active: true },
-    select:  { id: true, name: true },
-    orderBy: { name: 'asc' },
-  })
+  const [categories, responsibles] = await Promise.all([
+    prisma.equipmentCategory.findMany({
+      where:   { tenant_id: (await getTenantId()), is_active: true },
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.user.findMany({
+      where: {
+        tenant_id: (await getTenantId()),
+        role: { in: ['TECHNICIAN', 'MANAGER', 'MAINTENANCE'] },
+        is_active: true,
+        deleted_at: null,
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    })
+  ])
 
   return (
     <main className="p-6 md:p-8 max-w-3xl mx-auto space-y-6">
@@ -27,7 +39,7 @@ export default async function GestorNovoEquipamentoPage() {
       </div>
 
       <div className="bg-surface-1 border border-border rounded-xl p-6 shadow-sm">
-        <EquipmentForm categories={categories} />
+        <EquipmentForm categories={categories} responsibles={responsibles} />
       </div>
     </main>
   )

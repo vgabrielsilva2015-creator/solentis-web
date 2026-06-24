@@ -2,13 +2,9 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
-import { ConcludeButton } from './conclude-button'
-import { StatusButton } from './status-button'
-import { CorrectiveForm } from './corrective-form'
-import { EditForm } from './edit-form'
-import { ToggleButton } from './toggle-button'
+import { ConcludeButton } from '@/app/tecnico/equipamentos/[id]/conclude-button'
+import { StatusButton } from '@/app/tecnico/equipamentos/[id]/status-button'
 import { getTenantId } from '@/lib/tenant'
-
 
 function formatDate(d: Date | null): string {
   if (!d) return '—'
@@ -22,13 +18,6 @@ const PRIORITY_LABEL: Record<string, string> = {
   CRITICAL: 'Crítica',
 }
 
-const PRIORITY_COLOR: Record<string, string> = {
-  LOW:      'text-slate-400',
-  MEDIUM:   'text-amber-400',
-  HIGH:     'text-orange-400',
-  CRITICAL: 'text-red-400',
-}
-
 const STATUS_LABEL: Record<string, string> = {
   OPERATING: 'Operando',
   MAINTENANCE: 'Em Manutenção',
@@ -36,57 +25,49 @@ const STATUS_LABEL: Record<string, string> = {
   SCRAPPED: 'Sucateado',
 }
 
-export default async function EquipamentoDetailPage({
+const PRIORITY_COLOR: Record<string, string> = {
+  LOW:      'text-slate-400',
+  MEDIUM:   'text-amber-400',
+  HIGH:     'text-orange-400',
+  CRITICAL: 'text-red-400',
+}
+
+export default async function ManutencaoEquipamentoDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const session = await auth()
-  if (!session) redirect('/login')
+  if (!session || !['MAINTENANCE', 'MANAGER'].includes(session.user.role)) {
+    redirect('/acesso-negado')
+  }
 
   const { id } = await params
   const tenantId = await getTenantId()
 
-  const [equipment, categories, responsibles] = await Promise.all([
-    prisma.equipment.findFirst({
-      where: { id, tenant_id: tenantId },
-      include: {
-        category: { select: { name: true } },
-        responsible: { select: { name: true } },
-        preventive_maintenances: {
-          orderBy: { scheduled_date: 'desc' },
-          take:    10,
-          select:  { id: true, scheduled_date: true, status: true, completed_date: true },
-        },
-        corrective_maintenances: {
-          orderBy: { start_date: 'desc' },
-          take:    10,
-          include: { responsible: { select: { name: true } } },
-        },
-        maintenance_logs: {
-          orderBy: { logged_at: 'desc' },
-          take: 10
-        }
+  const equipment = await prisma.equipment.findFirst({
+    where: { id, tenant_id: tenantId },
+    include: {
+      category: { select: { name: true } },
+      responsible: { select: { name: true } },
+      preventive_maintenances: {
+        orderBy: { scheduled_date: 'desc' },
+        take:    10,
+        select:  { id: true, scheduled_date: true, status: true, completed_date: true },
       },
-    }),
-    prisma.equipmentCategory.findMany({
-      where:   { tenant_id: tenantId, is_active: true },
-      select:  { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.user.findMany({
-      where: {
-        tenant_id: tenantId,
-        role: { in: ['TECHNICIAN', 'MANAGER', 'MAINTENANCE'] },
-        is_active: true,
-        deleted_at: null,
+      corrective_maintenances: {
+        orderBy: { start_date: 'desc' },
+        take:    10,
+        include: { responsible: { select: { name: true } } },
       },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' }
-    })
-  ])
+      maintenance_logs: {
+        orderBy: { logged_at: 'desc' },
+        take: 10
+      }
+    },
+  })
 
-  if (!equipment || equipment.tenant_id !== tenantId) notFound()
+  if (!equipment) notFound()
 
   const today    = new Date()
   today.setHours(0, 0, 0, 0)
@@ -100,7 +81,7 @@ export default async function EquipamentoDetailPage({
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-6">
         <div>
-          <BackButton href="/tecnico/equipamentos" label="Equipamentos" />
+          <BackButton href="/manutencao/dashboard" label="Voltar" />
           <h1 className="text-xl font-semibold truncate mt-1">{equipment.name}</h1>
         </div>
 
@@ -199,10 +180,6 @@ export default async function EquipamentoDetailPage({
               )}
             </div>
           )}
-
-          <div className="flex justify-end pt-2">
-            <ToggleButton equipamentoId={equipment.id} isActive={equipment.is_active} />
-          </div>
         </div>
 
         {/* Manutenções preventivas */}
@@ -312,11 +289,6 @@ export default async function EquipamentoDetailPage({
               ))}
             </div>
           )}
-
-          {/* Formulário de nova corretiva — só se equipamento ativo */}
-          {equipment.is_active && (
-            <CorrectiveForm equipamentoId={equipment.id} />
-          )}
         </section>
 
         {/* Histórico de Manutenção */}
@@ -354,33 +326,6 @@ export default async function EquipamentoDetailPage({
               ))}
             </div>
           )}
-        </section>
-
-        {/* Editar equipamento */}
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold">Editar dados</h2>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <EditForm
-              equipment={{
-                id:                        equipment.id,
-                name:                      equipment.name,
-                category_id:               equipment.category_id,
-                serial_number:             equipment.serial_number,
-                location:                  equipment.location,
-                installation_date:         equipment.installation_date,
-                preventive_frequency_days: equipment.preventive_frequency_days,
-                is_active:                 equipment.is_active,
-                manufacturer:              equipment.manufacturer,
-                model_name:                equipment.model_name,
-                status:                    equipment.status,
-                responsible_id:            equipment.responsible_id,
-                photo_url:                 equipment.photo_url,
-                manual_url:                equipment.manual_url,
-              }}
-              categories={categories}
-              responsibles={responsibles}
-            />
-          </div>
         </section>
     </main>
   )

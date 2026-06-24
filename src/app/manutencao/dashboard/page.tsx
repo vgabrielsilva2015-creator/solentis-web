@@ -74,8 +74,10 @@ export default async function ManutencaoDashboardPage() {
               {preventivas.map(p => (
                 <div key={p.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex justify-between items-center">
                   <div>
-                    <p className="font-medium text-sm text-slate-200">{p.equipment.name}</p>
-                    <p className="text-xs text-slate-500">Agendada: {formatDateDisplay(p.scheduled_date)}</p>
+                    <Link href={`/manutencao/equipamentos/${p.equipment_id}`} className="font-medium text-sm text-blue-400 hover:underline">
+                      {p.equipment.name}
+                    </Link>
+                    <p className="text-xs text-slate-500 mt-0.5">Agendada: {formatDateDisplay(p.scheduled_date)}</p>
                   </div>
                   <span className="text-xs font-medium px-2 py-1 bg-slate-800 text-slate-300 rounded">
                     {p.status}
@@ -101,7 +103,9 @@ export default async function ManutencaoDashboardPage() {
                 <div key={c.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col gap-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-medium text-sm text-slate-200">{c.equipment.name}</p>
+                      <Link href={`/manutencao/equipamentos/${c.equipment_id}`} className="font-medium text-sm text-blue-400 hover:underline">
+                        {c.equipment.name}
+                      </Link>
                       <p className="text-xs text-slate-500 mt-1">{c.description}</p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-1 rounded ${

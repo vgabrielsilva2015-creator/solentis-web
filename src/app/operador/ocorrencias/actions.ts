@@ -35,10 +35,22 @@ async function resolveUserId(email: string): Promise<string | null> {
 const OcorrenciaSchema = z.object({
   description: z.string().min(5, 'Descreva a ocorrência em pelo menos 5 caracteres'),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
-    error: 'Selecione a severidade',
+    message: 'Selecione a severidade'
   }),
   category: z.string().min(1, 'Selecione a categoria'),
+  type: z.enum(['OPERATIONAL', 'LABORATORY', 'EQUIPMENT', 'ENVIRONMENTAL', 'SAFETY'], {
+    message: 'Selecione o tipo de ocorrência'
+  }),
   collection_point_id: z.string().optional().or(z.literal('')),
+  immediate_action: z.string().optional().nullable(),
+}).refine(data => {
+  if ((data.severity === 'HIGH' || data.severity === 'CRITICAL') && (!data.immediate_action || data.immediate_action.trim().length === 0)) {
+    return false
+  }
+  return true
+}, {
+  message: 'Ação imediata é obrigatória para severidades Alta ou Crítica',
+  path: ['immediate_action']
 })
 
 // ─── Form state types ─────────────────────────────────────────────────────────
@@ -61,7 +73,9 @@ export async function registrarOcorrencia(
     description: formData.get('description'),
     severity:    formData.get('severity'),
     category:    formData.get('category'),
+    type:        formData.get('type'),
     collection_point_id: formData.get('collection_point_id') || undefined,
+    immediate_action: formData.get('immediate_action'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -78,66 +92,72 @@ export async function registrarOcorrencia(
 
   const deadline = new Date(Date.now() + severityDefault.deadline_hours * 60 * 60 * 1000)
 
-  // Trata foto (opcional)
-  const photoFile = formData.get('photo') as File | null
+  // Trata fotos (até 3)
+  const files = (formData.getAll('photos') as File[]).filter((f) => f.size > 0)
+  if (files.length > 3) {
+    return { error: 'Limite máximo de 3 fotos excedido.' }
+  }
+
   type PhotoPayload = {
     filename:      string
     original_name: string
     mime_type:     string
     size_bytes:    number
   }
-  let photoPayload: PhotoPayload | null = null
+  const photoPayloads: PhotoPayload[] = []
 
-  if (photoFile && photoFile.size > 0) {
-    if (!ALLOWED_TYPES.includes(photoFile.type)) {
-      return { fieldErrors: { photo: ['Formato inválido. Use JPG, PNG ou WEBP.'] } }
+  for (const file of files) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return { error: `Formato inválido para ${file.name}. Use JPG, PNG ou WEBP.` }
     }
-    if (photoFile.size > MAX_FILE_BYTES) {
-      return { fieldErrors: { photo: ['Arquivo muito grande. Máximo 5 MB.'] } }
+    if (file.size > MAX_FILE_BYTES) {
+      return { error: `Arquivo ${file.name} é muito grande. Máximo 5 MB.` }
     }
 
-    const ext      = photoFile.type === 'image/jpeg' ? 'jpg' : photoFile.type.split('/')[1]
+    const ext      = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
     const filename = `${crypto.randomUUID()}.${ext}`
     const dir      = path.join(process.cwd(), 'uploads', 'occurrences')
 
     await fs.mkdir(dir, { recursive: true })
-    const buffer = Buffer.from(await photoFile.arrayBuffer())
+    const buffer = Buffer.from(await file.arrayBuffer())
     await fs.writeFile(path.join(dir, filename), buffer)
 
-    photoPayload = {
+    photoPayloads.push({
       filename,
-      original_name: photoFile.name,
-      mime_type:     photoFile.type,
-      size_bytes:    photoFile.size,
-    }
+      original_name: file.name,
+      mime_type:     file.type,
+      size_bytes:    file.size,
+    })
   }
 
-  // Cria ocorrência (+ foto + audit) em transação atômica
+  // Cria ocorrência (+ fotos + audit) em transação atômica
   await prisma.$transaction(async (tx) => {
     const occurrence = await tx.occurrence.create({
       data: {
         tenant_id:   (await getTenantId()),
         description: parsed.data.description,
         category:    parsed.data.category,
+        type:        parsed.data.type,
         severity:    parsed.data.severity,
         status:      'OPEN',
         deadline,
         reported_by: userId,
         collection_point_id: parsed.data.collection_point_id || null,
+        immediate_action: parsed.data.immediate_action || null,
       },
     })
 
-    if (photoPayload) {
-      await tx.occurrencePhoto.create({
-        data: {
-          tenant_id:     (await getTenantId()),
+    if (photoPayloads.length > 0) {
+      await tx.occurrencePhoto.createMany({
+        data: photoPayloads.map(p => ({
+          tenant_id:     session.user.tenantId,
           occurrence_id: occurrence.id,
-          filename:      photoPayload.filename,
-          original_name: photoPayload.original_name,
-          mime_type:     photoPayload.mime_type,
-          size_bytes:    photoPayload.size_bytes,
+          filename:      p.filename,
+          original_name: p.original_name,
+          mime_type:     p.mime_type,
+          size_bytes:    p.size_bytes,
           uploaded_by:   userId,
-        },
+        }))
       })
     }
 
@@ -146,7 +166,14 @@ export async function registrarOcorrencia(
       action:    'CREATE',
       tableName: 'occurrences',
       recordId:  occurrence.id,
-      after:     { description: parsed.data.description, severity: parsed.data.severity, status: 'OPEN', deadline },
+      after:     {
+        description: parsed.data.description,
+        severity: parsed.data.severity,
+        status: 'OPEN',
+        deadline,
+        type: parsed.data.type,
+        immediate_action: parsed.data.immediate_action
+      },
     })
   })
 
@@ -169,7 +196,7 @@ export async function registrarOcorrencia(
     const locationText = point ? `no local: ${point.name}` : ''
     const msg = `🚨 *Alerta Solentis*\nNova Ocorrência *${parsed.data.severity === 'CRITICAL' ? 'CRÍTICA' : 'ALTA'}* reportada ${locationText}\n\n*Descrição:* ${parsed.data.description}\n\nAcesse o painel para mais detalhes.`
 
-    // Disparar assincronamente (não precisa travar a requisição com await Promise.all total)
+    // Disparar assincronamente
     Promise.all(managers.map(m => sendWhatsAppAlert(m.phone!, msg))).catch(console.error)
   }
 
@@ -222,5 +249,94 @@ export async function resolverOcorrencia(formData: FormData) {
   revalidatePath('/gestor/ocorrencias')
   revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
   redirect(`/operador/ocorrencias/${occurrenceId}`)
+}
+
+export async function addOccurrenceComment(occurrenceId: string, text: string) {
+  const session = await requireAuthenticated()
+  const tenantId = await getTenantId()
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) throw new Error('Sessão inválida.')
+
+  if (!text || text.trim().length < 2) {
+    throw new Error('Comentário deve ter pelo menos 2 caracteres.')
+  }
+
+  await prisma.occurrenceComment.create({
+    data: {
+      occurrence_id: occurrenceId,
+      user_id: userId,
+      text: text.trim(),
+    }
+  })
+
+  // Log audit
+  await prisma.$transaction(async (tx) => {
+    await logAudit(tx, {
+      userId,
+      action: 'UPDATE',
+      tableName: 'occurrences',
+      recordId: occurrenceId,
+      after: { comment: text.trim() }
+    })
+  })
+
+  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
+  revalidatePath(`/tecnico/ocorrencias/${occurrenceId}`)
+  revalidatePath(`/gestor/ocorrencias/${occurrenceId}`)
+}
+
+export async function updateOccurrenceStatus(
+  occurrenceId: string,
+  newStatus: string,
+  notes?: string
+) {
+  const session = await requireAuthenticated()
+  const tenantId = await getTenantId()
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) throw new Error('Sessão inválida.')
+
+  const validStatuses = ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error('Status inválido.')
+  }
+
+  const occurrence = await prisma.occurrence.findFirst({
+    where: { id: occurrenceId, tenant_id: tenantId }
+  })
+  if (!occurrence) throw new Error('Ocorrência não encontrada.')
+
+  await prisma.$transaction(async (tx) => {
+    const isResolving = newStatus === 'RESOLVED'
+    await tx.occurrence.update({
+      where: { id: occurrenceId },
+      data: {
+        status: newStatus,
+        ...(isResolving ? {
+          resolved_at: new Date(),
+          resolved_by: userId,
+          resolution_notes: notes || 'Resolvido via painel Kanban.',
+        } : {})
+      }
+    })
+
+    await logAudit(tx, {
+      userId,
+      action: 'UPDATE',
+      tableName: 'occurrences',
+      recordId: occurrenceId,
+      before: { status: occurrence.status },
+      after: {
+        status: newStatus,
+        ...(isResolving ? { resolved_by: userId, resolution_notes: notes || 'Resolvido via painel Kanban.' } : {})
+      }
+    })
+  })
+
+  revalidatePath('/operador/ocorrencias')
+  revalidatePath('/tecnico/ocorrencias')
+  revalidatePath('/gestor/ocorrencias')
+  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
+  revalidatePath(`/tecnico/ocorrencias/${occurrenceId}`)
+  revalidatePath(`/gestor/ocorrencias/${occurrenceId}`)
 }
 
