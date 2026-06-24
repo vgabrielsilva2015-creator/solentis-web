@@ -807,6 +807,7 @@ model ChemicalStockCount {
 // Sem tenant_id — contexto recuperado via record_id + table_name
 model AuditLog {
   id            String   @id @default(cuid())
+  tenant_id     String
   user_id       String?
   table_name    String
   record_id     String
@@ -819,6 +820,7 @@ model AuditLog {
 
   user User? @relation(fields: [user_id], references: [id])
 
+  @@index([tenant_id, timestamp])
   @@index([table_name, record_id])
   @@index([user_id, timestamp])
   @@index([timestamp])

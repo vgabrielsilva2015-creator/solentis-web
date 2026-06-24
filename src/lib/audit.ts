@@ -6,6 +6,7 @@ export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE'
 type AuditClient = Pick<PrismaClient, 'auditLog'>
 
 export interface LogAuditParams {
+  tenantId:       string
   userId:         string | null
   action:         AuditAction
   tableName:      string
@@ -24,9 +25,10 @@ export async function logAudit(
   client: AuditClient,
   params: LogAuditParams,
 ): Promise<void> {
-  const { userId, action, tableName, recordId, before, after, justification } = params
+  const { tenantId, userId, action, tableName, recordId, before, after, justification } = params
   await client.auditLog.create({
     data: {
+      tenant_id:     tenantId,
       user_id:       userId       ?? null,
       action,
       table_name:    tableName,

@@ -53,6 +53,7 @@ export default async function AuditoriaPage({
 
   // Filtros ativos
   const where = {
+    tenant_id: (await getTenantId()),
     ...(userId    && { user_id:    userId    }),
     ...(tableName && { table_name: tableName }),
     ...(dataInicio || dataFim ? {

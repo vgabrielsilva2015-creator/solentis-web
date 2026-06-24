@@ -70,6 +70,7 @@ export async function resolverOcorrencia(
       },
     })
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId,
       action:    'UPDATE',
       tableName: 'occurrences',

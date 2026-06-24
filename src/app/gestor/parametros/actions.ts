@@ -128,6 +128,7 @@ export async function criarParametro(
       select: { id: true },
     })
     await logAudit(tx, {
+      tenantId,
       userId,
       action:    'CREATE',
       tableName: 'quality_parameters',
@@ -240,6 +241,7 @@ export async function editarParametro(
     })
 
     await logAudit(tx, {
+      tenantId,
       userId,
       action:    'UPDATE',
       tableName: 'quality_parameters',
@@ -273,6 +275,7 @@ export async function toggleAtivoParametro(
     await tx.qualityParameter.updateMany({ where: { id: parametroId , tenant_id: (await getTenantId()) }, data:  { is_active: !param.is_active },
     })
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId,
       action:    'UPDATE',
       tableName: 'quality_parameters',

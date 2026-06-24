@@ -84,6 +84,7 @@ export async function criarUsuario(
         select: { id: true },
       })
       await logAudit(tx, {
+        tenantId: (await getTenantId()),
         userId:    managerId,
         action:    'CREATE',
         tableName: 'users',
@@ -133,6 +134,7 @@ export async function editarUsuario(
       await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
       })
       await logAudit(tx, {
+        tenantId: (await getTenantId()),
         userId:    managerId,
         action:    'UPDATE',
         tableName: 'users',
@@ -169,6 +171,7 @@ export async function toggleAtivo(
     await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { is_active: !user.is_active },
     })
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId:    managerId,
       action:    'UPDATE',
       tableName: 'users',
@@ -203,6 +206,7 @@ export async function resetarSenha(
     await tx.user.updateMany({ where: { id: userId , tenant_id: (await getTenantId()) }, data:  { password_hash: passwordHash, must_change_password: true },
     })
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId:    managerId,
       action:    'UPDATE',
       tableName: 'users',

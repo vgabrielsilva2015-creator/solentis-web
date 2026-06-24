@@ -85,6 +85,7 @@ export async function editarPassagem(
       },
     })
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId,
       action:        'UPDATE',
       tableName:     'shift_handovers',

@@ -162,6 +162,7 @@ export async function registrarOcorrencia(
     }
 
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId,
       action:    'CREATE',
       tableName: 'occurrences',
@@ -235,6 +236,7 @@ export async function resolverOcorrencia(formData: FormData) {
     })
 
     await logAudit(tx, {
+      tenantId: (await getTenantId()),
       userId,
       action: 'UPDATE',
       tableName: 'occurrences',
@@ -272,6 +274,7 @@ export async function addOccurrenceComment(occurrenceId: string, text: string) {
   // Log audit
   await prisma.$transaction(async (tx) => {
     await logAudit(tx, {
+      tenantId,
       userId,
       action: 'UPDATE',
       tableName: 'occurrences',
@@ -320,6 +323,7 @@ export async function updateOccurrenceStatus(
     })
 
     await logAudit(tx, {
+      tenantId,
       userId,
       action: 'UPDATE',
       tableName: 'occurrences',
