@@ -143,8 +143,9 @@ export async function registrarLeitura(
         select: { name: true }
       })
       
+      const tenantId = await getTenantId()
       const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-        where: { severity: 'HIGH' }
+        where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
       })
       const deadlineHours = defaultSeverity?.deadline_hours || 24
       const deadline = new Date()

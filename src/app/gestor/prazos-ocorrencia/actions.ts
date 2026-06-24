@@ -51,11 +51,13 @@ export async function atualizarPrazos(
   })
   if (!user) return { error: 'Sessão inválida.' }
 
+  const tid = await getTenantId()
   await Promise.all(
     SEVERITIES.map((severity) =>
-      prisma.occurrenceSeverityDefault.update({
-        where: { severity },
-        data:  { deadline_hours: parsed.data[severity], updated_by: user.id },
+      prisma.occurrenceSeverityDefault.upsert({
+        where:  { tenant_id_severity: { tenant_id: tid, severity } },
+        update: { deadline_hours: parsed.data[severity], updated_by: user.id },
+        create: { tenant_id: tid, severity, deadline_hours: parsed.data[severity], updated_by: user.id },
       }),
     ),
   )

@@ -247,13 +247,9 @@ async function main() {
 
   for (const sd of severityDefaults) {
     await prisma.occurrenceSeverityDefault.upsert({
-      where: { severity: sd.severity },
-      update: {},
-      create: {
-        severity: sd.severity,
-        deadline_hours: sd.deadline_hours,
-        updated_by: admin.id,
-      },
+      where:  { tenant_id_severity: { tenant_id: 'default', severity: sd.severity } },
+      update: { deadline_hours: sd.deadline_hours, updated_by: admin.id },
+      create: { tenant_id: 'default', severity: sd.severity, deadline_hours: sd.deadline_hours, updated_by: admin.id },
     })
   }
   console.log(`Prazos de ocorrencia: CRITICAL=24h, HIGH=72h, MEDIUM=168h, LOW=720h`)

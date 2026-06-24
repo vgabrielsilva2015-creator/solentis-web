@@ -85,8 +85,9 @@ export async function registrarOcorrencia(
   if (!userId) return { error: 'Sessão inválida.' }
 
   // Prazo calculado a partir da configuração de severidade
+  const tenantId = await getTenantId()
   const severityDefault = await prisma.occurrenceSeverityDefault.findUnique({
-    where: { severity: parsed.data.severity },
+    where: { tenant_id_severity: { tenant_id: tenantId, severity: parsed.data.severity } },
   })
   if (!severityDefault) return { error: 'Configuração de prazo não encontrada. Contate o Gestor.' }
 
@@ -191,7 +192,7 @@ export async function registrarOcorrencia(
     })
 
     const point = parsed.data.collection_point_id 
-      ? await prisma.collectionPoint.findUnique({ where: { id: parsed.data.collection_point_id }, select: { name: true } })
+      ? await prisma.collectionPoint.findFirst({ where: { id: parsed.data.collection_point_id, tenant_id: tenantId }, select: { name: true } })
       : null
 
     const locationText = point ? `no local: ${point.name}` : ''

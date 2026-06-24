@@ -186,8 +186,8 @@ export async function saveMappedReadings(data: {
   if (!user) return { success: false, error: 'Usuário não encontrado.' }
 
   // Buscar a matriz do ponto para verificação multi-matriz
-  const point = await prisma.collectionPoint.findUnique({
-    where: { id: data.pointId }
+  const point = await prisma.collectionPoint.findFirst({
+    where: { id: data.pointId, tenant_id: tenantId }
   })
   const matrixName = point?.matrix || null
 
@@ -208,7 +208,7 @@ export async function saveMappedReadings(data: {
 
       if (matrixName) {
         const pLimit = await prisma.parameterLimit.findFirst({
-          where: { parameter_id: param.id, matrix: matrixName }
+          where: { parameter_id: param.id, matrix: matrixName, tenant_id: tenantId }
         })
         if (pLimit) {
           min_limit = pLimit.min_limit
@@ -241,7 +241,7 @@ export async function saveMappedReadings(data: {
         
         if (isNonConformant) {
           const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-            where: { severity: 'HIGH' }
+            where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
           })
           const deadlineHours = defaultSeverity?.deadline_hours || 24
           const deadline = new Date()

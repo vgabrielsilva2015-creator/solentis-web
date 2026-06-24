@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { PrazosForm } from './prazos-form'
+import { getTenantId } from '@/lib/tenant'
 
 const SEVERITY_LABELS: Record<string, { label: string; color: string }> = {
   CRITICAL: { label: 'Crítica',  color: 'text-red-400' },
@@ -10,6 +11,7 @@ const SEVERITY_LABELS: Record<string, { label: string; color: string }> = {
 
 export default async function PrazosOcorrenciaPage() {
   const prazos = await prisma.occurrenceSeverityDefault.findMany({
+    where: { tenant_id: await getTenantId() },
     orderBy: { deadline_hours: 'asc' },
   })
 

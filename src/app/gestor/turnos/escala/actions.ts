@@ -72,7 +72,7 @@ export async function toggleMaintenanceDay(dateStr: string, description?: string
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 
   const existing = await prisma.maintenanceDay.findUnique({
-    where: { date: targetDate }
+    where: { tenant_id_date: { tenant_id: tenantId, date: targetDate } }
   })
 
   if (existing) {

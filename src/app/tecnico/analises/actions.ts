@@ -116,8 +116,8 @@ export async function registrarAnalise(
     })
 
     if (isNonConformant) {
-      const point = await tx.collectionPoint.findUnique({
-        where: { id: parsed.data.collection_point_id },
+      const point = await tx.collectionPoint.findFirst({
+        where: { id: parsed.data.collection_point_id, tenant_id: tenantId },
         select: { name: true }
       })
       const paramName = await tx.qualityParameter.findFirst({
@@ -126,7 +126,7 @@ export async function registrarAnalise(
       })
 
       const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-        where: { severity: 'HIGH' }
+        where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
       })
       const deadlineHours = defaultSeverity?.deadline_hours || 24
       const deadline = new Date()
