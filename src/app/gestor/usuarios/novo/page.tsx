@@ -107,9 +107,9 @@ export default function NovoUsuarioPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full flex-1 border-slate-700 text-slate-300 hover:bg-slate-800">
-                <Link href="/gestor/usuarios/novo">
+                <a href="/gestor/usuarios/novo">
                   Criar outro
-                </Link>
+                </a>
               </Button>
             </div>
           </div>
