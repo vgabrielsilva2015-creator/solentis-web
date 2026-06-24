@@ -76,22 +76,22 @@ export default async function UsuariosPage({
           <h1 className="text-xl font-semibold">Usuários</h1>
           <p className="text-sm text-slate-400">Gerencie contas de acesso ao sistema.</p>
         </div>
-        <Link href="/gestor/usuarios/novo">
-          <Button className="w-full bg-slate-100 text-slate-900 hover:bg-white sm:w-auto">
+        <Button asChild className="w-full bg-slate-100 text-slate-900 hover:bg-white sm:w-auto">
+          <Link href="/gestor/usuarios/novo">
             + Novo usuário
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Busca */}
       <div className="flex gap-2">
         <UserSearch defaultValue={search} />
         {search && (
-          <Link href="/gestor/usuarios">
-            <Button variant="ghost" className="text-slate-400 hover:text-slate-200">
+          <Button asChild variant="ghost" className="text-slate-400 hover:text-slate-200">
+            <Link href="/gestor/usuarios">
               Limpar
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         )}
       </div>
 
@@ -142,11 +142,11 @@ export default async function UsuariosPage({
                     {formatDate(u.last_login_at)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/gestor/usuarios/${u.id}`}>
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">
+                    <Button asChild variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">
+                      <Link href={`/gestor/usuarios/${u.id}`}>
                         Editar
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </td>
                 </tr>
               ))}

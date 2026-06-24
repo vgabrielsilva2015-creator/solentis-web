@@ -101,16 +101,16 @@ export default function NovoUsuarioPage() {
             </div>
 
             <div className="flex gap-2 pt-1">
-              <Link href="/gestor/usuarios" className="flex-1">
-                <Button className="w-full bg-slate-100 text-slate-900 hover:bg-white">
+              <Button asChild className="w-full flex-1 bg-slate-100 text-slate-900 hover:bg-white">
+                <Link href="/gestor/usuarios">
                   Ver lista de usuários
-                </Button>
-              </Link>
-              <Link href="/gestor/usuarios/novo" className="flex-1">
-                <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800">
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full flex-1 border-slate-700 text-slate-300 hover:bg-slate-800">
+                <Link href="/gestor/usuarios/novo">
                   Criar outro
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
