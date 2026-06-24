@@ -92,7 +92,8 @@ export async function criarUsuario(
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
-    return { error: 'Erro ao criar usuário. Tente novamente.' }
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    return { error: 'Erro ao criar: ' + errorMessage }
   }
 
   revalidatePath('/gestor/usuarios')
@@ -147,7 +148,8 @@ export async function editarUsuario(
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
-    return { error: 'Erro ao salvar alterações. Tente novamente.' }
+    const errorMessage = e instanceof Error ? e.message : String(e)
+    return { error: 'Erro ao salvar alterações: ' + errorMessage }
   }
 
   revalidatePath('/gestor/usuarios')
