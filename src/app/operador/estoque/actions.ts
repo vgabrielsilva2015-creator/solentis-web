@@ -119,15 +119,54 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
   const recorded_by = await resolveUserId(session.user.email!)
   if (!recorded_by) return { error: 'Sessão inválida.' }
 
-  await prisma.chemicalStockCount.create({
-    data: {
-      tenant_id: (await getTenantId()),
-      product_id,
-      counted_quantity,
-      notes,
-      counted_at:  localInputToUTC(counted_at),
-      recorded_by,
-    },
+  const tenantId = await getTenantId()
+  const countedAtUTC = localInputToUTC(counted_at)
+
+  // Saldo calculado atual (entradas - saídas) antes do ajuste
+  const [entradas, saidas] = await Promise.all([
+    prisma.chemicalStockEntry.aggregate({ where: { tenant_id: tenantId, product_id }, _sum: { quantity: true } }),
+    prisma.chemicalStockExit.aggregate({ where: { tenant_id: tenantId, product_id }, _sum: { quantity: true } }),
+  ])
+  const calculado = calcularEstoqueAtual(entradas._sum.quantity ?? 0, saidas._sum.quantity ?? 0)
+  const diff = counted_quantity - calculado
+
+  // Contagem física = ajuste de inventário: cria uma movimentação da diferença
+  // para que o saldo calculado passe a ser exatamente o valor contado.
+  await prisma.$transaction(async (tx) => {
+    await tx.chemicalStockCount.create({
+      data: {
+        tenant_id: tenantId,
+        product_id,
+        counted_quantity,
+        notes,
+        counted_at: countedAtUTC,
+        recorded_by,
+      },
+    })
+
+    if (diff > 0) {
+      await tx.chemicalStockEntry.create({
+        data: {
+          tenant_id: tenantId,
+          product_id,
+          quantity: diff,
+          notes: 'Ajuste por contagem física',
+          received_at: countedAtUTC,
+          recorded_by,
+        },
+      })
+    } else if (diff < 0) {
+      await tx.chemicalStockExit.create({
+        data: {
+          tenant_id: tenantId,
+          product_id,
+          quantity: -diff,
+          notes: 'Ajuste por contagem física',
+          used_at: countedAtUTC,
+          recorded_by,
+        },
+      })
+    }
   })
 
   revalidatePath('/operador/estoque')
