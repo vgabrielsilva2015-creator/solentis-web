@@ -2,13 +2,32 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { LucideIcon } from 'lucide-react'
+import { 
+  LayoutDashboard, 
+  FlaskConical, 
+  Wrench, 
+  AlertTriangle, 
+  Clock, 
+  Droplets, 
+  Package, 
+  type LucideIcon 
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type NavItem = {
   href:  string
   label: string
-  icon:  LucideIcon
+  iconName: 'LayoutDashboard' | 'FlaskConical' | 'Wrench' | 'AlertTriangle' | 'Clock' | 'Droplets' | 'Package'
+}
+
+const ICON_MAP: Record<NavItem['iconName'], LucideIcon> = {
+  LayoutDashboard,
+  FlaskConical,
+  Wrench,
+  AlertTriangle,
+  Clock,
+  Droplets,
+  Package,
 }
 
 type BottomNavProps = {
@@ -24,7 +43,8 @@ export function BottomNav({ items }: BottomNavProps) {
       aria-label="Navegação principal"
     >
       <ul className="flex h-14">
-        {items.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, iconName }) => {
+          const Icon = ICON_MAP[iconName]
           const isActive = pathname === href || pathname.startsWith(href + '/')
           return (
             <li key={href} className="flex flex-1">

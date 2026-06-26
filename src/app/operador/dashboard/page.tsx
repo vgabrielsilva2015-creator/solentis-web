@@ -2,39 +2,36 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 
 
 export default async function OperadorDashboard() {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const userRecord = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
-    select: { id: true },
-  })
+  const userId = await resolveUserId(session.user.email!)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings] =
     await Promise.all([
-      userRecord
+      userId
         ? prisma.occurrence.count({
             where: {
               tenant_id:   (await getTenantId()),
-              reported_by: userRecord.id,
+              reported_by: userId,
               status:      { in: ['OPEN', 'IN_PROGRESS'] },
             },
           })
         : Promise.resolve(0),
 
-      userRecord
+      userId
         ? prisma.shiftHandover.count({
             where: {
               tenant_id:        (await getTenantId()),
               status:           'PENDING',
-              outgoing_user_id: { not: userRecord.id },
+              outgoing_user_id: { not: userId },
               shift_instance:   { date: today, status: 'HANDOVER_PENDING' },
             },
           })
@@ -54,33 +51,33 @@ export default async function OperadorDashboard() {
       })(),
 
       // Leituras registradas hoje por este operador
-      userRecord
+      userId
         ? prisma.reading.count({
             where: {
               tenant_id:   (await getTenantId()),
-              recorded_by: userRecord.id,
+              recorded_by: userId,
               recorded_at: { gte: today },
             },
           })
         : Promise.resolve(0),
 
       // Turno ativo aberto por este operador
-      userRecord
+      userId
         ? prisma.shiftInstance.findFirst({
-            where:   { tenant_id: (await getTenantId()), opened_by: userRecord.id, status: 'OPEN' },
+            where:   { tenant_id: (await getTenantId()), opened_by: userId, status: 'OPEN' },
             include: { shift: { select: { name: true, start_time: true, end_time: true } } },
             orderBy: { opened_at: 'desc' },
           })
         : Promise.resolve(null),
 
       // Tarefas pendentes no turno ativo deste operador
-      userRecord
+      userId
         ? prisma.shiftTask.count({
             where: {
               tenant_id:      (await getTenantId()),
               status:         'PENDING',
-              shift_instance: { opened_by: userRecord.id, status: 'OPEN' },
-              OR: [{ assigned_to_id: userRecord.id }, { assigned_to_id: null }],
+              shift_instance: { opened_by: userId, status: 'OPEN' },
+              OR: [{ assigned_to_id: userId }, { assigned_to_id: null }],
             },
           })
         : Promise.resolve(0),

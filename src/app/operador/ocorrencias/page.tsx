@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { OccurrencesKanban } from '@/components/occurrences-kanban'
 import { LayoutGrid, Table } from 'lucide-react'
 
@@ -34,14 +34,11 @@ export default async function OcorrenciasOperadorPage({
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
-  const userId = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
-    select: { id: true },
-  })
+  const userId = await resolveUserId(session.user.email!)
 
   if (!userId) redirect('/login')
 
-  const where: any = { tenant_id: (await getTenantId()), reported_by: userId.id, deleted_at: null }
+  const where: any = { tenant_id: (await getTenantId()), reported_by: userId, deleted_at: null }
   if (filter === 'open') {
     where.status = { in: ['OPEN', 'IN_PROGRESS', 'WAITING'] }
   } else if (filter === 'resolved') {

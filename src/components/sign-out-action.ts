@@ -4,6 +4,5 @@ import { signOut } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export async function handleSignOut() {
-  await signOut({ redirect: false })
-  redirect('/login')
+  await signOut({ redirectTo: '/login' })
 }

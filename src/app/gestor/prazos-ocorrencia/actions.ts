@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
@@ -45,19 +45,16 @@ export async function atualizarPrazos(
   }
 
   // Resolver o ID do usuário logado para updated_by
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
-    select: { id: true },
-  })
-  if (!user) return { error: 'Sessão inválida.' }
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
 
   const tid = await getTenantId()
   await Promise.all(
     SEVERITIES.map((severity) =>
       prisma.occurrenceSeverityDefault.upsert({
         where:  { tenant_id_severity: { tenant_id: tid, severity } },
-        update: { deadline_hours: parsed.data[severity], updated_by: user.id },
-        create: { tenant_id: tid, severity, deadline_hours: parsed.data[severity], updated_by: user.id },
+        update: { deadline_hours: parsed.data[severity], updated_by: userId },
+        create: { tenant_id: tid, severity, deadline_hours: parsed.data[severity], updated_by: userId },
       }),
     ),
   )

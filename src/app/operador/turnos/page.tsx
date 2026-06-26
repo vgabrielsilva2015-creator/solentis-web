@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { aplicarTimeouts } from './actions'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,13 +31,8 @@ export default async function TurnosPage() {
   // Aplica timeouts pendentes de forma lazy
   await aplicarTimeouts()
 
-  const userRecord = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email: session.user.email! } },
-    select: { id: true },
-  })
-  if (!userRecord) redirect('/login')
-
-  const userId = userRecord.id
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) redirect('/login')
 
   // Tarefas ativas (OPEN ou HANDOVER_PENDING) de qualquer data
   // Inclui turnos noturnos (crosses_midnight) abertos ontem e ainda não encerrados

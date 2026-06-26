@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { logAudit } from '@/lib/audit'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 
 
@@ -15,14 +15,6 @@ async function requireTechnicianOrManager() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user?.id ?? null
 }
 
 const ResolucaoSchema = z.object({

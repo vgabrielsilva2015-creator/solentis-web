@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
-import { LayoutDashboard, FlaskConical, Wrench, AlertTriangle, Clock } from 'lucide-react'
 import { TopNav } from '@/components/ui/top-nav'
 import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
@@ -15,11 +14,11 @@ export default async function TecnicoLayout({
   children: React.ReactNode
 }) {
   const NAV_ITEMS: NavItem[] = [
-    { href: '/tecnico/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-    { href: '/tecnico/analises',     label: 'Análises',     icon: FlaskConical    },
-    { href: '/tecnico/equipamentos', label: 'Equip.',       icon: Wrench          },
-    { href: '/tecnico/ocorrencias',  label: 'Ocorrências',  icon: AlertTriangle   },
-    { href: '/tecnico/turnos/tarefas', label: 'Turnos', icon: Clock           },
+    { href: '/tecnico/dashboard',    label: 'Dashboard',    iconName: 'LayoutDashboard' },
+    { href: '/tecnico/analises',     label: 'Análises',     iconName: 'FlaskConical'    },
+    { href: '/tecnico/equipamentos', label: 'Equip.',       iconName: 'Wrench'          },
+    { href: '/tecnico/ocorrencias',  label: 'Ocorrências',  iconName: 'AlertTriangle'   },
+    { href: '/tecnico/turnos/tarefas', label: 'Turnos', iconName: 'Clock'           },
   ]
 
   const session = await auth()

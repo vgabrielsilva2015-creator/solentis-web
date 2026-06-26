@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
-import { LayoutDashboard, Droplets, Clock, AlertTriangle, Package } from 'lucide-react'
 import { TopNav } from '@/components/ui/top-nav'
 import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
@@ -15,11 +14,11 @@ export default async function OperadorLayout({
   children: React.ReactNode
 }) {
   const NAV_ITEMS: NavItem[] = [
-    { href: '/operador/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-    { href: '/operador/leituras',    label: 'Leituras',    icon: Droplets        },
-    { href: '/operador/turnos',      label: 'Turnos',      icon: Clock           },
-    { href: '/operador/ocorrencias', label: 'Ocorrências', icon: AlertTriangle   },
-    { href: '/operador/estoque',     label: 'Estoque',     icon: Package         },
+    { href: '/operador/dashboard',   label: 'Dashboard',   iconName: 'LayoutDashboard' },
+    { href: '/operador/leituras',    label: 'Leituras',    iconName: 'Droplets'        },
+    { href: '/operador/turnos',      label: 'Turnos',      iconName: 'Clock'           },
+    { href: '/operador/ocorrencias', label: 'Ocorrências', iconName: 'AlertTriangle'   },
+    { href: '/operador/estoque',     label: 'Estoque',     iconName: 'Package'         },
   ]
 
   const session = await auth()
