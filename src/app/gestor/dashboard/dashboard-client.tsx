@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ParamSelector } from './param-selector'
 import { registrarLeitura } from '@/app/operador/leituras/actions'
 import { obterDetalhesPonto } from './actions'
+import { APP_TIMEZONE } from '@/lib/date-utils'
 
 interface DashboardClientProps {
   dbTotalRegistersToday: number
@@ -193,9 +194,11 @@ export function DashboardClient({
 
   const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
-  // Utility to replace closing parenthesis in oklch dynamically with alpha opacity
+  // Aplica opacidade a qualquer cor (incluindo var(--...) e oklch) via color-mix.
+  // Antes usava replace() que gerava "var(--brand / 0.3)" — CSS inválido, deixava
+  // o fundo do gráfico preto.
   const alpha = (col: string, al: number) => {
-    return col.replace(/\)\s*$/, ` / ${al})`)
+    return `color-mix(in oklch, ${col} ${Math.round(al * 100)}%, transparent)`
   }
 
   const activeVars = {
@@ -391,7 +394,7 @@ export function DashboardClient({
     const grid = gridVals.map((v, idx) => (
       <g key={idx}>
         <line x1={pl} y1={Y(v)} x2={W - pr} y2={Y(v)} stroke="var(--border)" strokeWidth={1} strokeDasharray="4 4" />
-        <text x={pl - 7} y={Y(v) + 3} textAnchor="end" fontFamily={F.mono} fontSize={9} fill="var(--txt3)">
+        <text x={pl - 7} y={Y(v) + 3} textAnchor="end" fontFamily={F.mono} fontSize={12} fill="var(--txt3)">
           {v.toFixed(1)}
         </text>
       </g>
@@ -403,7 +406,7 @@ export function DashboardClient({
         {paramMin !== null && (
           <g>
             <line x1={pl} y1={Y(paramMin)} x2={W - pr} y2={Y(paramMin)} stroke="var(--warn)" strokeWidth={1.5} strokeDasharray="3 3" />
-            <text x={W - pr - 5} y={Y(paramMin) - 4} textAnchor="end" fontFamily={F.mono} fontSize={8} fill="var(--warn)">
+            <text x={W - pr - 5} y={Y(paramMin) - 4} textAnchor="end" fontFamily={F.mono} fontSize={13} fill="var(--warn)">
               Min: {paramMin.toFixed(1)}
             </text>
           </g>
@@ -411,7 +414,7 @@ export function DashboardClient({
         {paramMax !== null && (
           <g>
             <line x1={pl} y1={Y(paramMax)} x2={W - pr} y2={Y(paramMax)} stroke="var(--danger)" strokeWidth={1.5} strokeDasharray="3 3" />
-            <text x={W - pr - 5} y={Y(paramMax) - 4} textAnchor="end" fontFamily={F.mono} fontSize={8} fill="var(--danger)">
+            <text x={W - pr - 5} y={Y(paramMax) - 4} textAnchor="end" fontFamily={F.mono} fontSize={13} fill="var(--danger)">
               Max: {paramMax.toFixed(1)}
             </text>
           </g>
@@ -425,7 +428,7 @@ export function DashboardClient({
       const showLabel = n <= 7 || i === 0 || i === n - 1 || (n <= 15 && i % 2 === 0) || (n <= 30 && i % 5 === 0) || (i % 10 === 0)
       if (!showLabel) return null
       return (
-        <text key={i} x={X(i)} y={H - 7} textAnchor="middle" fontFamily={F.mono} fontSize={8} fill="var(--txt3)">
+        <text key={i} x={X(i)} y={H - 7} textAnchor="middle" fontFamily={F.mono} fontSize={13} fill="var(--txt3)">
           {d.timeStr}
         </text>
       )
@@ -849,8 +852,8 @@ export function DashboardClient({
       else if (o.severity === 'MEDIUM') col = 'var(--brand)'
       else if (o.severity === 'LOW') col = '#64748b'
 
-      const dateStr = new Date(o.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-      const timeStr = new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      const dateStr = new Date(o.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: APP_TIMEZONE })
+      const timeStr = new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIMEZONE })
 
       return (
         <div 
@@ -1153,7 +1156,7 @@ export function DashboardClient({
 
     // Formatar data da última leitura
     const lastReadingTime = absoluteLatestReading 
-      ? new Date(absoluteLatestReading.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      ? new Date(absoluteLatestReading.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIMEZONE })
       : '—'
 
     return (
@@ -1263,7 +1266,7 @@ export function DashboardClient({
           >
             {icon('M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', 13, 'var(--danger)')}
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              Fora dos Limites: {latestNCToday.parameterName} às {new Date(latestNCToday.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} no ponto {latestNCToday.pointName} ({latestNCToday.value} {latestNCToday.unit})
+              Fora dos Limites: {latestNCToday.parameterName} às {new Date(latestNCToday.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIMEZONE })} no ponto {latestNCToday.pointName} ({latestNCToday.value} {latestNCToday.unit})
             </span>
           </div>
         )}
@@ -1530,7 +1533,7 @@ export function DashboardClient({
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '11.5px', fontFamily: F.mono, color: 'var(--txt3)' }}>
-                              {l.tipo} · {new Date(l.date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              {l.tipo} · {new Date(l.date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: APP_TIMEZONE })}
                             </span>
                             {l.is_non_conformant && (
                               <span 

@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularEstoqueAtual } from '@/lib/stock-utils'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
 
@@ -15,14 +16,6 @@ async function requireOperator() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string> {
-  const user = await prisma.user.findUniqueOrThrow({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user.id
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -98,7 +91,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
       product_id,
       quantity,
       notes,
-      used_at:    new Date(used_at),
+      used_at:    localInputToUTC(used_at),
       recorded_by,
     },
   })
@@ -130,7 +123,7 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
       product_id,
       counted_quantity,
       notes,
-      counted_at:  new Date(counted_at),
+      counted_at:  localInputToUTC(counted_at),
       recorded_by,
     },
   })

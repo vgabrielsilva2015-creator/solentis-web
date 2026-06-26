@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
+import { APP_TIMEZONE } from '@/lib/date-utils'
 import { DashboardClient } from './dashboard-client'
 
 export const dynamic = 'force-dynamic'
@@ -11,9 +12,9 @@ function calcDelta(current: number, previous: number): number | null {
 
 function formatDateDisplay(d: Date, diasNum?: number) {
   if (diasNum === 1 || !diasNum) {
-    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIMEZONE })
   }
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: APP_TIMEZONE }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: APP_TIMEZONE })
 }
 
 export default async function GestorDashboard({

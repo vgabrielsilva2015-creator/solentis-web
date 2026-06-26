@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
 
@@ -24,14 +25,6 @@ async function requireTechnicianOrManager() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user?.id ?? null
 }
 
 const AnaliseSchema = z.object({
@@ -110,7 +103,7 @@ export async function registrarAnalise(
         approved_at:         null,
         origin:              'MANUAL',
         metadata_origin:     null,
-        collected_at:        new Date(parsed.data.collected_at),
+        collected_at:        localInputToUTC(parsed.data.collected_at),
         recorded_by:         userId,
       },
     })

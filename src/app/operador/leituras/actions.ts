@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
 
@@ -15,14 +16,6 @@ async function requireOperator() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user?.id ?? null
 }
 
 const LeituraSchema = z
@@ -133,7 +126,7 @@ export async function registrarLeitura(
         origin:              'MANUAL',
         metadata_origin:     null,
         recorded_by:         userId,
-        recorded_at:         new Date(parsed.data.recorded_at),
+        recorded_at:         localInputToUTC(parsed.data.recorded_at),
       },
     })
 
