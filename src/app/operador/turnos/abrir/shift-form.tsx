@@ -16,7 +16,7 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
   const [state, action, isPending] = useActionState(abrirTurno, INITIAL)
 
   useEffect(() => {
-    if (state.success) router.push('/operador/turnos')
+    if (state.success) router.push('/operador/dashboard')
   }, [state.success, router])
 
   return (

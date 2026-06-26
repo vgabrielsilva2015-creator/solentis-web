@@ -11,7 +11,9 @@ export function ThemeScript() {
           try {
             let t = localStorage.getItem('theme');
             if (!t) {
-              t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+              // Design é dark-first; o tema claro ainda tem ajustes de contraste
+              // pendentes, então o padrão é escuro (o usuário pode alternar).
+              t = 'dark';
             }
             if (t === 'dark') {
               document.documentElement.classList.add('dark');
