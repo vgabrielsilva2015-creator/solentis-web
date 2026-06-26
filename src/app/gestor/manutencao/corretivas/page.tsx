@@ -108,11 +108,11 @@ export default async function CorrectiveMaintenancePage() {
                       {m.responsible?.name || '-'}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link 
-                        href={`/gestor/manutencao/corretivas/${m.id}`}
+                      <Link
+                        href={`/gestor/equipamentos/${m.equipment_id}`}
                         className="text-primary hover:text-primary/80 font-medium text-xs transition-colors"
                       >
-                        Detalhes
+                        Abrir equipamento
                       </Link>
                     </td>
                   </tr>
