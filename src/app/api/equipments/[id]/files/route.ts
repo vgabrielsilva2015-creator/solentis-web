@@ -1,8 +1,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
-import path from 'path'
-import fs from 'fs/promises'
+import { readUpload } from '@/lib/storage'
 import { getTenantId } from '@/lib/tenant'
 
 export async function GET(
@@ -35,8 +34,6 @@ export async function GET(
     return NextResponse.json({ error: 'Arquivo não associado' }, { status: 404 })
   }
 
-  const filePath = path.join(process.cwd(), 'uploads', 'equipments', fileName)
-  
   // Basic mime type determination
   let mimeType = 'application/octet-stream'
   if (type === 'photo') {
@@ -47,16 +44,16 @@ export async function GET(
     mimeType = 'application/pdf'
   }
 
-  try {
-    const buffer = await fs.readFile(filePath)
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': mimeType,
-        'Cache-Control': 'private, max-age=3600',
-        'Content-Disposition': 'inline',
-      },
-    })
-  } catch {
-    return NextResponse.json({ error: 'Arquivo não encontrado no disco' }, { status: 404 })
+  const buffer = await readUpload('equipments', fileName)
+  if (!buffer) {
+    return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 })
   }
+
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      'Content-Type': mimeType,
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Disposition': 'inline',
+    },
+  })
 }

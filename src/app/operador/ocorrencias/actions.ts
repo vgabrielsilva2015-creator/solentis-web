@@ -4,10 +4,9 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import path from 'path'
-import fs from 'fs/promises'
+import { saveUpload } from '@/lib/storage'
 import { logAudit } from '@/lib/audit'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
 
@@ -20,14 +19,6 @@ async function requireAuthenticated() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user?.id ?? null
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -117,14 +108,12 @@ export async function registrarOcorrencia(
 
     const ext      = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
     const filename = `${crypto.randomUUID()}.${ext}`
-    const dir      = path.join(process.cwd(), 'uploads', 'occurrences')
 
-    await fs.mkdir(dir, { recursive: true })
     const buffer = Buffer.from(await file.arrayBuffer())
-    await fs.writeFile(path.join(dir, filename), buffer)
+    const stored = await saveUpload('occurrences', filename, buffer, file.type)
 
     photoPayloads.push({
-      filename,
+      filename: stored,
       original_name: file.name,
       mime_type:     file.type,
       size_bytes:    file.size,

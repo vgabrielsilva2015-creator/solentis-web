@@ -4,11 +4,10 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import path from 'path'
-import fs from 'fs/promises'
+import { saveUpload } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 import { isMimeTypeValido } from '@/lib/occurrence-utils'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 
 const MAX_PHOTOS_TASK = 3
@@ -22,14 +21,6 @@ async function requireOperator() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user?.id ?? null
 }
 
 // Normaliza para meia-noite local — data do calendário independe da hora
@@ -345,16 +336,14 @@ export async function concluirTarefa(
     if (file.size > MAX_FILE_SIZE)    return { error: `${file.name} excede 5 MB.` }
   }
 
-  // Salva arquivos em disco antes da transação — evita BLOBs no SQLite
+  // Salva arquivos no storage (Blob em produção, disco em dev) antes da transação
   const photoRecords: { filename: string; original_name: string; mime_type: string; size_bytes: number }[] = []
   if (files.length > 0) {
-    const uploadsDir = path.join(process.cwd(), 'uploads', 'tasks')
-    await fs.mkdir(uploadsDir, { recursive: true })
     for (const file of files) {
       const ext      = file.name.split('.').pop() ?? 'bin'
       const filename = `${randomUUID()}.${ext}`
-      await fs.writeFile(path.join(uploadsDir, filename), Buffer.from(await file.arrayBuffer()))
-      photoRecords.push({ filename, original_name: file.name, mime_type: file.type, size_bytes: file.size })
+      const stored   = await saveUpload('tasks', filename, Buffer.from(await file.arrayBuffer()), file.type)
+      photoRecords.push({ filename: stored, original_name: file.name, mime_type: file.type, size_bytes: file.size })
     }
   }
 

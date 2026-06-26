@@ -5,10 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
-import path from 'path'
-import fs from 'fs/promises'
+import { saveUpload } from '@/lib/storage'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
@@ -18,14 +17,6 @@ async function requireTechnicianOrManager() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user?.id ?? null
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -142,11 +133,8 @@ export async function criarEquipamento(
     }
     const ext = photoFile.type === 'image/jpeg' ? 'jpg' : photoFile.type.split('/')[1]
     const filename = `${crypto.randomUUID()}.${ext}`
-    const dir = path.join(process.cwd(), 'uploads', 'equipments')
-    await fs.mkdir(dir, { recursive: true })
     const buffer = Buffer.from(await photoFile.arrayBuffer())
-    await fs.writeFile(path.join(dir, filename), buffer)
-    photo_url = filename
+    photo_url = await saveUpload('equipments', filename, buffer, photoFile.type)
   }
 
   if (manualFile && manualFile.size > 0) {
@@ -154,11 +142,8 @@ export async function criarEquipamento(
       return { error: 'O manual deve ser um arquivo PDF.' }
     }
     const filename = `${crypto.randomUUID()}.pdf`
-    const dir = path.join(process.cwd(), 'uploads', 'equipments')
-    await fs.mkdir(dir, { recursive: true })
     const buffer = Buffer.from(await manualFile.arrayBuffer())
-    await fs.writeFile(path.join(dir, filename), buffer)
-    manual_url = filename
+    manual_url = await saveUpload('equipments', filename, buffer, manualFile.type)
   }
 
   const firstScheduledDate = addDays(new Date(), parsed.data.preventive_frequency_days)
@@ -246,11 +231,8 @@ export async function editarEquipamento(
     }
     const ext = photoFile.type === 'image/jpeg' ? 'jpg' : photoFile.type.split('/')[1]
     const filename = `${crypto.randomUUID()}.${ext}`
-    const dir = path.join(process.cwd(), 'uploads', 'equipments')
-    await fs.mkdir(dir, { recursive: true })
     const buffer = Buffer.from(await photoFile.arrayBuffer())
-    await fs.writeFile(path.join(dir, filename), buffer)
-    photo_url = filename
+    photo_url = await saveUpload('equipments', filename, buffer, photoFile.type)
   }
 
   if (manualFile && manualFile.size > 0) {
@@ -258,11 +240,8 @@ export async function editarEquipamento(
       return { error: 'O manual deve ser um arquivo PDF.' }
     }
     const filename = `${crypto.randomUUID()}.pdf`
-    const dir = path.join(process.cwd(), 'uploads', 'equipments')
-    await fs.mkdir(dir, { recursive: true })
     const buffer = Buffer.from(await manualFile.arrayBuffer())
-    await fs.writeFile(path.join(dir, filename), buffer)
-    manual_url = filename
+    manual_url = await saveUpload('equipments', filename, buffer, manualFile.type)
   }
 
   await prisma.equipment.updateMany({
