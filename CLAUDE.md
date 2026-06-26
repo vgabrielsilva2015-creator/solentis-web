@@ -27,6 +27,45 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Fase 12 — Polish Mobile CONCLUÍDA
 ✅ Ciclo 3 — Notificações, Filtros, Exportação para CSV, Ponto de Coleta e Categoria na Ocorrência CONCLUÍDA
 ✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
+✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
+
+## 🔧 Sessão de Hardening — 2026-06-26
+
+Análise crítica + correção dos problemas que impediam virar produto. Todos os itens abaixo estão commitados e no `main`/Vercel.
+
+### Segurança
+- **Reset de senha reescrito (era account takeover):** o token antigo era `base64(email)` (forjável) e o link aparecia na tela do `/forgot`. Agora: token aleatório de 32 bytes, guardado só como **hash SHA-256**, validade 60 min, **uso único**, enviado **só por e-mail**. Não revela mais se o e-mail existe. Nova tabela `PasswordResetToken` (migration `20260626140000_add_password_reset_token`).
+- **Cadastro agora é APENAS por convite (B2B):** `/signup`, `/verify-email` e `/invite/[token]` eram **mock** (não criavam nada). Removidos/redirecionados. Ao criar usuário, o gestor dispara **e-mail de convite** (token de definir senha, validade 7 dias, reaproveita o fluxo `/reset`). Link "Solicitar acesso" removido do login.
+- **Cron protegido:** `/api/cron/shifts` agora é *fail-closed* em produção (exige `CRON_SECRET` + header correto).
+- **Stack trace não vaza mais** em `criarUsuario` nem no import de laudos (mensagens amigáveis + log só no servidor).
+- **PENDENTE (só o dono faz):** revogar o token do GitHub que estava embutido no `git remote`.
+
+### Fuso horário (estava gravando/exibindo errado)
+- **Gravação:** `localInputToUTC()` em `src/lib/date-utils.ts` converte o `datetime-local` (horário de Brasília) para UTC correto. Aplicado em leituras, análises, entradas/saídas/contagens de estoque. (Antes `new Date(string)` era interpretado como UTC no servidor da Vercel.)
+- **Exibição:** `src/instrumentation.ts` define `process.env.TZ = 'America/Sao_Paulo'` no startup — corrige **todas** as telas server-rendered de uma vez. (A Vercel **reserva** a env `TZ`, não dá pra setar no painel; por isso é no código.)
+
+### Infra / uploads
+- **Uploads migrados para Vercel Blob** (`src/lib/storage.ts` → `saveUpload`/`readUpload`). Antes gravava em disco local, que **some no filesystem efêmero da Vercel**. Fallback para `./uploads` em dev. As fotos continuam servidas só por rotas autenticadas (não expõem a URL do Blob). **Requer criar o Blob Store na Vercel** (gera `BLOB_READ_WRITE_TOKEN`).
+
+### Qualidade / build
+- **Removido `typescript.ignoreBuildErrors`** do `next.config.mjs` — o build voltou a validar tipos. Corrigidos 4 erros reais (`recorded_by`/`created_by` podiam ser `null` → insert quebrava em runtime).
+- **`middleware.ts` → `proxy.ts`** (convenção do Next 16; `middleware` está deprecated).
+- Gráfico de tendência do dashboard: função `alpha()` gerava CSS inválido (`var(--x / 0.3)`) deixando o fundo preto → corrigida com `color-mix`; fontes dos eixos aumentadas.
+
+### ⚠️ Ações pendentes na Vercel (Environment Variables)
+`RESEND_API_KEY` + `EMAIL_FROM` (e-mails de reset/convite) · `BLOB_READ_WRITE_TOKEN` via Blob Store (uploads) · `CRON_SECRET` (cron) · conferir `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push).
+
+### Próximos itens de robustez (não-bloqueantes)
+- Reduzir os ~77 `any` aos poucos (não fazer sweep cego).
+- Endurecer o service worker se o cache do PWA voltar a atrapalhar navegação de auth.
+
+## ⚠️ CORREÇÕES ao restante deste documento (estado REAL em 2026-06-26)
+As seções antigas abaixo contêm afirmações **desatualizadas**. O estado real é:
+- **Banco: PostgreSQL (Supabase)** — NÃO é mais SQLite. A "regra inviolável 3.1 (Prisma v5 / SQLite)" está **superada**: `provider = "postgresql"`. (Prisma client ainda na linha v5.)
+- **5 perfis, não 3:** OPERATOR, TECHNICIAN, MANAGER, **MAINTENANCE**, **SUPER_ADMIN** (ver `ROUTE_ACCESS` em `src/lib/auth-utils.ts`).
+- **Proteção de rotas:** `src/proxy.ts` (não `middleware.ts`).
+- **Enums/JSON nativos do Postgres** podem ser usados (a limitação era do SQLite).
+Trate o texto histórico abaixo como registro de fases, não como verdade atual de infra.
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
