@@ -5,9 +5,19 @@ import { isRouteAllowedForRole, getDashboardRoute } from '@/lib/auth-utils'
 
 const { auth } = NextAuth(authConfig)
 
+// Rotas públicas de autenticação — acessíveis SEM sessão (recuperar/definir
+// senha, convite, cadastro). Sem isso, o usuário deslogado que clica no link
+// de "esqueci senha" ou no link de convite/reset por e-mail é jogado ao login.
+const PUBLIC_AUTH_PATHS = ['/forgot', '/reset', '/signup', '/verify-email', '/invite']
+
 export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
+
+  // Rotas públicas de auth: liberadas independentemente de sessão
+  if (PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    return NextResponse.next()
+  }
 
   // Rotas públicas: login e troca de senha não exigem sessão
   if (pathname.startsWith('/login')) {
@@ -49,7 +59,9 @@ function redirectToLogin(req: NextRequest) {
   return NextResponse.redirect(loginUrl)
 }
 
-// Aplica o middleware a todas as rotas exceto assets estáticos e API do NextAuth
+// Aplica o middleware a todas as rotas exceto a API do NextAuth, internos do
+// Next e QUALQUER arquivo com extensão (manifest.json, sw.js, ícones, imagens).
+// Antes, manifest.json e sw.js eram redirecionados ao login, quebrando o PWA.
 export const config = {
-  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 }
