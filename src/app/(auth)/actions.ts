@@ -40,7 +40,7 @@ export async function sendPasswordResetLink(email: string) {
   try {
     // Invalida tokens anteriores ainda não usados deste usuário.
     await prisma.passwordResetToken.deleteMany({
-      where: { user_id: user.id, used_at: null },
+      where: { tenant_id: user.tenant_id, user_id: user.id, used_at: null },
     })
 
     const rawToken = randomBytes(32).toString('hex')
@@ -95,6 +95,8 @@ export async function resetPassword(token: string, newPassword: string) {
   try {
     const tokenHash = hashToken(token)
 
+    // @tenant-safe: token_hash é um segredo aleatório único global; o próprio
+    // token é a credencial. O registro carrega o tenant_id do usuário-alvo.
     const record = await prisma.passwordResetToken.findUnique({
       where: { token_hash: tokenHash },
     })

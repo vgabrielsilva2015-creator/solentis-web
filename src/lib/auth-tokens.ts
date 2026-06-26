@@ -21,7 +21,7 @@ export async function createSetPasswordToken(
   ttlMs: number,
 ): Promise<string> {
   await prisma.passwordResetToken.deleteMany({
-    where: { user_id: userId, used_at: null },
+    where: { tenant_id: tenantId, user_id: userId, used_at: null },
   })
 
   const rawToken = randomBytes(32).toString('hex')
