@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { AuthHeader, AuthFooterLink, FormError } from '@/components/auth/AuthComponents'
-import { Loader2, MailCheck, ArrowLeft, KeyRound } from 'lucide-react'
+import { Loader2, MailCheck, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { sendPasswordResetLink } from '../actions'
 
@@ -12,7 +12,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('')
   const [isSuccess, setIsSuccess] = useState(false)
   const [email, setEmail] = useState('')
-  const [magicToken, setMagicToken] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -27,9 +26,6 @@ export default function ForgotPasswordPage() {
         setError('Erro ao enviar link.')
       } else {
         setIsSuccess(true)
-        if (result.token) {
-          setMagicToken(result.token)
-        }
       }
     } catch (err) {
       setIsPending(false)
@@ -52,23 +48,7 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
 
-          {magicToken && (
-            <div className="w-full max-w-[280px] p-4 bg-primary/10 border border-primary/20 rounded-xl flex flex-col items-center mt-4">
-              <span className="text-xs text-primary font-medium uppercase tracking-wider mb-2">Ambiente de Testes</span>
-              <p className="text-xs text-foreground text-center mb-4">
-                Como não há provedor de email configurado, utilize o botão abaixo para prosseguir:
-              </p>
-              <Link
-                href={`/reset?token=${magicToken}`}
-                className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:brightness-105 transition-all"
-              >
-                <KeyRound className="w-4 h-4" />
-                Redefinir Senha
-              </Link>
-            </div>
-          )}
-
-          <Link 
+          <Link
             href="/login"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-4"
           >

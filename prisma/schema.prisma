@@ -113,11 +113,28 @@ model User {
   shift_scales            ShiftScale[]         @relation("ShiftScaleOperator")
   equipment_responsible   Equipment[]          @relation("EquipmentResponsible")
   occurrence_comments     OccurrenceComment[]
+  password_reset_tokens   PasswordResetToken[]
 
   @@unique([tenant_id, email])
   @@index([tenant_id, role, is_active])
   @@index([created_at])
   @@map("users")
+}
+
+// Tokens de redefinição de senha — guardamos apenas o HASH do token, nunca o valor cru.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  tenant_id  String
+  user_id    String
+  token_hash String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("password_reset_tokens")
 }
 
 model LoginAttempt {
