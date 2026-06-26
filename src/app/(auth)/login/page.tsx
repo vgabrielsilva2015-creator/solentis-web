@@ -76,14 +76,8 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="mt-8 space-y-3">
+      <div className="mt-8">
         <AuthFooterLink href="/forgot" label="Esqueci minha senha" align="center" />
-        <div className="h-px w-full bg-border" />
-        <AuthFooterLink 
-          href="/signup" 
-          label={<>Não tem conta? <strong className="font-medium text-foreground">Solicitar acesso</strong></>} 
-          align="center" 
-        />
       </div>
     </AuthShell>
   )

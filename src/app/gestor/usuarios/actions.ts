@@ -8,6 +8,10 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
 import { getTenantId } from '@/lib/tenant'
+import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
+import { sendEmail } from '@/lib/email'
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
 async function resolveUserId(email: string, tenantId: string): Promise<string | null> {
   const user = await prisma.user.findFirst({
@@ -58,7 +62,7 @@ export async function criarUsuario(
     const tempPassword = gerarSenhaProvisoria()
     const passwordHash = await hashPassword(tempPassword)
 
-    await prisma.$transaction(async (tx) => {
+    const newUserId = await prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: {
           tenant_id:            tenantId,
@@ -79,7 +83,31 @@ export async function criarUsuario(
         recordId:  created.id,
         after:     { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role, is_active: true },
       })
+      return created.id
     })
+
+    // Envia convite por e-mail para o usuário definir a própria senha (válido por 7 dias).
+    // Falha de e-mail não impede a criação: a senha provisória serve de fallback.
+    try {
+      const rawToken = await createSetPasswordToken(newUserId, tenantId, INVITE_TTL_MS)
+      const inviteUrl = buildSetPasswordUrl(rawToken)
+      const html = `
+        <div style="font-family: system-ui, sans-serif; line-height: 1.5; color: #1f2937;">
+          <h2 style="margin-bottom: 16px;">Você foi convidado para o Solentis</h2>
+          <p>Olá, ${parsed.data.name}. Uma conta foi criada para você no Solentis.</p>
+          <p>Clique no botão abaixo para definir sua senha e acessar. O link é válido por <strong>7 dias</strong>.</p>
+          <p style="margin: 24px 0;">
+            <a href="${inviteUrl}" style="background:#0ea5e9;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block;">
+              Definir minha senha
+            </a>
+          </p>
+          <p style="font-size: 13px; color: #6b7280;">Se você não esperava este convite, ignore este e-mail.</p>
+        </div>
+      `
+      await sendEmail({ to: parsed.data.email, subject: 'Convite — Solentis', html })
+    } catch (mailErr) {
+      console.error('[usuarios] Falha ao enviar convite por e-mail:', mailErr)
+    }
 
     revalidatePath('/gestor/usuarios')
     return { tempPassword }
@@ -90,8 +118,8 @@ export async function criarUsuario(
     if (e && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
-    const errorMessage = e instanceof Error ? e.message : String(e)
-    return { error: 'Erro geral (Crash interceptado): ' + errorMessage + ' ' + (e.stack || '') }
+    console.error('[usuarios] Erro ao criar usuário:', e)
+    return { error: 'Não foi possível criar o usuário. Tente novamente.' }
   }
 }
 
