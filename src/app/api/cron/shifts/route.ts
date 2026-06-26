@@ -4,15 +4,14 @@ import { startOfDay, addDays } from 'date-fns'
 import { toZonedTime, format } from 'date-fns-tz'
 
 export async function GET(request: Request) {
-  // Verificação de segurança: A Vercel Cron Jobs envia um header 'Authorization' com o CRON_SECRET
-  // ou podemos usar um header customizado
-  const authHeader = request.headers.get('authorization')
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}` &&
-    process.env.NODE_ENV !== 'development'
-  ) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Verificação de segurança: a Vercel Cron envia 'Authorization: Bearer <CRON_SECRET>'.
+  // Em produção, o endpoint é fail-closed: exige o segredo configurado e o header correto.
+  // Em desenvolvimento, liberamos para facilitar testes locais.
+  if (process.env.NODE_ENV !== 'development') {
+    const authHeader = request.headers.get('authorization')
+    if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   try {
