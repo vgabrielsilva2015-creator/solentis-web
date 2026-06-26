@@ -77,6 +77,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   )
 
   const recorded_by = await resolveUserId(session.user.email!)
+  if (!recorded_by) return { error: 'Sessão inválida.' }
 
   const novoEstoque = estoqueAtual - quantity
   if (novoEstoque < 0) {
@@ -116,6 +117,7 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
 
   const { product_id, counted_quantity, notes, counted_at } = parsed.data
   const recorded_by = await resolveUserId(session.user.email!)
+  if (!recorded_by) return { error: 'Sessão inválida.' }
 
   await prisma.chemicalStockCount.create({
     data: {

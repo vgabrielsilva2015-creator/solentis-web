@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
-import { getTenantId } from '@/lib/tenant'
+import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
 
@@ -23,14 +24,6 @@ async function requireManagerOrTechnician() {
     redirect('/login')
   }
   return session
-}
-
-async function resolveUserId(email: string): Promise<string> {
-  const user = await prisma.user.findUniqueOrThrow({
-    where:  { tenant_id_email: { tenant_id: (await getTenantId()), email } },
-    select: { id: true },
-  })
-  return user.id
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -97,6 +90,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
   if (!unit) return { error: 'Informe a unidade de medida' }
 
   const recorded_by = await resolveUserId(session.user.email!)
+  if (!recorded_by) return { error: 'Sessão inválida.' }
 
   await prisma.chemicalProduct.create({
     data: { tenant_id: (await getTenantId()), name, unit, min_stock, description, created_by: recorded_by },
@@ -153,6 +147,7 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
 
   const { product_id, quantity, supplier, invoice_number, notes, received_at } = parsed.data
   const recorded_by = await resolveUserId(session.user.email!)
+  if (!recorded_by) return { error: 'Sessão inválida.' }
 
   await prisma.chemicalStockEntry.create({
     data: {
@@ -162,7 +157,7 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
       supplier,
       invoice_number,
       notes,
-      received_at: new Date(received_at),
+      received_at: localInputToUTC(received_at),
       recorded_by,
     },
   })
