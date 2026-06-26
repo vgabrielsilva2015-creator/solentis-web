@@ -160,7 +160,7 @@ export async function createParameterFromImport(data: { name: string; unit: stri
     return { success: true, parameter: { id: param.id, name: param.name, unit: param.unit } }
   } catch (err: any) {
     console.error('Erro ao criar parâmetro:', err)
-    return { success: false, error: err.message }
+    return { success: false, error: 'Não foi possível criar o parâmetro. Tente novamente.' }
   }
 }
 
@@ -276,7 +276,7 @@ export async function saveMappedReadings(data: {
     
     return { success: true }
   } catch (err: any) {
-    console.error(err)
-    return { success: false, error: err.message }
+    console.error('Erro ao salvar leituras do laudo:', err)
+    return { success: false, error: 'Não foi possível salvar as leituras. Verifique os dados e tente novamente.' }
   }
 }

@@ -33,8 +33,6 @@ export async function sendWhatsAppAlert(phone: string, message: string) {
     if (!response.ok) {
       const err = await response.json()
       console.error('❌ Falha ao enviar WhatsApp:', err)
-    } else {
-      console.log(`✅ WhatsApp enviado com sucesso para ${cleanPhone}`)
     }
   } catch (error) {
     console.error('❌ Erro de conexão com WhatsApp API:', error)

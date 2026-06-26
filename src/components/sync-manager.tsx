@@ -12,8 +12,7 @@ export function SyncManager() {
         
         const queue: any[] = JSON.parse(stored)
         if (!Array.isArray(queue) || queue.length === 0) return
-        
-        console.log(`[SyncManager] Sincronizando ${queue.length} leituras offline...`)
+
         let successCount = 0
 
         for (const item of queue) {
