@@ -42,7 +42,7 @@ export function BottomNav({ items }: BottomNavProps) {
       className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/60 pb-safe lg:hidden"
       aria-label="Navegação principal"
     >
-      <ul className="flex h-14">
+      <ul className="flex h-16">
         {items.map(({ href, label, iconName }) => {
           const Icon = ICON_MAP[iconName]
           const isActive = pathname === href || pathname.startsWith(href + '/')
@@ -52,16 +52,20 @@ export function BottomNav({ items }: BottomNavProps) {
                 href={href}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-colors',
+                  'relative flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-transform active:scale-95',
                   isActive
-                    ? 'border-sky-400 text-sky-400'
+                    ? 'border-[#3ad0d6] text-[#3ad0d6]'
                     : 'border-transparent text-slate-500 hover:text-slate-300',
                 )}
               >
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                {/* Barra-pílula do item ativo */}
+                {isActive && (
+                  <span className="absolute top-0 h-1 w-[30px] -translate-y-1/2 rounded-full bg-[#3ad0d6]" />
+                )}
+                <Icon size={23} strokeWidth={isActive ? 2 : 1.5} />
                 <span
                   className={cn(
-                    'text-[10px] leading-none font-medium tracking-wide',
+                    'text-[11px] leading-none font-medium tracking-wide',
                     !isActive && 'text-slate-600',
                   )}
                 >
