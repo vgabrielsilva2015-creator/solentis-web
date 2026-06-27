@@ -136,9 +136,12 @@ export default async function OperadorDashboard() {
         {pendingHandovers > 0 && (
           <Link
             href="/operador/turnos"
-            className="block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 hover:bg-amber-950/30 transition-colors animate-pulse"
+            className="block rounded-xl border border-amber-900/60 bg-amber-950/20 p-4 hover:bg-amber-950/30 transition-colors"
           >
-            <p className="text-2xl font-bold text-amber-400">{pendingHandovers}</p>
+            <p className="flex items-center gap-2 text-2xl font-bold text-amber-400">
+              <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />
+              {pendingHandovers}
+            </p>
             <p className="text-xs text-amber-500 mt-1">
               {pendingHandovers === 1 ? 'Passagem de turno aguardando sua confirmação' : 'Passagens de turno aguardando sua confirmação'}
             </p>

@@ -148,7 +148,8 @@ export default async function OcorrenciasOperadorPage({
                           {SEVERITY_LABEL[oc.severity] ?? oc.severity}
                         </span>
                         {prazoVencido && (
-                          <span className="rounded border border-red-900/50 bg-red-950/60 px-2 py-0.5 text-[10px] font-semibold text-red-400 animate-pulse">
+                          <span className="inline-flex items-center gap-1 rounded border border-red-500/60 bg-red-950/60 px-2 py-0.5 text-[10px] font-bold text-red-400">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
                             PRAZO VENCIDO
                           </span>
                         )}
