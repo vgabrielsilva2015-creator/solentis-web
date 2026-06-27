@@ -10,6 +10,7 @@ export default async function OperadorDashboard() {
   if (!session) redirect('/login')
 
   const userId = await resolveUserId(session.user.email!)
+  const tenantId = await getTenantId()
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -19,7 +20,7 @@ export default async function OperadorDashboard() {
       userId
         ? prisma.occurrence.count({
             where: {
-              tenant_id:   (await getTenantId()),
+              tenant_id:   tenantId,
               reported_by: userId,
               status:      { in: ['OPEN', 'IN_PROGRESS'] },
             },
@@ -29,7 +30,7 @@ export default async function OperadorDashboard() {
       userId
         ? prisma.shiftHandover.count({
             where: {
-              tenant_id:        (await getTenantId()),
+              tenant_id:        tenantId,
               status:           'PENDING',
               outgoing_user_id: { not: userId },
               shift_instance:   { date: today, status: 'HANDOVER_PENDING' },
@@ -40,7 +41,7 @@ export default async function OperadorDashboard() {
       // Produtos com estoque calculado abaixo do mínimo
       (async () => {
         const products = await prisma.chemicalProduct.findMany({
-          where:  { tenant_id: (await getTenantId()), is_active: true },
+          where:  { tenant_id: tenantId, is_active: true },
           select: { min_stock: true, entries: { select: { quantity: true } }, exits: { select: { quantity: true } } },
         })
         return products.filter((p) => {
@@ -54,7 +55,7 @@ export default async function OperadorDashboard() {
       userId
         ? prisma.reading.count({
             where: {
-              tenant_id:   (await getTenantId()),
+              tenant_id:   tenantId,
               recorded_by: userId,
               recorded_at: { gte: today },
             },
@@ -64,7 +65,7 @@ export default async function OperadorDashboard() {
       // Turno ativo aberto por este operador
       userId
         ? prisma.shiftInstance.findFirst({
-            where:   { tenant_id: (await getTenantId()), opened_by: userId, status: 'OPEN' },
+            where:   { tenant_id: tenantId, opened_by: userId, status: 'OPEN' },
             include: { shift: { select: { name: true, start_time: true, end_time: true } } },
             orderBy: { opened_at: 'desc' },
           })
@@ -74,7 +75,7 @@ export default async function OperadorDashboard() {
       userId
         ? prisma.shiftTask.count({
             where: {
-              tenant_id:      (await getTenantId()),
+              tenant_id:      tenantId,
               status:         'PENDING',
               shift_instance: { opened_by: userId, status: 'OPEN' },
               OR: [{ assigned_to_id: userId }, { assigned_to_id: null }],
@@ -85,7 +86,7 @@ export default async function OperadorDashboard() {
       // Agendamentos (Checklist do dia)
       prisma.monitoringSchedule.findMany({
         where: {
-          tenant_id: (await getTenantId()),
+          tenant_id: tenantId,
           executor_role: 'OPERATOR',
           is_active: true,
         },
@@ -98,7 +99,7 @@ export default async function OperadorDashboard() {
       // Leituras feitas hoje (para checar o que já foi feito do checklist)
       prisma.reading.findMany({
         where: {
-          tenant_id: (await getTenantId()),
+          tenant_id: tenantId,
           recorded_at: { gte: today },
         },
         select: { collection_point_id: true, parameter_id: true }
