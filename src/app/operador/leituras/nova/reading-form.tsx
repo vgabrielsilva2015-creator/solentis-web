@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { registrarLeitura, type LeituraFormState } from '../actions'
+import { cn } from '@/lib/utils'
 
 const DRAFT_KEY = 'reading_draft'
 
@@ -38,9 +39,12 @@ function formatDatetimeLocal(d: Date): string {
 
 const initialState: LeituraFormState = {}
 
-const SELECT_CLS =
-  'w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2.5 text-sm ' +
-  'focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50'
+const CHIP_CLS =
+  'shrink-0 h-12 px-4 rounded-xl text-sm font-semibold whitespace-nowrap border transition-colors active:scale-95 disabled:opacity-50'
+const chipActive = (active: boolean) =>
+  active
+    ? 'bg-[#3ad0d6]/15 border-[#3ad0d6] text-[#3ad0d6]'
+    : 'bg-slate-800 border-slate-700 text-slate-300'
 
 export function ReadingForm({ collectionPoints, parameters }: Props) {
   const router = useRouter()
@@ -155,64 +159,75 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
         className="space-y-5"
       >
 
-        {/* ── Ponto de coleta ───────────────────────────────────────────── */}
+        {/* ── Ponto de coleta (chips) ───────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="collection_point_id" className="text-sm font-medium text-slate-300">
-            Ponto de coleta
-          </label>
-          <select
-            id="collection_point_id"
-            name="collection_point_id"
-            value={collectionPointId}
-            onChange={(e) => setCollectionPointId(e.target.value)}
-            disabled={isPending}
-            required
-            className={SELECT_CLS}
-          >
-            <option value="">Selecione o ponto…</option>
-            {collectionPoints.map((cp) => (
-              <option key={cp.id} value={cp.id}>{cp.name}</option>
-            ))}
-          </select>
+          <label className="text-sm font-medium text-slate-300">Ponto de coleta</label>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {collectionPoints.map((cp) => {
+              const active = collectionPointId === cp.id
+              return (
+                <button
+                  type="button"
+                  key={cp.id}
+                  onClick={() => setCollectionPointId(cp.id)}
+                  disabled={isPending}
+                  className={cn(CHIP_CLS, chipActive(active))}
+                >
+                  {cp.name}
+                </button>
+              )
+            })}
+          </div>
+          <input type="hidden" name="collection_point_id" value={collectionPointId} />
           {state.fieldErrors?.collection_point_id && (
             <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
           )}
         </div>
 
-        {/* ── Parâmetro (opcional) ───────────────────────────────────────── */}
+        {/* ── Parâmetro (opcional, chips) ────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="parameter_id" className="text-sm font-medium text-slate-300">
+          <label className="text-sm font-medium text-slate-300">
             Parâmetro{' '}
             <span className="font-normal text-slate-500">(opcional)</span>
           </label>
-          <select
-            id="parameter_id"
-            name="parameter_id"
-            value={parameterId}
-            onChange={(e) => {
-              setParameterId(e.target.value)
-              setValueStr('')
-            }}
-            disabled={isPending}
-            className={SELECT_CLS}
-          >
-            <option value="">Nenhum — observação visual</option>
-            {parameters.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.unit})
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => { setParameterId(''); setValueStr('') }}
+              disabled={isPending}
+              className={cn(CHIP_CLS, chipActive(parameterId === ''))}
+            >
+              Observação visual
+            </button>
+            {parameters.map((p) => {
+              const active = parameterId === p.id
+              return (
+                <button
+                  type="button"
+                  key={p.id}
+                  onClick={() => { setParameterId(p.id); setValueStr('') }}
+                  disabled={isPending}
+                  className={cn(CHIP_CLS, chipActive(active))}
+                >
+                  {p.name} <span className="font-normal opacity-70">({p.unit})</span>
+                </button>
+              )
+            })}
+          </div>
+          <input type="hidden" name="parameter_id" value={parameterId} />
         </div>
 
         {/* ── Valor medido (visível só quando há parâmetro) ─────────────── */}
         {selectedParam && (
-          <div className="space-y-1.5">
-            <label htmlFor="value" className="text-sm font-medium text-slate-300">
-              Valor medido
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="value" className="text-sm font-medium text-slate-300">Valor medido</label>
+              {hasLimits && (
+                <span className="text-xs font-mono text-slate-500">limite {limitLabel}</span>
+              )}
+            </div>
             <div className="relative">
-              <Input
+              <input
                 id="value"
                 name="value"
                 type="number"
@@ -223,23 +238,25 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
                 onChange={(e) => setValueStr(e.target.value)}
                 disabled={isPending}
                 required
-                className={[
-                  'pr-16 bg-slate-800 text-slate-100 placeholder:text-slate-500',
+                className={cn(
+                  'w-full h-16 rounded-2xl bg-slate-800 px-4 pr-16 text-3xl font-bold font-mono text-slate-100 outline-none border-2 transition-colors disabled:opacity-50',
                   nonConformant === true
-                    ? 'border-red-600 focus-visible:ring-red-600'
-                    : 'border-slate-700 focus-visible:ring-slate-500',
-                ].join(' ')}
+                    ? 'border-red-500'
+                    : nonConformant === false
+                      ? 'border-emerald-500'
+                      : 'border-slate-700',
+                )}
               />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-500">
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">
                 {selectedParam.unit}
               </span>
             </div>
 
-            {/* Faixa permitida / alerta de não-conformidade */}
-            {hasLimits && (
-              <p className={`text-xs ${nonConformant === true ? 'text-red-400' : 'text-slate-500'}`}>
-                {nonConformant === true ? 'Fora do limite CONAMA: ' : 'Limite CONAMA: '}
-                {limitLabel}
+            {/* Feedback CONAMA em tempo real */}
+            {hasLimits && nonConformant !== null && (
+              <p className={cn('flex items-center gap-2 text-xs font-medium', nonConformant ? 'text-red-400' : 'text-emerald-400')}>
+                <span className={cn('inline-block h-2 w-2 rounded-full', nonConformant ? 'bg-red-400' : 'bg-emerald-400')} />
+                {nonConformant ? `Fora do limite CONAMA (${limitLabel})` : 'Dentro do limite'}
               </p>
             )}
 
