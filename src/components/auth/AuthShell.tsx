@@ -11,10 +11,9 @@ interface AuthShellProps {
 export function AuthShell({ children, tagline }: AuthShellProps) {
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-background">
-      {/* Lado Esquerdo - Visual (Água animada) */}
-      {/* Mobile: 40vh de altura. Desktop: 50% da largura, fixa na tela */}
-      <div className="relative w-full md:w-1/2 h-[40vh] md:h-screen shrink-0 border-b md:border-b-0 md:border-r border-border overflow-hidden">
-        {/* No desktop a imagem fica sticky para não rolar se o form for grande */}
+      {/* Lado Esquerdo - Visual (Água animada) — SÓ no desktop.
+          No mobile o login vira uma coluna única centrada (sem faixa de água). */}
+      <div className="relative hidden md:block md:w-1/2 md:h-screen shrink-0 md:border-r border-border overflow-hidden">
         <div className="absolute inset-0 md:fixed md:w-1/2 md:h-screen">
           <WaterCanvas tagline={tagline} />
         </div>

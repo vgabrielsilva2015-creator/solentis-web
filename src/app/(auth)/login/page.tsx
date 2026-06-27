@@ -29,7 +29,7 @@ export default function LoginPage() {
             placeholder="voce@empresa.com.br"
             required
             disabled={isPending}
-            className="w-full h-11 px-3 rounded-[10px] bg-surface-2 border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/50 transition-all"
+            className="w-full h-[54px] px-3 rounded-[14px] bg-surface-2 border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/50 transition-all"
           />
         </div>
 
@@ -60,7 +60,8 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isPending}
-          className="group flex w-full h-11 items-center justify-center gap-2 rounded-[10px] bg-primary text-primary-foreground font-medium transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none mt-2"
+          style={{ backgroundImage: 'linear-gradient(150deg,#3ad0d6,#0a86a0)' }}
+          className="group flex w-full h-[54px] items-center justify-center gap-2 rounded-[14px] text-white font-semibold transition-all hover:brightness-105 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none mt-2"
         >
           {isPending ? (
             <>
