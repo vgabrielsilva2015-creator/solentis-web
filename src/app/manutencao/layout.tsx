@@ -14,7 +14,11 @@ export default async function ManutencaoLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
-  if (!session || session.user.role !== 'MAINTENANCE') redirect('/acesso-negado')
+  // Manutenção e Gestor podem acessar (gestor vê tudo), alinhado ao proxy
+  // (ROUTE_ACCESS['/manutencao']) e às telas internas da área.
+  if (!session || !['MAINTENANCE', 'MANAGER'].includes(session.user.role)) {
+    redirect('/acesso-negado')
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
