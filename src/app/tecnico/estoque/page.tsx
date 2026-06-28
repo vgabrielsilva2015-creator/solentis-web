@@ -24,7 +24,7 @@ export default async function TecnicoEstoquePage() {
     <main className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-xl font-semibold">Estoque de Produtos Químicos</h1>
         <p className="text-sm text-slate-400">
-          Registre entradas e saídas de produtos. Para contagens físicas, use o Operador.
+          Registre entradas, saídas e contagens físicas de produtos.
         </p>
 
         {products.length === 0 ? (
@@ -73,6 +73,12 @@ export default async function TecnicoEstoquePage() {
                       className="rounded-md border border-red-800 bg-red-900/40 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-900/60 transition-colors"
                     >
                       Registrar saída
+                    </Link>
+                    <Link
+                      href={`/tecnico/estoque/${p.id}/contagem`}
+                      className="rounded-md border border-blue-800 bg-blue-900/30 px-4 py-2 text-sm font-medium text-blue-300 hover:bg-blue-900/50 transition-colors"
+                    >
+                      Contagem
                     </Link>
                   </div>
                 </div>

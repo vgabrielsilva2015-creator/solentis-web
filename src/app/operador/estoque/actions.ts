@@ -108,7 +108,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
 export async function registrarContagem(_prev: unknown, formData: FormData) {
   const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem registrar contagens.' }
+  if (!['OPERATOR', 'TECHNICIAN'].includes(session.user.role)) return { error: 'Apenas operadores ou técnicos podem registrar contagens.' }
 
   const parsed = ContagemSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -171,6 +171,7 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
 
   revalidatePath('/operador/estoque')
   revalidatePath(`/operador/estoque/${product_id}`)
+  revalidatePath('/tecnico/estoque')
   revalidatePath('/gestor/dashboard')
   return { success: true }
 }

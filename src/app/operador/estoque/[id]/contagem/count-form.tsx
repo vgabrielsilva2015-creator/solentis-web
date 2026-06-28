@@ -9,9 +9,10 @@ type Props = {
   productId:        string
   unit:             string
   estoqueCalculado: number
+  estoquePath?:     string
 }
 
-export function CountForm({ productId, unit, estoqueCalculado }: Props) {
+export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/operador/estoque' }: Props) {
   const router      = useRouter()
   const [qty, setQty] = useState('')
   const now = new Date()
@@ -20,7 +21,7 @@ export function CountForm({ productId, unit, estoqueCalculado }: Props) {
 
   const [state, action, pending] = useActionState(async (prev: unknown, formData: FormData) => {
     const result = await registrarContagem(prev, formData)
-    if (result?.success) router.push('/operador/estoque')
+    if (result?.success) router.push(estoquePath)
     return result
   }, null)
 
@@ -96,7 +97,7 @@ export function CountForm({ productId, unit, estoqueCalculado }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => router.push('/operador/estoque')}
+          onClick={() => router.push(estoquePath)}
           className="rounded-lg border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
         >
           Cancelar
