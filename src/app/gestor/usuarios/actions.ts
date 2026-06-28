@@ -88,6 +88,9 @@ export async function criarUsuario(
 
     // Envia convite por e-mail para o usuário definir a própria senha (válido por 7 dias).
     // Falha de e-mail não impede a criação: a senha provisória serve de fallback.
+    // O resultado é devolvido para a UI mostrar se o convite saiu ou o motivo da falha.
+    let inviteSent = false
+    let inviteError: string | undefined
     try {
       const rawToken = await createSetPasswordToken(newUserId, tenantId, INVITE_TTL_MS)
       const inviteUrl = buildSetPasswordUrl(rawToken)
@@ -104,13 +107,16 @@ export async function criarUsuario(
           <p style="font-size: 13px; color: #6b7280;">Se você não esperava este convite, ignore este e-mail.</p>
         </div>
       `
-      await sendEmail({ to: parsed.data.email, subject: 'Convite — Solentis', html })
+      const emailResult = await sendEmail({ to: parsed.data.email, subject: 'Convite — Solentis', html })
+      if (emailResult.success) inviteSent = true
+      else inviteError = emailResult.error
     } catch (mailErr) {
       console.error('[usuarios] Falha ao enviar convite por e-mail:', mailErr)
+      inviteError = mailErr instanceof Error ? mailErr.message : 'Erro desconhecido ao enviar e-mail'
     }
 
     revalidatePath('/gestor/usuarios')
-    return { tempPassword }
+    return { tempPassword, inviteSent, inviteError }
   } catch (e: any) {
     if (e && typeof e === 'object' && 'message' in e && e.message === 'NEXT_REDIRECT') {
       throw e // let Next.js handle redirects

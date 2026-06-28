@@ -10,4 +10,6 @@ export type UsuarioFormState = {
   error?:        string
   fieldErrors?:  Record<string, string[]>
   tempPassword?: string
+  inviteSent?:   boolean
+  inviteError?:  string
 }

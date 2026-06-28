@@ -87,6 +87,17 @@ export default function NovoUsuarioPage() {
               </p>
             </div>
 
+            {/* Status do convite por e-mail */}
+            {state.inviteSent ? (
+              <div className="rounded-lg border border-emerald-800/50 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-400">
+                ✅ Convite enviado por e-mail para o usuário definir a própria senha.
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-800/50 bg-amber-950/30 px-3 py-2 text-xs text-amber-400">
+                ⚠️ Não foi possível enviar o convite por e-mail{state.inviteError ? `: ${state.inviteError}` : ''}. Use a senha provisória abaixo.
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-800 px-4 py-3">
               <code className="font-mono text-base tracking-widest text-amber-300">
                 {state.tempPassword}
