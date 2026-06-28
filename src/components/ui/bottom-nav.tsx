@@ -2,22 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  FlaskConical, 
-  Wrench, 
-  AlertTriangle, 
-  Clock, 
-  Droplets, 
-  Package, 
-  type LucideIcon 
+import {
+  LayoutDashboard,
+  FlaskConical,
+  Wrench,
+  AlertTriangle,
+  Clock,
+  Droplets,
+  Package,
+  CalendarDays,
+  type LucideIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type NavItem = {
   href:  string
   label: string
-  iconName: 'LayoutDashboard' | 'FlaskConical' | 'Wrench' | 'AlertTriangle' | 'Clock' | 'Droplets' | 'Package'
+  iconName: 'LayoutDashboard' | 'FlaskConical' | 'Wrench' | 'AlertTriangle' | 'Clock' | 'Droplets' | 'Package' | 'CalendarDays'
 }
 
 const ICON_MAP: Record<NavItem['iconName'], LucideIcon> = {
@@ -28,13 +29,16 @@ const ICON_MAP: Record<NavItem['iconName'], LucideIcon> = {
   Clock,
   Droplets,
   Package,
+  CalendarDays,
 }
 
 type BottomNavProps = {
   items: NavItem[]
+  /** Cor de acento do item ativo (por área). Default: aqua do operador. */
+  accent?: string
 }
 
-export function BottomNav({ items }: BottomNavProps) {
+export function BottomNav({ items, accent = '#3ad0d6' }: BottomNavProps) {
   const pathname = usePathname()
 
   return (
@@ -51,16 +55,18 @@ export function BottomNav({ items }: BottomNavProps) {
               <Link
                 href={href}
                 aria-current={isActive ? 'page' : undefined}
+                style={isActive ? { color: accent, borderTopColor: accent } : undefined}
                 className={cn(
                   'relative flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-transform active:scale-95',
-                  isActive
-                    ? 'border-[#3ad0d6] text-[#3ad0d6]'
-                    : 'border-transparent text-slate-500 hover:text-slate-300',
+                  isActive ? '' : 'border-transparent text-slate-500 hover:text-slate-300',
                 )}
               >
                 {/* Barra-pílula do item ativo */}
                 {isActive && (
-                  <span className="absolute top-0 h-1 w-[30px] -translate-y-1/2 rounded-full bg-[#3ad0d6]" />
+                  <span
+                    className="absolute top-0 h-1 w-[30px] -translate-y-1/2 rounded-full"
+                    style={{ background: accent }}
+                  />
                 )}
                 <Icon size={23} strokeWidth={isActive ? 2 : 1.5} />
                 <span

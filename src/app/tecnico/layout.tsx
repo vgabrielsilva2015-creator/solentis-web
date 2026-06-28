@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/sign-out-button'
 import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
-import { TopNav } from '@/components/ui/top-nav'
 import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
@@ -48,14 +47,12 @@ export default async function TecnicoLayout({
         </div>
       </header>
 
-      <TopNav />
-
       {/* Conteúdo — pb-24 para não ficar atrás da bottom nav e notch */}
       <div className="pb-24">
         {children}
       </div>
 
-      <BottomNav items={NAV_ITEMS} />
+      <BottomNav items={NAV_ITEMS} accent="#38bdf8" />
     </div>
   )
 }
