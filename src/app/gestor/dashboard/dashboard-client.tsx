@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ParamSelector } from './param-selector'
+import { PointSelector } from './point-selector'
 import { registrarLeitura } from '@/app/operador/leituras/actions'
 import { obterDetalhesPonto } from './actions'
 import { APP_TIMEZONE } from '@/lib/date-utils'
@@ -808,12 +809,20 @@ export function DashboardClient({
   // Trend Chart Widget
   const renderTrend = () => {
     const selectedTitle = dbSelectedParam?.name || 'Parâmetro'
-    if (dbTrendData.length === 0) return cardFrame(`Tendência de ${selectedTitle}`, 'Sem leituras no período', null, emptyState('trend'))
-    let series = dbTrendData.map((d) => d.value)
+    const pointLabel = pontoId && activePointName ? activePointName : 'Todos os pontos'
 
     const dropdown = (
-      <ParamSelector parameters={dbParameters} defaultValue={paramId || (dbParameters[0]?.id)} diasNum={diasNum} />
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <ParamSelector parameters={dbParameters} defaultValue={paramId || (dbParameters[0]?.id)} diasNum={diasNum} />
+        <PointSelector points={dbHeatmapPoints} pontoId={pontoId} />
+      </div>
     )
+
+    // Sem leituras: ainda mostra os seletores para o usuário trocar de ponto/parâmetro
+    if (dbTrendData.length === 0) {
+      return cardFrame(`Tendência de ${selectedTitle}`, `${pointLabel} · sem leituras no período`, dropdown, emptyState('trend'), 'SMM')
+    }
+    let series = dbTrendData.map((d) => d.value)
 
     const unitStr = dbSelectedParam?.unit ? ` ${dbSelectedParam.unit}` : ''
     const minLimit = dbSelectedParam?.min_limit
@@ -827,11 +836,18 @@ export function DashboardClient({
       limitStr = `Limite Mínimo CONAMA (${minLimit.toFixed(1)}${unitStr})`
     }
 
+    const mixingNote = !pontoId ? (
+      <p style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '8px', lineHeight: 1.4 }}>
+        Mostrando <strong>todos os pontos juntos</strong> — os valores podem variar muito entre pontos
+        (ex.: pH na entrada × na saída). Selecione um ponto acima para uma leitura limpa.
+      </p>
+    ) : null
+
     return cardFrame(
-      `Tendência de ${selectedTitle}`,
-      `${limitStr} · ${diasNum} ${diasNum === 1 ? 'dia' : 'dias'}`,
+      `Tendência de ${selectedTitle}${pontoId && activePointName ? ` · ${activePointName}` : ''}`,
+      `${limitStr} · ${diasNum} ${diasNum === 1 ? 'dia' : 'dias'} · ${pointLabel}`,
       dropdown,
-      <div style={{ marginTop: '10px' }}>{buildTrend(series, false)}</div>,
+      <div style={{ marginTop: '10px' }}>{buildTrend(series, false)}{mixingNote}</div>,
       'SMM'
     )
   }
