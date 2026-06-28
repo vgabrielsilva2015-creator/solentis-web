@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   Wrench,
-  AlertTriangle
+  AlertTriangle,
+  CalendarDays
 } from 'lucide-react'
 
 type NavItem = {
@@ -29,6 +30,11 @@ const NAV_ITEMS: NavItem[] = [
   { type: 'title',   label: 'Operação' },
   { type: 'link',    label: 'Preventivas',         href: '/manutencao/preventivas', icon: <Wrench className="w-4 h-4" /> },
   { type: 'link',    label: 'Corretivas',          href: '/manutencao/corretivas', icon: <AlertTriangle className="w-4 h-4" /> },
+
+  { type: 'divider' },
+
+  { type: 'title',   label: 'Planejamento' },
+  { type: 'link',    label: 'Escalas',             href: '/manutencao/escala', icon: <CalendarDays className="w-4 h-4" /> },
 ]
 
 export function ManutencaoSidebar() {

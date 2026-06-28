@@ -95,6 +95,7 @@ export default async function TecnicoDashboard() {
     { title: 'Ocorrências',  desc: 'Acompanhar e fechar ocorrências',        href: '/tecnico/ocorrencias'       },
     { title: 'Estoque',      desc: 'Registrar entradas de produtos químicos', href: '/tecnico/estoque'          },
     { title: 'Turnos',       desc: 'Tarefas de turno ativas',             href: '/tecnico/turnos/tarefas' },
+    { title: 'Escalas',      desc: 'Ver a escala de turnos do mês',       href: '/tecnico/turnos/escala' },
   ]
 
   return (

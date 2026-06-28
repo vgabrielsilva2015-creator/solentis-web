@@ -65,6 +65,10 @@ interface EscalaClientProps {
   schedules: any[]
   shifts: any[]
   operators: any[]
+  // Caminhos de navegação configuráveis (default: operador). Permite reusar a
+  // mesma visualização em /manutencao e /tecnico sem links levando a 403.
+  basePath?: string
+  backHref?: string
 }
 
 const MONTH_NAMES = [
@@ -104,7 +108,9 @@ export function EscalaClient({
   occurrences,
   schedules,
   shifts,
-  operators
+  operators,
+  basePath = '/operador/turnos/escala',
+  backHref = '/operador/turnos',
 }: EscalaClientProps) {
   const router = useRouter()
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null)
@@ -117,7 +123,7 @@ export function EscalaClient({
       newMonth = 12
       newYear -= 1
     }
-    router.push(`/operador/turnos/escala?year=${newYear}&month=${newMonth}`)
+    router.push(`${basePath}?year=${newYear}&month=${newMonth}`)
   }
 
   // Navigate to next month
@@ -128,7 +134,7 @@ export function EscalaClient({
       newMonth = 1
       newYear += 1
     }
-    router.push(`/operador/turnos/escala?year=${newYear}&month=${newMonth}`)
+    router.push(`${basePath}?year=${newYear}&month=${newMonth}`)
   }
 
   // Calculate calendar grid days
@@ -249,8 +255,8 @@ export function EscalaClient({
       {/* Header with Navigation */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-4">
         <div>
-          <Link href="/operador/turnos" className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 mb-1">
-            <ChevronLeft className="w-3.5 h-3.5" /> Voltar para Turnos
+          <Link href={backHref} className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 mb-1">
+            <ChevronLeft className="w-3.5 h-3.5" /> Voltar
           </Link>
           <h1 className="text-xl font-bold tracking-tight">Escala & Agenda</h1>
         </div>
