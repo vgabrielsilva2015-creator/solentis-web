@@ -9,6 +9,8 @@ export default async function TecnicoDashboard() {
   const session = await auth()
   if (!session) redirect('/login')
 
+  const tenantId = await getTenantId()
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -17,7 +19,7 @@ export default async function TecnicoDashboard() {
       // Preventivas vencidas
       prisma.preventiveMaintenance.count({
         where: {
-          tenant_id:      (await getTenantId()),
+          tenant_id:      tenantId,
           status:         'SCHEDULED',
           scheduled_date: { lt: today },
           equipment:      { is_active: true },
@@ -25,21 +27,21 @@ export default async function TecnicoDashboard() {
       }),
       // Análises pendentes de aprovação (qualquer)
       prisma.analysis.count({
-        where: { tenant_id: (await getTenantId()), approved_by: null },
+        where: { tenant_id: tenantId, approved_by: null },
       }),
       // Corretivas em andamento
       prisma.correctiveMaintenance.count({
-        where: { tenant_id: (await getTenantId()), status: 'IN_PROGRESS' },
+        where: { tenant_id: tenantId, status: 'IN_PROGRESS' },
       }),
       // Não-conformidades em aberto (n.c. ainda sem aprovação)
       prisma.analysis.count({
-        where: { tenant_id: (await getTenantId()), is_non_conformant: true, approved_by: null },
+        where: { tenant_id: tenantId, is_non_conformant: true, approved_by: null },
       }),
 
       // Agendamentos para o Técnico (Checklist do dia)
       prisma.monitoringSchedule.findMany({
         where: {
-          tenant_id: (await getTenantId()),
+          tenant_id: tenantId,
           executor_role: 'TECHNICIAN',
           is_active: true,
         },
@@ -52,7 +54,7 @@ export default async function TecnicoDashboard() {
       // Análises Internas já feitas hoje
       prisma.analysis.findMany({
         where: {
-          tenant_id: (await getTenantId()),
+          tenant_id: tenantId,
           collected_at: { gte: today },
         },
         select: { collection_point_id: true, parameter_id: true }
@@ -61,7 +63,7 @@ export default async function TecnicoDashboard() {
       // Laudos Externos já feitos hoje
       prisma.externalAnalysis.findMany({
         where: {
-          tenant_id: (await getTenantId()),
+          tenant_id: tenantId,
           collected_at: { gte: today },
         },
         select: { collection_point_id: true, parameter_id: true }
