@@ -10,10 +10,9 @@ import { SignOutButton } from '@/components/sign-out-button'
 const initialState: TrocarSenhaState = {}
 
 const REQUIREMENTS = [
-  { label: 'Mínimo 8 caracteres',  test: (v: string) => v.length >= 8 },
-  { label: 'Letra maiúscula',       test: (v: string) => /[A-Z]/.test(v) },
-  { label: 'Letra minúscula',       test: (v: string) => /[a-z]/.test(v) },
-  { label: 'Número',                test: (v: string) => /[0-9]/.test(v) },
+  { label: 'Mínimo 10 caracteres',  test: (v: string) => v.length >= 10 },
+  { label: 'Ao menos uma letra',    test: (v: string) => /[A-Za-z]/.test(v) },
+  { label: 'Ao menos um número',    test: (v: string) => /[0-9]/.test(v) },
 ]
 
 export default function TrocarSenhaPage() {
