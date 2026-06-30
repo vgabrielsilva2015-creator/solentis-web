@@ -195,21 +195,34 @@ export async function saveMappedReadings(data: {
   const fallbackMethod = await prisma.analysisMethod.findFirst({
     where: { tenant_id: tenantId }
   })
-  
+
+  // Batch: busca todos os parâmetros (e limites, se houver matriz) de uma vez,
+  // em vez de 1-2 queries por leitura dentro do loop. Mesmo resultado.
+  const uniqueParamIds = [...new Set(data.readings.map((r) => r.parameterId))]
+
+  const params = await prisma.qualityParameter.findMany({
+    where: { id: { in: uniqueParamIds }, tenant_id: tenantId },
+  })
+  const paramMap = new Map(params.map((p) => [p.id, p]))
+
+  const limitMap = new Map<string, { min_limit: number | null; max_limit: number | null }>()
+  if (matrixName) {
+    const limits = await prisma.parameterLimit.findMany({
+      where: { parameter_id: { in: uniqueParamIds }, matrix: matrixName, tenant_id: tenantId },
+    })
+    for (const l of limits) limitMap.set(l.parameter_id, { min_limit: l.min_limit, max_limit: l.max_limit })
+  }
+
   try {
     for (const r of data.readings) {
-      const param = await prisma.qualityParameter.findFirst({
-         where: { id: r.parameterId, tenant_id: tenantId }
-      })
+      const param = paramMap.get(r.parameterId)
       if (!param) continue;
 
       let min_limit: number | null = null
       let max_limit: number | null = null
 
       if (matrixName) {
-        const pLimit = await prisma.parameterLimit.findFirst({
-          where: { parameter_id: param.id, matrix: matrixName, tenant_id: tenantId }
-        })
+        const pLimit = limitMap.get(param.id)
         if (pLimit) {
           min_limit = pLimit.min_limit
           max_limit = pLimit.max_limit
