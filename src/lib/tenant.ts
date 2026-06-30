@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -5,14 +6,17 @@ import { prisma } from '@/lib/prisma'
  * Retrieves the `tenantId` of the currently logged-in user.
  * For server components and server actions.
  * Throws an error if the user is not authenticated or lacks a tenantId.
+ *
+ * Envolto em React cache(): dentro de uma mesma requisição, auth()/decode do
+ * JWT roda uma única vez, mesmo com múltiplas chamadas. Comportamento idêntico.
  */
-export async function getTenantId(): Promise<string> {
+export const getTenantId = cache(async (): Promise<string> => {
   const session = await auth()
   if (!session?.user?.tenantId) {
     throw new Error('Acesso não autorizado: Tenant não encontrado.')
   }
   return session.user.tenantId
-}
+})
 
 /**
  * Resolves a user ID by email within the current tenant.
