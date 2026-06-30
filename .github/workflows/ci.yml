@@ -50,7 +50,4 @@ jobs:
         run: npx vitest run --no-cache
 
       - name: Verificação de tipos (TypeScript)
-        # Não falha o build por erros de tipo pré-existentes (implicit any).
-        # Roda como informativo até a limpeza de tipos estar concluída.
-        run: npx tsc --noEmit || echo "::warning::Há erros de TypeScript a revisar (não bloqueante por enquanto)"
-        continue-on-error: true
+        run: npx tsc --noEmit

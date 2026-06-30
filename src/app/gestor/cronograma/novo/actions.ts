@@ -2,10 +2,12 @@
 
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
+import { requireRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 export async function createMonitoringSchedule(formData: FormData) {
+  await requireRole(['MANAGER'])
   const tenant_id = await getTenantId()
   const collection_point_id = formData.get('collection_point_id') as string
   const parameter_id = formData.get('parameter_id') as string

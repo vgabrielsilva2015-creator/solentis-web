@@ -2,9 +2,11 @@
 
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
+import { requireRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
 export async function deleteMonitoringSchedule(formData: FormData) {
+  await requireRole(['MANAGER'])
   const tenant_id = await getTenantId()
   const schedule_id = formData.get('id') as string
 
@@ -21,6 +23,7 @@ export async function deleteMonitoringSchedule(formData: FormData) {
 }
 
 export async function toggleMonitoringSchedule(formData: FormData) {
+  await requireRole(['MANAGER'])
   const tenant_id = await getTenantId()
   const schedule_id = formData.get('id') as string
   const current_status = formData.get('is_active') === 'true'

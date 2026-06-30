@@ -2,7 +2,7 @@
 
 import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, validatePassword } from '@/lib/password'
+import { hashPassword, passwordSchema } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
 
 const TOKEN_TTL_MS = 60 * 60 * 1000 // 60 minutos
@@ -92,9 +92,9 @@ export async function resetPassword(token: string, newPassword: string) {
     return { error: 'Dados inválidos.' }
   }
 
-  const passwordError = validatePassword(newPassword)
-  if (passwordError) {
-    return { error: passwordError }
+  const pw = passwordSchema.safeParse(newPassword)
+  if (!pw.success) {
+    return { error: pw.error.issues[0].message }
   }
 
   try {

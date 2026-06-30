@@ -1,6 +1,15 @@
 import bcrypt from 'bcryptjs'
+import { z } from 'zod'
 
 const SALT_ROUNDS = 12
+
+// Política única de senha (fonte da verdade). UI e servidor concordam:
+// mínimo 10 caracteres, com ao menos uma letra e um número.
+export const passwordSchema = z
+  .string()
+  .min(10, 'A senha deve ter no mínimo 10 caracteres.')
+  .regex(/[A-Za-z]/, 'A senha deve conter ao menos uma letra.')
+  .regex(/[0-9]/, 'A senha deve conter ao menos um número.')
 
 const PASSWORD_POLICY = {
   minLength: 8,

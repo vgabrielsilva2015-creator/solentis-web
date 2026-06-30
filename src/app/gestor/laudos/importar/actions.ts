@@ -127,7 +127,7 @@ export async function createParameterFromImport(data: { name: string; unit: stri
   const { auth } = await import('@/lib/auth')
   
   const session = await auth()
-  if (!session) return { success: false, error: 'Não autorizado.' }
+  if (!session || session.user.role !== 'MANAGER') return { success: false, error: 'Não autorizado.' }
   
   const tenantId = await getTenantId()
   const user = await prisma.user.findUnique({
@@ -175,7 +175,7 @@ export async function saveMappedReadings(data: {
   const { calcularNaoConformidade } = await import('@/lib/readings-utils')
   
   const session = await auth()
-  if (!session) return { success: false, error: 'Não autorizado.' }
+  if (!session || session.user.role !== 'MANAGER') return { success: false, error: 'Não autorizado.' }
   
   const tenantId = await getTenantId()
 
