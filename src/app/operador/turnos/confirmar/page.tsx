@@ -40,12 +40,11 @@ export default async function ConfirmarPage({
   if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) redirect('/operador/turnos')
   if (handover.status !== 'PENDING') redirect('/operador/turnos')
 
-  let checklist: {
+  const checklist = (handover.checklist_data as {
     readings_count?: number
     open_occurrences_count?: number
     pending_items?: string
-  } = {}
-  try { checklist = JSON.parse(handover.checklist_data) } catch { /* ignora */ }
+  }) ?? {}
 
   const vencido = new Date(handover.timeout_at) < new Date()
 

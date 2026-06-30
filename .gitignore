@@ -31,6 +31,12 @@
 # Uploads (arquivos de usuário — não versionar)
 uploads/
 
+# Relatórios e arquivos gerados localmente
+/playwright-report/
+/test-results/
+/scratch/
+/public/sw.js
+
 # Backups locais
 backups/
 

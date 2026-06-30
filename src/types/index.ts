@@ -15,13 +15,28 @@ export const ROLES = {
 
 // ─── Operação ─────────────────────────────────────────────────────────────────
 
-export type DataOrigin = 'MANUAL' | 'SENSOR' | 'IMPORT'
+export type DataOrigin = 'MANUAL' | 'SENSOR' | 'IMPORT' | 'AI_IMPORT'
 
 export const DATA_ORIGINS = {
-  MANUAL: 'MANUAL',
-  SENSOR: 'SENSOR',
-  IMPORT: 'IMPORT',
+  MANUAL:    'MANUAL',
+  SENSOR:    'SENSOR',
+  IMPORT:    'IMPORT',
+  AI_IMPORT: 'AI_IMPORT',
 } as const satisfies Record<DataOrigin, DataOrigin>
+
+export type RuleType = 'TETO' | 'FAIXA' | 'EFICIENCIA'
+
+export type EquipmentStatus = 'OPERATING' | 'MAINTENANCE' | 'INACTIVE' | 'SCRAPPED'
+
+export type LaboratoryType = 'INTERNAL' | 'EXTERNAL'
+
+export type ExternalAnalysisStatus = 'PENDING_LAB' | 'COMPLETED'
+
+export type SampleType = 'FIELD' | 'INTERNAL' | 'EXTERNAL'
+
+export type ScheduleFrequency = 'PER_SHIFT' | 'DAILY' | 'WEEKLY' | 'MONTHLY'
+
+export type TaskStatus = 'PENDING' | 'DONE' | 'SKIPPED'
 
 // ─── Ocorrências ──────────────────────────────────────────────────────────────
 

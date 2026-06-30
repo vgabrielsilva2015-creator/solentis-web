@@ -2,7 +2,7 @@
 
 import { auth, signIn } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
+import { hashPassword, validatePassword } from '@/lib/password'
 import { z } from 'zod'
 import { AuthError } from 'next-auth'
 
@@ -44,6 +44,11 @@ export async function trocarSenhaAction(
   if (!parsed.success) {
     const flat = parsed.error.flatten()
     return { fieldErrors: flat.fieldErrors as Record<string, string[]> }
+  }
+
+  const passwordError = validatePassword(parsed.data.newPassword)
+  if (passwordError) {
+    return { error: passwordError }
   }
 
   try {

@@ -2,7 +2,7 @@
 
 import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
+import { hashPassword, validatePassword } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
 
 const TOKEN_TTL_MS = 60 * 60 * 1000 // 60 minutos
@@ -27,9 +27,9 @@ function buildResetUrl(rawToken: string) {
 export async function sendPasswordResetLink(email: string) {
   const normalizedEmail = email.trim().toLowerCase()
 
-  // @tenant-safe: fluxo de auth busca usuario pelo email globalmente
-  const user = await prisma.user.findFirst({
-    where: { email: { equals: normalizedEmail, mode: 'insensitive' }, is_active: true },
+  // O email é globalmente único no schema Prisma, portanto findUnique é seguro.
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
   })
 
   // Não revelamos se o usuário existe: retornamos sucesso de qualquer forma.
@@ -88,8 +88,13 @@ export async function sendPasswordResetLink(email: string) {
  * Valida hash + expiração + uso único antes de trocar a senha.
  */
 export async function resetPassword(token: string, newPassword: string) {
-  if (!token || !newPassword || newPassword.length < 8) {
-    return { error: 'Dados inválidos ou senha muito curta.' }
+  if (!token || !newPassword) {
+    return { error: 'Dados inválidos.' }
+  }
+
+  const passwordError = validatePassword(newPassword)
+  if (passwordError) {
+    return { error: passwordError }
   }
 
   try {

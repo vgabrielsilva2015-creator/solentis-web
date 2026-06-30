@@ -209,13 +209,13 @@ export async function iniciarPassagem(
     }),
   ])
 
-  const checklistData = JSON.stringify({
+  const checklistData = {
     readings_count:         readingsCount,
     open_occurrences_count: openOccurrencesCount,
     pending_items:          parsed.data.pending_items ?? '',
     pending_tasks_count:    pendingTasks.length,
     pending_tasks:          pendingTasks.map((t) => t.title),
-  })
+  }
 
   const handoverAt = new Date()
   const timeoutAt  = new Date(

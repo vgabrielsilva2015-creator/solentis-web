@@ -8,6 +8,97 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  OPERATOR
+  TECHNICIAN
+  MANAGER
+  SUPER_ADMIN
+  MAINTENANCE
+}
+
+enum RuleType {
+  TETO
+  FAIXA
+  EFICIENCIA
+}
+
+enum EquipmentStatus {
+  OPERATING
+  MAINTENANCE
+  INACTIVE
+  SCRAPPED
+}
+
+enum ShiftInstanceStatus {
+  SCHEDULED
+  OPEN
+  HANDOVER_PENDING
+  CLOSED
+}
+
+enum DataOrigin {
+  MANUAL
+  SENSOR
+  IMPORT
+  AI_IMPORT
+}
+
+enum LaboratoryType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum ExternalAnalysisStatus {
+  PENDING_LAB
+  COMPLETED
+}
+
+enum SampleType {
+  FIELD
+  INTERNAL
+  EXTERNAL
+}
+
+enum ScheduleFrequency {
+  PER_SHIFT
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum HandoverStatus {
+  PENDING
+  CONFIRMED
+  TIMED_OUT
+}
+
+enum OccurrenceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // a) Identidade & Autenticação
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,11 +149,11 @@ model Tenant {
 model User {
   id                   String    @id @default(cuid())
   tenant_id            String
-  email                String
+  email                String    @unique
   password_hash        String
   name                 String
   phone                String?
-  role                 String
+  role                 Role
   must_change_password Boolean   @default(true)
   is_active            Boolean   @default(true)
   last_login_at        DateTime?
@@ -222,7 +313,7 @@ model ParameterLimit {
   matrix          String
   min_limit       Float?
   max_limit       Float?
-  rule_type       String   @default("TETO") // TETO, FAIXA, EFICIENCIA
+  rule_type       RuleType @default(TETO)
   legal_reference String? // e.g. "CONAMA 430/2011"
   created_at      DateTime @default(now())
 
@@ -382,7 +473,7 @@ model OccurrenceSeverityDefault {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Equipment {
-  id                        String    @id @default(cuid())
+  id                        String          @id @default(cuid())
   tenant_id                 String
   name                      String
   category_id               String
@@ -390,15 +481,15 @@ model Equipment {
   location                  String?
   installation_date         DateTime?
   preventive_frequency_days Int
-  is_active                 Boolean   @default(true)
-  created_at                DateTime  @default(now())
+  is_active                 Boolean         @default(true)
+  created_at                DateTime        @default(now())
   created_by                String
   deleted_at                DateTime?
   manufacturer              String?
   model_name                String?
   manual_url                String?
   photo_url                 String?
-  status                    String    @default("OPERATING")
+  status                    EquipmentStatus @default(OPERATING)
   responsible_id            String?
 
   tenant                  Tenant                  @relation(fields: [tenant_id], references: [id])
@@ -414,14 +505,14 @@ model Equipment {
 }
 
 model ShiftInstance {
-  id         String    @id @default(cuid())
+  id         String              @id @default(cuid())
   tenant_id  String
   shift_id   String
   date       DateTime
   opened_by  String
-  opened_at  DateTime  @default(now())
+  opened_at  DateTime            @default(now())
   closed_at  DateTime?
-  status     String    @default("OPEN")
+  status     ShiftInstanceStatus @default(OPEN)
   created_at DateTime  @default(now())
 
   tenant      Tenant         @relation(fields: [tenant_id], references: [id])
@@ -448,8 +539,8 @@ model Reading {
   unit                String?
   notes               String?
   is_non_conformant   Boolean?
-  origin              String   @default("MANUAL")
-  metadata_origin     String? // JSON serializado: {device_id, topic, qos} — reservado para sensores (v2.0)
+  origin              DataOrigin @default(MANUAL)
+  metadata_origin     Json?
   recorded_by         String
   recorded_at         DateTime
   created_at          DateTime @default(now())
@@ -481,12 +572,12 @@ model Analysis {
   min_limit_applied   Float?
   max_limit_applied   Float?
   report_text         String?
-  laboratory_type     String    @default("INTERNAL") // INTERNAL or EXTERNAL
+  laboratory_type     LaboratoryType @default(INTERNAL)
   is_non_conformant   Boolean
   approved_by         String?
   approved_at         DateTime?
-  origin              String    @default("MANUAL")
-  metadata_origin     String? // JSON serializado — reservado para sensores (v2.0)
+  origin              DataOrigin    @default(MANUAL)
+  metadata_origin     Json?
   collected_at        DateTime
   recorded_by         String
   created_at          DateTime  @default(now())
@@ -521,8 +612,8 @@ model ExternalAnalysis {
   laboratory_name     String?
   laudo_number        String?
   is_non_conformant   Boolean?
-  status              String    @default("PENDING_LAB") // PENDING_LAB, COMPLETED
-  origin              String    @default("MANUAL")
+  status              ExternalAnalysisStatus @default(PENDING_LAB)
+  origin              DataOrigin             @default(MANUAL)
   collected_at        DateTime
   collected_by        String
   completed_at        DateTime?
@@ -540,13 +631,13 @@ model ExternalAnalysis {
 }
 
 model MonitoringSchedule {
-  id                  String   @id @default(cuid())
+  id                  String          @id @default(cuid())
   tenant_id           String
   collection_point_id String
   parameter_id        String
-  executor_role       String   // OPERATOR, TECHNICIAN
-  sample_type         String   // FIELD, INTERNAL, EXTERNAL
-  frequency           String   // PER_SHIFT, DAILY, WEEKLY, MONTHLY
+  executor_role       Role            // OPERATOR, TECHNICIAN
+  sample_type         SampleType      // FIELD, INTERNAL, EXTERNAL
+  frequency           ScheduleFrequency // PER_SHIFT, DAILY, WEEKLY, MONTHLY
   days_of_week        Int[]    // 0=Sun, 1=Mon, ..., 6=Sat
   days_of_month       Int[]    // 1-31
   is_active           Boolean  @default(true)
@@ -565,14 +656,14 @@ model MonitoringSchedule {
 }
 
 model PreventiveMaintenance {
-  id             String    @id @default(cuid())
+  id             String            @id @default(cuid())
   tenant_id      String
   equipment_id   String
   scheduled_date DateTime
   completed_date DateTime?
   completed_by   String?
   notes          String?
-  status         String    @default("SCHEDULED")
+  status         MaintenanceStatus @default(SCHEDULED)
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 
@@ -591,10 +682,10 @@ model CorrectiveMaintenance {
   equipment_id   String
   description    String
   responsible_id String
-  priority       String?   @default("MEDIUM")
+  priority       Priority?          @default(MEDIUM)
   start_date     DateTime
   end_date       DateTime?
-  status         String    @default("OPEN")
+  status         MaintenanceStatus  @default(IN_PROGRESS)
   estimated_cost Decimal?
   actual_cost    Decimal?
   notes          String?
@@ -619,7 +710,7 @@ model Occurrence {
   category            String?   // VAZAMENTO, QUEBRA, FALTA_PRODUTO, OUTROS
   type                String?   // OPERATIONAL | LABORATORY | EQUIPMENT | ENVIRONMENTAL | SAFETY
   severity            String
-  status              String    @default("OPEN")
+  status              OccurrenceStatus @default(OPEN)
   deadline            DateTime
   resolved_at         DateTime?
   resolved_by         String?
@@ -675,13 +766,13 @@ model ShiftHandover {
   shift_instance_id     String    @unique
   outgoing_user_id      String
   incoming_user_id      String?
-  checklist_data        String // JSON serializado: {readings_done, open_occurrences, pending_items}
+  checklist_data        Json // JSON serializado: {readings_done, open_occurrences, pending_items}
   outgoing_observations String?
   handover_at           DateTime
   timeout_at            DateTime
   incoming_observations String?
   confirmed_at          DateTime?
-  status                String    @default("PENDING")
+  status                HandoverStatus @default(PENDING)
   created_at            DateTime  @default(now())
 
   tenant         Tenant        @relation(fields: [tenant_id], references: [id])
@@ -705,7 +796,7 @@ model ShiftTask {
   completed_at      DateTime?
   completed_by      String?
   completion_notes  String?
-  status            String    @default("PENDING")
+  status            TaskStatus @default(PENDING)
 
   tenant         Tenant           @relation(fields: [tenant_id], references: [id])
   shift_instance ShiftInstance    @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
