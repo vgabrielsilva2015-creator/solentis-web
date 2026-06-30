@@ -124,7 +124,6 @@ export async function registrarLeitura(
         notes:               parsed.data.notes,
         is_non_conformant:   isNonConformant,
         origin:              'MANUAL',
-        metadata_origin:     null,
         recorded_by:         userId,
         recorded_at:         localInputToUTC(parsed.data.recorded_at),
       },

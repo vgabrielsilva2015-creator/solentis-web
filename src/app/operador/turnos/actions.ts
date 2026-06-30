@@ -228,7 +228,7 @@ export async function iniciarPassagem(
         tenant_id:             (await getTenantId()),
         shift_instance_id:     instanceId,
         outgoing_user_id:      userId,
-        checklist_data:        checklistData,
+        checklist_data:        JSON.stringify(checklistData),
         outgoing_observations: parsed.data.outgoing_observations,
         handover_at:           handoverAt,
         timeout_at:            timeoutAt,

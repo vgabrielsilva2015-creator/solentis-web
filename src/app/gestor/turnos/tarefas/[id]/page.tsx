@@ -72,11 +72,11 @@ export default async function InstanciaDetalhePage({
 
   const h = instance.handover
 
-  const checklist = h ? (h.checklist_data as {
+  const checklist = (h ? JSON.parse((h.checklist_data as string) || '{}') : {}) as {
     readings_count?: number
     open_occurrences_count?: number
     pending_items?: string
-  }) ?? {} : {}
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">

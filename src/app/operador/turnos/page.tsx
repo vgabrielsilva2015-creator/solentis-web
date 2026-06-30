@@ -106,13 +106,13 @@ export default async function TurnosPage() {
             {pendingToConfirm.map((inst) => {
               const h        = inst.handover!
               const vencido  = new Date(h.timeout_at) < now
-              const checklist = (h.checklist_data as {
+              const checklist = JSON.parse((h.checklist_data as string) || '{}') as {
                 readings_count?: number
                 open_occurrences_count?: number
                 pending_items?: string
                 pending_tasks_count?: number
                 pending_tasks?: string[]
-              }) ?? {}
+              }
 
               return (
                 <div

@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { ThemeScript } from "@/components/theme-provider";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { SyncManager } from "@/components/sync-manager";
+import { ToastProvider } from "@/components/ui/toast";
 import type { Viewport } from "next";
 
 const sora = Sora({
@@ -64,7 +65,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <OfflineIndicator />
         <SyncManager />
-        {children}
+        <ToastProvider position="bottom-right">
+          {children}
+        </ToastProvider>
         <CommandMenu />
         <Analytics />
       </body>

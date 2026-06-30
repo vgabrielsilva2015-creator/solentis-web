@@ -4,7 +4,7 @@
  * Pré-requisito: npx prisma db seed (seed principal) já executado.
  */
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 const TENANT_ID = 'default'
@@ -21,7 +21,7 @@ function randomInt(min: number, max: number): number {
   return Math.floor(randomBetween(min, max + 1))
 }
 
-function randomItem<T>(arr: T[]): T {
+function randomItem<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
@@ -50,7 +50,7 @@ async function main() {
 
   // ── Leituras (180 dias × ~2/dia) ─────────────────────────────────────────
   console.log('Gerando leituras de campo...')
-  const readingsData = []
+  const readingsData: Prisma.ReadingCreateManyInput[] = []
   for (let day = 180; day >= 0; day--) {
     const count = randomInt(1, 4)
     for (let i = 0; i < count; i++) {
@@ -87,7 +87,7 @@ async function main() {
 
   // ── Análises (180 dias × ~1/dia) ─────────────────────────────────────────
   console.log('Gerando análises laboratoriais...')
-  const analysesData = []
+  const analysesData: Prisma.AnalysisCreateManyInput[] = []
   for (let day = 180; day >= 0; day--) {
     if (Math.random() < 0.4) continue // ~60% dos dias têm análise
     const param  = randomItem(params)
@@ -131,13 +131,13 @@ async function main() {
 
   // ── Ocorrências (1 por semana nos últimos 6 meses) ────────────────────────
   console.log('Gerando ocorrências...')
-  const severities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-  const statuses   = ['OPEN', 'IN_PROGRESS', 'RESOLVED']
+  const severities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const
+  const statuses   = ['OPEN', 'IN_PROGRESS', 'RESOLVED'] as const
 
   const severityDefaults = await prisma.occurrenceSeverityDefault.findMany()
   const deadlineMap = new Map(severityDefaults.map((s) => [s.severity, s.deadline_hours]))
 
-  const occurrencesData = []
+  const occurrencesData: Prisma.OccurrenceCreateManyInput[] = []
   for (let week = 24; week >= 0; week--) {
     const count = randomInt(1, 3)
     for (let i = 0; i < count; i++) {

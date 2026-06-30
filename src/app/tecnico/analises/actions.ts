@@ -102,7 +102,6 @@ export async function registrarAnalise(
         approved_by:         null,
         approved_at:         null,
         origin:              'MANUAL',
-        metadata_origin:     null,
         collected_at:        localInputToUTC(parsed.data.collected_at),
         recorded_by:         userId,
       },
