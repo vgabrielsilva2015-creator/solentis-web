@@ -22,6 +22,8 @@ type Parameter = {
 type Props = {
   collectionPoints: CollectionPoint[]
   parameters:       Parameter[]
+  // ponto de coleta → ids de parâmetros configurados pelo gestor (cronograma)
+  allowedParams:    Record<string, string[]>
 }
 
 type Draft = {
@@ -46,7 +48,7 @@ const chipActive = (active: boolean) =>
     ? 'bg-[#3ad0d6]/15 border-[#3ad0d6] text-[#3ad0d6]'
     : 'bg-slate-800 border-slate-700 text-slate-300'
 
-export function ReadingForm({ collectionPoints, parameters }: Props) {
+export function ReadingForm({ collectionPoints, parameters, allowedParams }: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(registrarLeitura, initialState)
 
@@ -99,6 +101,24 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
       router.push('/operador/leituras')
     }
   }, [state.success, router])
+
+  // ── Filtro de parâmetros pelo cronograma do gestor ─────────────────────────
+  // Se o ponto tem parâmetros configurados, mostra só eles; senão, mostra todos
+  // (fallback) para não travar operação em pontos ainda não configurados.
+  const allowedForPoint = collectionPointId ? allowedParams[collectionPointId] : undefined
+  const hasSchedule = !!allowedForPoint && allowedForPoint.length > 0
+  const visibleParams = hasSchedule
+    ? parameters.filter((p) => allowedForPoint!.includes(p.id))
+    : parameters
+
+  // Ao trocar de ponto, limpa o parâmetro se ele não for permitido no novo ponto
+  useEffect(() => {
+    if (parameterId && !visibleParams.some((p) => p.id === parameterId)) {
+      setParameterId('')
+      setValueStr('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionPointId])
 
   // ── Parâmetro selecionado (para limites e unidade) ─────────────────────────
   const selectedParam = parameters.find((p) => p.id === parameterId) ?? null
@@ -199,7 +219,7 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
             >
               Observação visual
             </button>
-            {parameters.map((p) => {
+            {visibleParams.map((p) => {
               const active = parameterId === p.id
               return (
                 <button
@@ -214,6 +234,11 @@ export function ReadingForm({ collectionPoints, parameters }: Props) {
               )
             })}
           </div>
+          {collectionPointId && !hasSchedule && (
+            <p className="text-xs text-amber-400">
+              Nenhum parâmetro pré-configurado para este ponto — peça ao gestor para configurar em Cronograma.
+            </p>
+          )}
           <input type="hidden" name="parameter_id" value={parameterId} />
         </div>
 
