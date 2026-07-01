@@ -15,6 +15,25 @@ async function requireManager() {
   return session
 }
 
+/**
+ * Carrega um parâmetro (com método e pontos) para edição no Sheet.
+ * Read tenant-safe + guard de MANAGER. Mesma query da página de detalhe —
+ * apenas movida para action, para o Sheet buscar sob demanda ao abrir.
+ */
+export async function carregarParametro(id: string) {
+  await requireManager()
+  return prisma.qualityParameter.findFirst({
+    where: { id, tenant_id: await getTenantId() },
+    select: {
+      id: true, name: true, unit: true,
+      min_limit: true, max_limit: true,
+      legal_reference: true, effective_date: true, is_active: true,
+      method: { select: { name: true } },
+      collection_points: { select: { name: true } },
+    },
+  })
+}
+
 const ParametroSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   unit: z.string().min(1, 'Informe a unidade'),

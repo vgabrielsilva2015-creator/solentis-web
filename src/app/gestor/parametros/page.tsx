@@ -2,15 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
-
-function formatLimit(value: number | null): string {
-  if (value === null) return '—'
-  return value.toString()
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+import { ParametrosTable } from './parametros-table'
 
 export default async function ParametrosPage({
   searchParams,
@@ -75,54 +67,7 @@ export default async function ParametrosPage({
             {search ? `Nenhum parâmetro encontrado para "${search}".` : 'Nenhum parâmetro cadastrado.'}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-4 py-3">Parâmetro</th>
-                <th className="px-4 py-3">Limites</th>
-                <th className="px-4 py-3">Vigência</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {params.map((p) => (
-                <tr key={p.id} className="transition-colors hover:bg-slate-800/50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-slate-100">{p.name}</div>
-                    <div className="text-xs text-slate-500">{p.unit}</div>
-                    {p.legal_reference && (
-                      <div className="text-xs text-slate-600">{p.legal_reference}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-300 font-mono">
-                    {formatLimit(p.min_limit)} – {formatLimit(p.max_limit)}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
-                    {formatDate(p.effective_date)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {p.is_active ? (
-                      <span className="flex items-center gap-1.5 text-xs text-green-400">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Ativo
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-xs text-red-400">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Inativo
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/gestor/parametros/${p.id}`}>
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">
-                        Editar
-                      </Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ParametrosTable items={params} />
         )}
       </div>
 
