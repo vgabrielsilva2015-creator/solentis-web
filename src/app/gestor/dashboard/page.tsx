@@ -1,9 +1,20 @@
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import { getTenantId } from '@/lib/tenant'
 import { APP_TIMEZONE } from '@/lib/date-utils'
 import { DashboardClient } from './dashboard-client'
 
 export const dynamic = 'force-dynamic'
+
+// COUNT retorna bigint no $queryRaw — normaliza para number
+const num = (v: unknown): number => Number(v as bigint)
+
+type MeasCountRow = {
+  today: bigint; yesterday: bigint
+  total_current: bigint; nc_current: bigint
+  total_prev: bigint; nc_prev: bigint
+  today_nc: bigint
+}
 
 function calcDelta(current: number, previous: number): number | null {
   if (previous === 0) return null // Sem histórico para comparar
@@ -69,15 +80,30 @@ export default async function GestorDashboard({
     }
   }
 
-  // PHASE 2: Huge Promise.all for all other 24+ queries
+  // Filtro opcional de ponto para os counts em SQL bruto
+  const pointSql = pontoId ? Prisma.sql`AND collection_point_id = ${pontoId}` : Prisma.empty
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  // As ~24 contagens por período viram 1 query por tabela via COUNT(*) FILTER.
+  // Validado 1:1 contra as contagens antigas (readings/analyses/external/occ,
+  // com e sem filtro de ponto, para 24h/7d/30d). table/dateCol são literais
+  // controlados (Prisma.raw) — sem injeção.
+  const measCounts = (table: Prisma.Sql, dateCol: Prisma.Sql) =>
+    prisma.$queryRaw<MeasCountRow[]>(Prisma.sql`
+      SELECT
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${today}) AS today,
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${yesterday} AND ${dateCol} < ${today}) AS yesterday,
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoInicio}) AS total_current,
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoInicio} AND is_non_conformant = true) AS nc_current,
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoAnteriorInicio} AND ${dateCol} < ${periodoInicio}) AS total_prev,
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoAnteriorInicio} AND ${dateCol} < ${periodoInicio} AND is_non_conformant = true) AS nc_prev,
+        COUNT(*) FILTER (WHERE ${dateCol} >= ${today} AND is_non_conformant = true) AS today_nc
+      FROM ${table}
+      WHERE tenant_id = ${tenant_id} ${pointSql}
+    `)
+
   const [
-    readingsToday, readingsYesterday,
-    analysesToday, analysesYesterday,
-    externalToday, externalYesterday,
-    openOccurrences,
-    totalReadsCurrent, nonConformReadsCurrent, totalReadsPrev, nonConformReadsPrev,
-    totalAnalysesCurrent, nonConformAnalysesCurrent, totalAnalysesPrev, nonConformAnalysesPrev,
-    totalExternalCurrent, nonConformExternalCurrent, totalExternalPrev, nonConformExternalPrev,
+    readingCountsRow, analysisCountsRow, externalCountsRow, occCountsRow,
     readsLast7Days, analysesLast7Days, externalLast7Days,
     schedules,
     collectionPointsRaw,
@@ -87,40 +113,26 @@ export default async function GestorDashboard({
     auditFeed,
     pendingMaintenances,
     shiftScales,
-    openCriticalOccCount,
-    openOtherOccCount,
-    nonConformReadingsTodayCount, nonConformAnalysesTodayCount, nonConformExternalTodayCount,
     latestReading, latestAnalysis, latestExternal,
     latestNCReading, latestNCAnalysis, latestNCExternal,
     activeOccurrences
   ] = await Promise.all([
-    // KPIs Base
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: today }, ...pointCond } }),
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: yesterday, lt: today }, ...pointCond } }),
-    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
-    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: yesterday, lt: today }, ...pointCond } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: today }, ...pointCond } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: yesterday, lt: today }, ...pointCond } }),
-    prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond } }),
-    // Conformity Readings
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond } }),
-    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoInicio }, ...pointCond } }),
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
-    prisma.reading.count({ where: { tenant_id, is_non_conformant: true, created_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
-    // Conformity Analyses
-    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: periodoInicio }, ...pointCond } }),
-    prisma.analysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoInicio }, ...pointCond } }),
-    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
-    prisma.analysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
-    // Conformity External
-    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: periodoInicio }, ...pointCond } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoInicio }, ...pointCond } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, is_non_conformant: true, collected_at: { gte: periodoAnteriorInicio, lt: periodoInicio }, ...pointCond } }),
+    // Contagens consolidadas — 4 queries no lugar de ~24 counts
+    measCounts(Prisma.raw('readings'), Prisma.raw('created_at')),
+    measCounts(Prisma.raw('analyses'), Prisma.raw('collected_at')),
+    measCounts(Prisma.raw('external_analyses'), Prisma.raw('collected_at')),
+    prisma.$queryRaw<Array<{ open_total: bigint; open_critical: bigint; open_other: bigint }>>(Prisma.sql`
+      SELECT
+        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') ${pointSql}) AS open_total,
+        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') AND severity = 'CRITICAL') AS open_critical,
+        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') AND severity IN ('HIGH','MEDIUM','LOW')) AS open_other
+      FROM occurrences
+      WHERE tenant_id = ${tenant_id}
+    `),
     // Sparkline
-    prisma.reading.findMany({ where: { tenant_id, created_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond }, select: { created_at: true } }),
-    prisma.analysis.findMany({ where: { tenant_id, collected_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond }, select: { collected_at: true } }),
-    prisma.externalAnalysis.findMany({ where: { tenant_id, collected_at: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }, ...pointCond }, select: { collected_at: true } }),
+    prisma.reading.findMany({ where: { tenant_id, created_at: { gte: sevenDaysAgo }, ...pointCond }, select: { created_at: true } }),
+    prisma.analysis.findMany({ where: { tenant_id, collected_at: { gte: sevenDaysAgo }, ...pointCond }, select: { collected_at: true } }),
+    prisma.externalAnalysis.findMany({ where: { tenant_id, collected_at: { gte: sevenDaysAgo }, ...pointCond }, select: { collected_at: true } }),
     // Monitoring Schedule
     prisma.monitoringSchedule.findMany({ where: { tenant_id, is_active: true } }),
     // Heatmap
@@ -145,11 +157,6 @@ export default async function GestorDashboard({
     prisma.auditLog.findMany({ where: { tenant_id }, orderBy: { timestamp: 'desc' }, take: 5, include: { user: { select: { name: true } } } }),
     prisma.preventiveMaintenance.findMany({ where: { tenant_id, status: 'SCHEDULED', scheduled_date: { lte: maxPreventiveDate } }, orderBy: { scheduled_date: 'asc' }, include: { equipment: { select: { id: true, name: true } } } }),
     prisma.shiftScale.findMany({ where: { tenant_id, date: today }, include: { operator: { select: { name: true } }, shift: { select: { name: true, start_time: true, end_time: true, crosses_midnight: true } } } }),
-    prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, severity: 'CRITICAL' } }),
-    prisma.occurrence.count({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, severity: { in: ['HIGH', 'MEDIUM', 'LOW'] } } }),
-    prisma.reading.count({ where: { tenant_id, created_at: { gte: today }, is_non_conformant: true } }),
-    prisma.analysis.count({ where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true } }),
-    prisma.externalAnalysis.count({ where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true } }),
     prisma.reading.findFirst({ where: { tenant_id }, orderBy: { recorded_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
     prisma.analysis.findFirst({ where: { tenant_id }, orderBy: { collected_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
     prisma.externalAnalysis.findFirst({ where: { tenant_id }, orderBy: { collected_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
@@ -158,6 +165,17 @@ export default async function GestorDashboard({
     prisma.externalAnalysis.findFirst({ where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true }, orderBy: { collected_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
     prisma.occurrence.findMany({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond }, orderBy: { created_at: 'desc' }, include: { reporter: { select: { name: true } }, collection_point: { select: { name: true } } } })
   ])
+
+  // Deriva os escalares a partir das contagens consolidadas
+  const rc = readingCountsRow[0], ac = analysisCountsRow[0], ec = externalCountsRow[0], occ = occCountsRow[0]
+  const readingsToday = num(rc.today), readingsYesterday = num(rc.yesterday)
+  const analysesToday = num(ac.today), analysesYesterday = num(ac.yesterday)
+  const externalToday = num(ec.today), externalYesterday = num(ec.yesterday)
+  const totalReadsCurrent = num(rc.total_current), nonConformReadsCurrent = num(rc.nc_current), totalReadsPrev = num(rc.total_prev), nonConformReadsPrev = num(rc.nc_prev)
+  const totalAnalysesCurrent = num(ac.total_current), nonConformAnalysesCurrent = num(ac.nc_current), totalAnalysesPrev = num(ac.total_prev), nonConformAnalysesPrev = num(ac.nc_prev)
+  const totalExternalCurrent = num(ec.total_current), nonConformExternalCurrent = num(ec.nc_current), totalExternalPrev = num(ec.total_prev), nonConformExternalPrev = num(ec.nc_prev)
+  const nonConformReadingsTodayCount = num(rc.today_nc), nonConformAnalysesTodayCount = num(ac.today_nc), nonConformExternalTodayCount = num(ec.today_nc)
+  const openOccurrences = num(occ.open_total), openCriticalOccCount = num(occ.open_critical), openOtherOccCount = num(occ.open_other)
 
   // Total Registers Top KPI
   const totalRegistersToday = readingsToday + analysesToday + externalToday
