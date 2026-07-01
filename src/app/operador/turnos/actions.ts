@@ -112,11 +112,13 @@ export async function abrirTurno(
   })
   if (!shift) return { error: 'Turno não encontrado.' }
 
+  const tenant_id = await getTenantId()
+
   // Verificação de duplicado em transação (SQLite serializa escritas — seguro no MVP)
   const result = await prisma.$transaction(async (tx) => {
     const existing = await tx.shiftInstance.findFirst({
       where: {
-        tenant_id: (await getTenantId()),
+        tenant_id,
         shift_id:  parsed.data.shift_id,
         date:      today,
         status:    { in: ['OPEN', 'HANDOVER_PENDING'] },
@@ -129,24 +131,26 @@ export async function abrirTurno(
     // Se existe instância pré-agendada (SCHEDULED), promove para OPEN
     const scheduled = await tx.shiftInstance.findFirst({
       where: {
-        tenant_id: (await getTenantId()),
+        tenant_id,
         shift_id:  parsed.data.shift_id,
         date:      today,
         status:    'SCHEDULED',
       },
     })
 
+    let instanceId: string
     if (scheduled) {
-      await tx.shiftInstance.updateMany({ where: { id: scheduled.id , tenant_id: (await getTenantId()) }, data: {
+      await tx.shiftInstance.updateMany({ where: { id: scheduled.id, tenant_id }, data: {
           opened_by: userId,
           opened_at: new Date(),
           status:    'OPEN',
         },
       })
+      instanceId = scheduled.id
     } else {
-      await tx.shiftInstance.create({
+      const created = await tx.shiftInstance.create({
         data: {
-          tenant_id: (await getTenantId()),
+          tenant_id,
           shift_id:  parsed.data.shift_id,
           date:      today,
           opened_by: userId,
@@ -154,7 +158,40 @@ export async function abrirTurno(
           status:    'OPEN',
         },
       })
+      instanceId = created.id
     }
+
+    // Templates de tarefa do turno → cria uma ShiftTask PENDING para cada um.
+    // Guarda anti-duplicação: não recria templates que já viraram tarefa nesta
+    // instância (importa para turnos pré-agendados que podem ser reabertos).
+    const templates = await tx.shiftTaskTemplate.findMany({
+      where: { tenant_id, shift_id: parsed.data.shift_id, is_active: true },
+      orderBy: [{ sort_order: 'asc' }, { created_at: 'asc' }],
+    })
+    if (templates.length > 0) {
+      const jaCriadas = await tx.shiftTask.findMany({
+        where:  { tenant_id, shift_instance_id: instanceId, template_id: { not: null } },
+        select: { template_id: true },
+      })
+      const jaCriadasIds = new Set(jaCriadas.map((t) => t.template_id))
+      const aCriar = templates.filter((t) => !jaCriadasIds.has(t.id))
+      if (aCriar.length > 0) {
+        await tx.shiftTask.createMany({
+          data: aCriar.map((t) => ({
+            tenant_id,
+            shift_instance_id: instanceId,
+            title:             t.title,
+            description:       t.description,
+            assigned_to_id:    t.assigned_to_id,
+            requires_photo:    t.requires_photo,
+            template_id:       t.id,
+            created_by:        userId,
+            status:            'PENDING',
+          })),
+        })
+      }
+    }
+
     return null
   })
 
@@ -328,6 +365,11 @@ export async function concluirTarefa(
 
   // Valida fotos (0–3 por tarefa; considera fotos já existentes)
   const files = (formData.getAll('photos') as File[]).filter((f) => f.size > 0)
+  // Foto obrigatória quando o template exige (defesa em profundidade — o client
+  // também bloqueia, mas a action valida de novo).
+  if (task.requires_photo && task.photos.length + files.length === 0) {
+    return { error: 'Esta tarefa exige ao menos 1 foto de comprovação.' }
+  }
   if (task.photos.length + files.length > MAX_PHOTOS_TASK) {
     return { error: `Máximo de ${MAX_PHOTOS_TASK} fotos por tarefa.` }
   }
@@ -394,4 +436,72 @@ export async function pularTarefa(taskId: string): Promise<void> {
   })
   revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
   revalidatePath('/operador/turnos')
+}
+
+// ─── Repetir tarefa ───────────────────────────────────────────────────────────
+// Cria uma NOVA tarefa a partir de uma concluída/pulada, preservando a original
+// intacta (fotos e notas). repeated_from_id encadeia a tentativa anterior.
+
+export async function repetirTarefa(
+  taskId: string,
+  _prev: TurnoFormState,
+  formData: FormData,
+): Promise<TurnoFormState> {
+  const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem repetir tarefas.' }
+
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
+
+  const tenant_id = await getTenantId()
+
+  const reasonRaw = formData.get('reason')
+  const reason =
+    reasonRaw == null || String(reasonRaw).trim() === ''
+      ? null
+      : String(reasonRaw).trim().slice(0, 500)
+
+  const original = await prisma.shiftTask.findFirst({
+    where:   { id: taskId, tenant_id },
+    include: { shift_instance: { select: { id: true, status: true } } },
+  })
+  if (!original) return { error: 'Tarefa não encontrada.' }
+  if (original.status !== 'DONE' && original.status !== 'SKIPPED') {
+    return { error: 'Só é possível repetir tarefas concluídas ou puladas.' }
+  }
+
+  // Turno de destino: o mesmo, se ainda aberto; senão, o turno ativo do operador.
+  let targetInstanceId: string
+  if (original.shift_instance.status !== 'CLOSED') {
+    targetInstanceId = original.shift_instance.id
+  } else {
+    const active = await prisma.shiftInstance.findFirst({
+      where:   { tenant_id, opened_by: userId, status: 'OPEN' },
+      orderBy: { opened_at: 'desc' },
+      select:  { id: true },
+    })
+    if (!active) return { error: 'Nenhum turno aberto para registrar a repetição. Abra um turno primeiro.' }
+    targetInstanceId = active.id
+  }
+
+  await prisma.shiftTask.create({
+    data: {
+      tenant_id,
+      shift_instance_id: targetInstanceId,
+      title:             original.title,
+      description:       original.description,
+      assigned_to_id:    original.assigned_to_id,
+      requires_photo:    original.requires_photo,
+      template_id:       original.template_id,
+      repeated_from_id:  original.id,
+      repeat_reason:     reason,
+      created_by:        userId,
+      status:            'PENDING',
+    },
+  })
+
+  revalidatePath(`/operador/turnos/${targetInstanceId}/tarefas`)
+  revalidatePath(`/operador/turnos/${original.shift_instance.id}/tarefas`)
+  revalidatePath('/operador/turnos')
+  return { success: true }
 }
