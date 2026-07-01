@@ -90,6 +90,24 @@ Zero `console.*` em código server-side (migração completa nas Fases 1–4). F
 ### ✅ Decisão — fail-open do rate-limit (2026-07-01)
 Em `src/lib/auth.ts`, se a checagem de rate-limit no banco falhar, o login **prossegue sem proteção de brute-force** (*fail-open*), registrado em `WARN`. **Decidido manter fail-open** (prioriza disponibilidade — não trava operadores em campo por um soluço do banco; o risco de brute-force é estreito, pois um banco instável já derrubaria os outros passos do login). Se um dia quiser fail-closed, é ~1 linha + ajuste de teste.
 
+## 🎨 Padrão de tabela de listagem do admin (2026-07-01)
+
+Tabelas de listagem do Gestor usam um padrão único (PRs #23/#24). Ao criar uma nova listagem admin, **siga este padrão** em vez de coluna "Editar" navegando para página.
+
+### Primitivas reutilizáveis (`src/components/ui/`)
+- `sheet.tsx` — drawer lateral (Radix Dialog ancorado à direita) para edição in-place.
+- `dropdown-menu.tsx` — menu de ações secundárias (kebab).
+- `tooltip.tsx` — `<Tooltip label="…">{trigger}</Tooltip>`.
+- `data-table-row.tsx` — `<DataTableRow onEdit={} actions={RowAction[]}>{...tds}</DataTableRow>`: linha clicável + **Pencil** (tooltip "Editar") + kebab **MoreVertical**; `hover:bg-muted/50`; **área de toque 44px** no kebab (PWA mobile). A célula de ações é anexada automática à direita.
+
+### Como aplicar numa tela (ver Categorias como referência)
+1. A `page.tsx` (Server Component) continua buscando os dados **e mantém a query intacta** (tenant-safe).
+2. Criar um `<x>-table.tsx` (Client) que recebe `items`, renderiza `<DataTableRow>` por item e um `<Sheet>` com o form.
+3. Criar um `<x>-sheet-form.tsx` (Client) que **reusa a MESMA server action** de edição (`editar…`), fecha o Sheet no sucesso (`onSaved` + `router.refresh()`).
+4. Ativar/Desativar (soft-delete) e navegações extras vão como itens do **kebab**.
+5. **Formulário pesado** (ex.: Parâmetros precisa de `method`/`collection_points` que a lista não carrega): **NÃO inchar a query da lista** — criar uma action de leitura tenant-safe (`carregar…`, guard de role) que o Sheet busca sob demanda ao abrir (com skeleton).
+6. **Preservar as rotas `[id]` antigas** (deep-links e páginas que hospedam seções extras, ex.: schedule de Turnos, continuam funcionando).
+
 ## ⚠️ CORREÇÕES ao restante deste documento (estado REAL em 2026-06-26)
 As seções antigas abaixo contêm afirmações **desatualizadas**. O estado real é:
 - **Banco: PostgreSQL (Supabase)** — NÃO é mais SQLite. A "regra inviolável 3.1 (Prisma v5 / SQLite)" está **superada**: `provider = "postgresql"`. (Prisma client ainda na linha v5.)
