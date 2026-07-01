@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { logger } from '@/lib/logger'
 
 interface SendEmailParams {
   to: string | string[]
@@ -32,17 +33,16 @@ export async function sendEmail({ to, subject, html }: SendEmailParams): Promise
     }
 
     // Dev: simula o envio para não bloquear o fluxo local.
-    console.log('[email:simulado] Envio simulado (RESEND_API_KEY ausente em dev):', {
-      to,
-      subject,
-      htmlPreview: html.slice(0, 120),
-    })
+    logger.info(
+      { to, subject, htmlPreview: html.slice(0, 120), component: 'email' },
+      'Envio de e-mail simulado (RESEND_API_KEY ausente em dev)',
+    )
     return { success: true, simulated: true }
   }
 
   // Há API key, mas falta o remetente: erro amigável (sem lançar).
   if (!from) {
-    console.error('[email] EMAIL_FROM não configurado, mas RESEND_API_KEY está presente.')
+    logger.error({ component: 'email' }, 'EMAIL_FROM não configurado, mas RESEND_API_KEY está presente')
     return { success: false, error: 'Remetente de e-mail não configurado. Contate o administrador.' }
   }
 
@@ -51,13 +51,13 @@ export async function sendEmail({ to, subject, html }: SendEmailParams): Promise
     const { data, error } = await resend.emails.send({ from, to, subject, html })
 
     if (error) {
-      console.error('[email] Falha ao enviar via Resend:', error)
+      logger.error({ err: error, component: 'email' }, 'Falha ao enviar via Resend')
       return { success: false, error: 'Não foi possível enviar o e-mail. Tente novamente.' }
     }
 
     return { success: true, id: data?.id }
   } catch (err) {
-    console.error('[email] Erro inesperado ao enviar e-mail:', err)
+    logger.error({ err, component: 'email' }, 'Erro inesperado ao enviar e-mail')
     return { success: false, error: 'Não foi possível enviar o e-mail. Tente novamente.' }
   }
 }
