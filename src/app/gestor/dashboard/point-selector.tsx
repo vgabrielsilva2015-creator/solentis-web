@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTransition } from 'react'
 
 interface PointSelectorProps {
   points: { id: string; name: string }[]
@@ -12,21 +13,24 @@ interface PointSelectorProps {
 export function PointSelector({ points, pontoId }: PointSelectorProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const params = new URLSearchParams(searchParams.toString())
     if (e.target.value) params.set('pontoId', e.target.value)
     else params.delete('pontoId')
-    router.push(`/gestor/dashboard?${params.toString()}`)
+    // useTransition mantém a UI responsiva e expõe o estado de "carregando"
+    startTransition(() => router.push(`/gestor/dashboard?${params.toString()}`))
   }
 
   return (
     <select
       value={pontoId ?? ''}
       onChange={handleChange}
-      className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500"
+      disabled={isPending}
+      className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50"
     >
-      <option value="">Todos os pontos</option>
+      <option value="">{isPending ? 'Atualizando…' : 'Todos os pontos'}</option>
       {points.map((p) => (
         <option key={p.id} value={p.id}>{p.name}</option>
       ))}

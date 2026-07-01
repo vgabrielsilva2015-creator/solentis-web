@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ParamSelector } from './param-selector'
@@ -83,6 +83,7 @@ export function DashboardClient({
   latestNCToday,
 }: DashboardClientProps) {
   const router = useRouter()
+  const [isNavPending, startNav] = useTransition()
 
   // Toast notification state
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null)
@@ -1923,12 +1924,13 @@ export function DashboardClient({
             <p style={{ margin: '5px 0 0', fontSize: '13px', color: 'var(--txt3)' }}>Status operacional e ambiental em tempo real.</p>
           </div>
 
-          <div style={{ display: 'inline-flex', gap: '3px', padding: '3px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+          <div style={{ display: 'inline-flex', gap: '3px', padding: '3px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: '10px', opacity: isNavPending ? 0.6 : 1 }}>
             {[1, 7, 30].map((d) => (
-              <Link
+              <button
                 key={d}
-                scroll={false}
-                href={`/gestor/dashboard?dias=${d}${paramId ? `&paramId=${paramId}` : ''}`}
+                type="button"
+                disabled={isNavPending}
+                onClick={() => startNav(() => router.push(`/gestor/dashboard?dias=${d}${paramId ? `&paramId=${paramId}` : ''}`, { scroll: false }))}
                 style={{
                   padding: '5px 11px',
                   borderRadius: '7px',
@@ -1939,12 +1941,12 @@ export function DashboardClient({
                   background: diasNum === d ? 'var(--s1)' : 'transparent',
                   color: diasNum === d ? 'var(--txt)' : 'var(--txt2)',
                   boxShadow: diasNum === d ? 'var(--shadow-sm)' : 'none',
-                  textDecoration: 'none',
+                  cursor: isNavPending ? 'wait' : 'pointer',
                   transition: 'all .15s',
                 }}
               >
                 {d === 1 ? '24h' : `${d}d`}
-              </Link>
+              </button>
             ))}
           </div>
         </div>
