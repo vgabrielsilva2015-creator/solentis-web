@@ -124,6 +124,12 @@ export function TaskCard({
               {task.assignee ? `Para: ${task.assignee.name}` : 'Qualquer operador'}
               {' · '}por {task.creator.name}
             </p>
+            {/* Descoberta antecipada: sinaliza que dá pra anexar foto sem precisar
+                clicar em "Concluir". Para tarefas com foto obrigatória, o badge
+                "Foto obrigatória" acima já cobre o aviso. */}
+            {isPendingStatus && !task.requires_photo && (
+              <p className="mt-1 text-xs text-slate-500">📷 Aceita foto de comprovação</p>
+            )}
           </div>
         </div>
 
