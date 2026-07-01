@@ -28,6 +28,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Ciclo 3 — Notificações, Filtros, Exportação para CSV, Ponto de Coleta e Categoria na Ocorrência CONCLUÍDA
 ✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
 ✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
+✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`.
 
 ## 🔧 Sessão de Hardening — 2026-06-26
 

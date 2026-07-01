@@ -42,6 +42,7 @@ model Tenant {
   shift_schedules         ShiftSchedule[]
   shift_handovers         ShiftHandover[]
   shift_tasks             ShiftTask[]
+  shift_task_templates    ShiftTaskTemplate[]
   shift_task_photos       ShiftTaskPhoto[]
   chemical_products       ChemicalProduct[]
   chemical_stock_entries  ChemicalStockEntry[]
@@ -107,6 +108,8 @@ model User {
   tasks_assigned          ShiftTask[]          @relation("TaskAssignee")
   tasks_created           ShiftTask[]          @relation("TaskCreator")
   tasks_completed         ShiftTask[]          @relation("TaskCompleter")
+  task_templates_assigned ShiftTaskTemplate[]  @relation("TaskTemplateAssignee")
+  task_templates_created  ShiftTaskTemplate[]  @relation("TaskTemplateCreator")
   task_photos_uploaded    ShiftTaskPhoto[]
   chemical_products       ChemicalProduct[]
   chemical_stock_entries  ChemicalStockEntry[]
@@ -340,10 +343,11 @@ model Shift {
   is_active                Boolean  @default(true)
   created_at               DateTime @default(now())
 
-  tenant          Tenant          @relation(fields: [tenant_id], references: [id])
+  tenant          Tenant              @relation(fields: [tenant_id], references: [id])
   shift_instances ShiftInstance[]
   schedules       ShiftSchedule[]
   shift_scales    ShiftScale[]
+  task_templates  ShiftTaskTemplate[]
 
   @@index([tenant_id])
   @@map("shifts")
@@ -710,17 +714,47 @@ model ShiftTask {
   completed_by      String?
   completion_notes  String?
   status            String @default("PENDING")
+  template_id       String?
+  requires_photo    Boolean   @default(false)
+  repeated_from_id  String?
+  repeat_reason     String?
 
-  tenant         Tenant           @relation(fields: [tenant_id], references: [id])
-  shift_instance ShiftInstance    @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
-  assignee       User?            @relation("TaskAssignee", fields: [assigned_to_id], references: [id])
-  creator        User             @relation("TaskCreator", fields: [created_by], references: [id])
-  completer      User?            @relation("TaskCompleter", fields: [completed_by], references: [id])
+  tenant         Tenant             @relation(fields: [tenant_id], references: [id])
+  shift_instance ShiftInstance      @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
+  assignee       User?              @relation("TaskAssignee", fields: [assigned_to_id], references: [id])
+  creator        User               @relation("TaskCreator", fields: [created_by], references: [id])
+  completer      User?              @relation("TaskCompleter", fields: [completed_by], references: [id])
+  template       ShiftTaskTemplate? @relation(fields: [template_id], references: [id], onDelete: SetNull)
+  repeated_from  ShiftTask?         @relation("RepeatChain", fields: [repeated_from_id], references: [id], onDelete: SetNull)
+  repeats        ShiftTask[]        @relation("RepeatChain")
   photos         ShiftTaskPhoto[]
 
   @@index([shift_instance_id, status])
   @@index([tenant_id, assigned_to_id, status])
   @@map("shift_tasks")
+}
+
+model ShiftTaskTemplate {
+  id             String   @id @default(cuid())
+  tenant_id      String
+  shift_id       String
+  title          String
+  description    String?
+  requires_photo Boolean  @default(false)
+  assigned_to_id String?
+  is_active      Boolean  @default(true)
+  sort_order     Int      @default(0)
+  created_at     DateTime @default(now())
+  created_by     String
+
+  tenant   Tenant      @relation(fields: [tenant_id], references: [id])
+  shift    Shift       @relation(fields: [shift_id], references: [id], onDelete: Cascade)
+  assignee User?       @relation("TaskTemplateAssignee", fields: [assigned_to_id], references: [id])
+  creator  User        @relation("TaskTemplateCreator", fields: [created_by], references: [id])
+  tasks    ShiftTask[]
+
+  @@index([tenant_id, shift_id, is_active])
+  @@map("shift_task_templates")
 }
 
 model ShiftTaskPhoto {

@@ -61,9 +61,14 @@ export default async function TurnosPage() {
                       : <span className="flex items-center gap-1.5 text-xs text-red-400"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Inativo</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/gestor/turnos/${t.id}`}>
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">Editar</Button>
-                    </Link>
+                    <div className="flex justify-end gap-1">
+                      <Link href={`/gestor/turnos/templates/${t.id}`}>
+                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">Tarefas padrão</Button>
+                      </Link>
+                      <Link href={`/gestor/turnos/${t.id}`}>
+                        <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">Editar</Button>
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

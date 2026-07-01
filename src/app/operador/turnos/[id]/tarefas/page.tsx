@@ -25,6 +25,14 @@ export default async function TarefasDoTurnoPage({
           creator:   { select: { name: true } },
           completer: { select: { name: true } },
           photos:    { select: { id: true, original_name: true } },
+          repeated_from: {
+            select: {
+              title:            true,
+              status:           true,
+              completion_notes: true,
+              photos:           { select: { id: true, original_name: true } },
+            },
+          },
         },
         orderBy: { created_at: 'asc' },
       },
@@ -88,6 +96,10 @@ export default async function TarefasDoTurnoPage({
                   completed_at:     task.completed_at,
                   completion_notes: task.completion_notes,
                   photos:           task.photos,
+                  requires_photo:   task.requires_photo,
+                  repeated_from_id: task.repeated_from_id,
+                  repeat_reason:    task.repeat_reason,
+                  repeatedFrom:     task.repeated_from,
                 }}
                 isShiftOpen={isOpen}
               />
