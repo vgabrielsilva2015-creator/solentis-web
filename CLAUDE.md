@@ -573,7 +573,7 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 
 # SOLENTIS — Relatório de Handoff Técnico
 ### Documento de transferência de contexto para colaboração entre IAs
-**Última atualização:** sessão de correção de bugs (Onda 1 concluída)
+**Última atualização:** 2026-07-01 — Ondas 1, 2 e 3 concluídas (Onda 3 verificada no código)
 **Destino:** Antigravity / IA colaboradora
 **Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
 
@@ -756,12 +756,13 @@ Etapas A–F foram concluídas:
 - **E** — botão voltar nas telas internas do gestor
 - **F** — auditar botão "Sair" presente em todas as telas
 
-### 7.2 PRÓXIMA — Onda 3 (mudanças de fluxo / regras de negócio)
-- Técnico também registrar **saída** de produtos químicos (hoje só operador) — facilita ajustes de estoque
-- Técnico **e** Gestor também registrarem ocorrências (hoje só operador)
-- Atribuir tarefa a um turno **sem precisar abrir o turno** (pré-agendamento / pré-datado) → tornar o fluxo de tarefas contínuo e confiável
-- Repensar o uso de "ocorrências" (definir melhor o propósito)
-- Estoque: mostrar **quem registrou** cada movimento (rastreabilidade visual)
+### 7.2 CONCLUÍDA — Onda 3 (mudanças de fluxo / regras de negócio)
+Verificada no código em 2026-07-01 (os 5 itens já estavam implementados em commits posteriores à última atualização destes docs):
+- ✅ Técnico também registra **saída** de produtos químicos — rota `/tecnico/estoque/[id]/saida` (page + `exit-form`); o action `registrarSaida` (em `operador/estoque/actions.ts`) libera `OPERATOR` e `TECHNICIAN` e revalida `/tecnico/estoque`
+- ✅ Técnico **e** Gestor também registram ocorrências — rotas `/tecnico/ocorrencias/nova` e `/gestor/ocorrencias/nova` importam `registrarOcorrencia`; o guard `requireAuthenticated` aceita `OPERATOR/TECHNICIAN/MANAGER`
+- ✅ Atribuir tarefa **sem abrir o turno** (pré-agendamento) — rota `/gestor/turnos/tarefas/pre-agendar` (page + `pre-agendar-form`) chama o action `preAgendarTurno`, criando uma instância de turno com data futura para atribuir tarefas antecipadamente
+- ✅ Repensar o uso de "ocorrências" — reformuladas com kanban (`updateOccurrenceStatus`), comentários (`addOccurrenceComment`), tipos (`OPERATIONAL/LABORATORY/EQUIPMENT/ENVIRONMENTAL/SAFETY`), categoria, ação imediata obrigatória em severidade Alta/Crítica e alerta WhatsApp para gestores
+- ✅ Estoque: mostra **quem registrou** cada movimento — detalhe do produto (`gestor/produtos-quimicos/[id]/page.tsx`) lista cada movimentação com `{data} · {recorder.name}` em entradas, saídas e contagens
 
 ### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
 - **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
@@ -812,7 +813,7 @@ Antes de propor qualquer mudança, confirme:
 
 # SOLENTIS — Relatório de Handoff Técnico
 ### Documento de transferência de contexto para colaboração entre IAs
-**Última atualização:** sessão de correção de bugs (Onda 1 concluída)
+**Última atualização:** 2026-07-01 — Ondas 1, 2 e 3 concluídas (Onda 3 verificada no código)
 **Destino:** Antigravity / IA colaboradora
 **Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
 
@@ -995,12 +996,13 @@ Etapas A–F foram concluídas:
 - **E** — botão voltar nas telas internas do gestor
 - **F** — auditar botão "Sair" presente em todas as telas
 
-### 7.2 PRÓXIMA — Onda 3 (mudanças de fluxo / regras de negócio)
-- Técnico também registrar **saída** de produtos químicos (hoje só operador) — facilita ajustes de estoque
-- Técnico **e** Gestor também registrarem ocorrências (hoje só operador)
-- Atribuir tarefa a um turno **sem precisar abrir o turno** (pré-agendamento / pré-datado) → tornar o fluxo de tarefas contínuo e confiável
-- Repensar o uso de "ocorrências" (definir melhor o propósito)
-- Estoque: mostrar **quem registrou** cada movimento (rastreabilidade visual)
+### 7.2 CONCLUÍDA — Onda 3 (mudanças de fluxo / regras de negócio)
+Verificada no código em 2026-07-01 (os 5 itens já estavam implementados em commits posteriores à última atualização destes docs):
+- ✅ Técnico também registra **saída** de produtos químicos — rota `/tecnico/estoque/[id]/saida` (page + `exit-form`); o action `registrarSaida` (em `operador/estoque/actions.ts`) libera `OPERATOR` e `TECHNICIAN` e revalida `/tecnico/estoque`
+- ✅ Técnico **e** Gestor também registram ocorrências — rotas `/tecnico/ocorrencias/nova` e `/gestor/ocorrencias/nova` importam `registrarOcorrencia`; o guard `requireAuthenticated` aceita `OPERATOR/TECHNICIAN/MANAGER`
+- ✅ Atribuir tarefa **sem abrir o turno** (pré-agendamento) — rota `/gestor/turnos/tarefas/pre-agendar` (page + `pre-agendar-form`) chama o action `preAgendarTurno`, criando uma instância de turno com data futura para atribuir tarefas antecipadamente
+- ✅ Repensar o uso de "ocorrências" — reformuladas com kanban (`updateOccurrenceStatus`), comentários (`addOccurrenceComment`), tipos (`OPERATIONAL/LABORATORY/EQUIPMENT/ENVIRONMENTAL/SAFETY`), categoria, ação imediata obrigatória em severidade Alta/Crítica e alerta WhatsApp para gestores
+- ✅ Estoque: mostra **quem registrou** cada movimento — detalhe do produto (`gestor/produtos-quimicos/[id]/page.tsx`) lista cada movimentação com `{data} · {recorder.name}` em entradas, saídas e contagens
 
 ### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
 - **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
