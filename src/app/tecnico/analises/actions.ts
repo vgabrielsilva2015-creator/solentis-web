@@ -76,7 +76,7 @@ export async function registrarAnalise(
   if (!userId) return { error: 'Sessão inválida.' }
 
   const param = await prisma.qualityParameter.findFirst({ where: { id: parsed.data.parameter_id , tenant_id: (await getTenantId()) },
-    select: { min_limit: true, max_limit: true, unit: true, default_method_id: true },
+    select: { name: true, min_limit: true, max_limit: true, unit: true, default_method_id: true },
   })
   if (!param) return { error: 'Parâmetro não encontrado.' }
 
@@ -142,8 +142,8 @@ export async function registrarAnalise(
   try {
     const tenantId = await getTenantId()
     const payload = {
-      title: 'Nova Análise Registrada',
-      body: `O parâmetro ${param.unit ? 'foi' : 'foi'} medido: ${parsed.data.value} ${param.unit}`,
+      title: isNonConformant ? '⚠️ Análise fora do limite' : 'Nova análise registrada',
+      body: `${param.name}: ${parsed.data.value} ${param.unit ?? ''}${isNonConformant ? ' — fora do limite CONAMA' : ''}`,
       url: '/gestor/analises'
     }
     await sendPushToRole(tenantId, 'MANAGER', payload)

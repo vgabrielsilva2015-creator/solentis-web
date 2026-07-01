@@ -8,6 +8,7 @@ import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
+import { sendPushToRole } from '@/lib/push-actions'
 
 
 async function requireOperator() {
@@ -75,16 +76,18 @@ export async function registrarLeitura(
 
   let isNonConformant: boolean | null = null
   let unit = parsed.data.unit
+  let paramName: string | null = null
+  let pointName: string | null = null
 
   if (parsed.data.parameter_id) {
     const [param, collectionPoint] = await Promise.all([
       prisma.qualityParameter.findFirst({
         where:  { id: parsed.data.parameter_id, tenant_id: await getTenantId() },
-        select: { min_limit: true, max_limit: true, unit: true },
+        select: { name: true, min_limit: true, max_limit: true, unit: true },
       }),
       prisma.collectionPoint.findFirst({
         where: { id: parsed.data.collection_point_id, tenant_id: await getTenantId() },
-        select: { id: true },
+        select: { id: true, name: true },
       })
     ])
 
@@ -95,6 +98,8 @@ export async function registrarLeitura(
     if (param) {
       // Copia a unidade do parâmetro quando o formulário não enviou uma
       unit = unit ?? param.unit
+      paramName = param.name
+      pointName = collectionPoint.name
       isNonConformant = calcularNaoConformidade(
         parsed.data.value,
         param.min_limit,
@@ -131,10 +136,6 @@ export async function registrarLeitura(
 
     // Se estiver fora da faixa, abre automaticamente uma ocorrência
     if (isNonConformant && parsed.data.parameter_id) {
-      const paramName = await tx.qualityParameter.findFirst({ where: { id: parsed.data.parameter_id , tenant_id: (await getTenantId()) },
-        select: { name: true }
-      })
-      
       const tenantId = await getTenantId()
       const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
         where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
@@ -145,16 +146,32 @@ export async function registrarLeitura(
 
       await tx.occurrence.create({
         data: {
-          tenant_id:   (await getTenantId()),
-          description: `Não Conformidade (${paramName?.name}): Leitura registrada = ${parsed.data.value} ${unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${parsed.data.collection_point_id}`,
+          tenant_id:   tenantId,
+          description: `Não Conformidade (${paramName}): Leitura registrada = ${parsed.data.value} ${unit ?? ''}. O valor está fora dos limites aceitáveis.`,
           severity:    'HIGH',
           status:      'OPEN',
+          type:        'OPERATIONAL',
           deadline,
           reported_by: userId,
+          collection_point_id: parsed.data.collection_point_id,
         }
       })
     }
   })
+
+  // Nível 3 — push para gestores quando a leitura fica fora do limite CONAMA.
+  // Assíncrono e não-bloqueante: falha de push não impede o registro da leitura.
+  if (isNonConformant) {
+    try {
+      await sendPushToRole(await getTenantId(), 'MANAGER', {
+        title: '⚠️ Não-conformidade registrada',
+        body: `${paramName}: ${parsed.data.value} ${unit ?? ''} fora do limite${pointName ? ` no ponto ${pointName}` : ''}`,
+        url: '/gestor/dashboard',
+      })
+    } catch (err) {
+      console.error('Falha ao enviar push de não-conformidade', err)
+    }
+  }
 
   revalidatePath('/operador/leituras')
   revalidatePath('/operador/ocorrencias')
