@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { encontrarTurnoAtual } from '@/lib/shift-utils'
+import { AbrirTurnoRapido } from './abrir-turno-rapido'
 
 
 export default async function OperadorDashboard() {
@@ -15,7 +17,7 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings] =
+  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings, activeShifts, activeInstances, lastClosedInstance] =
     await Promise.all([
       userId
         ? prisma.occurrence.count({
@@ -103,6 +105,35 @@ export default async function OperadorDashboard() {
           recorded_at: { gte: today },
         },
         select: { collection_point_id: true, parameter_id: true }
+      }),
+
+      // Turnos configurados ativos — para detectar o turno da faixa horária atual
+      prisma.shift.findMany({
+        where:  { tenant_id: tenantId, is_active: true },
+        select: { id: true, name: true, start_time: true, end_time: true, crosses_midnight: true },
+      }),
+
+      // Instâncias ativas (qualquer operador) — para saber se o turno da vez já está aberto
+      prisma.shiftInstance.findMany({
+        where:  { tenant_id: tenantId, status: { in: ['OPEN', 'HANDOVER_PENDING'] } },
+        select: { shift_id: true },
+      }),
+
+      // Último turno encerrado — resumo para o operador entrante
+      prisma.shiftInstance.findFirst({
+        where:   { tenant_id: tenantId, status: 'CLOSED' },
+        orderBy: { closed_at: 'desc' },
+        include: {
+          shift:    { select: { name: true } },
+          opener:   { select: { name: true } },
+          handover: {
+            select: {
+              checklist_data:        true,
+              outgoing_observations: true,
+              outgoing_user:         { select: { name: true } },
+            },
+          },
+        },
       })
     ])
 
@@ -117,6 +148,34 @@ export default async function OperadorDashboard() {
       r => r.collection_point_id === s.collection_point_id && r.parameter_id === s.parameter_id
     )
   })
+
+  // Abertura assistida: turno da faixa horária atual + se já está aberto por alguém
+  const now = new Date()
+  const currentShift = encontrarTurnoAtual(activeShifts, now)
+  const currentShiftOpen = currentShift
+    ? activeInstances.some((i) => i.shift_id === currentShift.id)
+    : false
+  const podeAbrirTurno = session.user.role === 'OPERATOR'
+
+  // Resumo do turno anterior (último encerrado) para o operador entrante
+  let resumoAnterior:
+    | { shiftName: string; who: string; readings: number; occurrences: number; pendingTasks: string[]; observations: string | null }
+    | null = null
+  if (lastClosedInstance) {
+    const cl = JSON.parse((lastClosedInstance.handover?.checklist_data as string) || '{}') as {
+      readings_count?: number
+      open_occurrences_count?: number
+      pending_tasks?: string[]
+    }
+    resumoAnterior = {
+      shiftName:    lastClosedInstance.shift.name,
+      who:          lastClosedInstance.handover?.outgoing_user?.name ?? lastClosedInstance.opener.name,
+      readings:     cl.readings_count ?? 0,
+      occurrences:  cl.open_occurrences_count ?? 0,
+      pendingTasks: cl.pending_tasks ?? [],
+      observations: lastClosedInstance.handover?.outgoing_observations ?? null,
+    }
+  }
 
   const SHORTCUTS = [
     { title: 'Leituras',       desc: 'Registrar leitura de campo',            href: '/operador/leituras'    },
@@ -178,6 +237,20 @@ export default async function OperadorDashboard() {
               <span className="text-green-500 text-xl">→</span>
             </div>
           </Link>
+        ) : currentShift && !currentShiftOpen && podeAbrirTurno ? (
+          <AbrirTurnoRapido
+            shiftId={currentShift.id}
+            shiftName={currentShift.name}
+            janela={`${currentShift.start_time} – ${currentShift.end_time}`}
+          />
+        ) : currentShift && currentShiftOpen ? (
+          <Link
+            href="/operador/turnos"
+            className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+          >
+            <p className="text-sm text-slate-400">Turno {currentShift.name} já está aberto</p>
+            <p className="text-xs text-slate-600 mt-0.5">Toque para acompanhar ou assumir a passagem →</p>
+          </Link>
         ) : (
           <Link
             href="/operador/turnos"
@@ -186,6 +259,39 @@ export default async function OperadorDashboard() {
             <p className="text-sm text-slate-500">Nenhum turno ativo</p>
             <p className="text-xs text-slate-600 mt-0.5">Toque para abrir um turno →</p>
           </Link>
+        )}
+
+        {/* Resumo do turno anterior — para o operador entrante */}
+        {!turnoAtivo && resumoAnterior && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
+            <div>
+              <p className="text-sm font-medium text-slate-300">Resumo do turno anterior</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {resumoAnterior.shiftName} · {resumoAnterior.who}
+              </p>
+            </div>
+            <div className="flex gap-4 text-xs text-slate-400">
+              <span>{resumoAnterior.readings} leitura(s)</span>
+              <span>{resumoAnterior.occurrences} ocorrência(s) em aberto</span>
+            </div>
+            {resumoAnterior.pendingTasks.length > 0 && (
+              <div className="text-xs">
+                <p className="text-amber-400 font-medium">
+                  {resumoAnterior.pendingTasks.length} tarefa(s) não concluída(s):
+                </p>
+                <ul className="mt-0.5 space-y-0.5">
+                  {resumoAnterior.pendingTasks.map((t, i) => (
+                    <li key={i} className="text-slate-300">• {t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {resumoAnterior.observations && (
+              <p className="text-xs text-slate-400">
+                Observações: <span className="text-slate-300">{resumoAnterior.observations}</span>
+              </p>
+            )}
+          </div>
         )}
 
         {/* Tarefas do turno */}
