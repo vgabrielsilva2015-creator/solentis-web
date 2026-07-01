@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
+import { CategoriasTable } from './categorias-table'
 
 export default async function CategoriasPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams
@@ -44,35 +45,7 @@ export default async function CategoriasPage({ searchParams }: { searchParams: P
             {search ? `Nenhuma categoria encontrada para "${search}".` : 'Nenhuma categoria cadastrada.'}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-4 py-3">Categoria</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {categorias.map((c) => (
-                <tr key={c.id} className="transition-colors hover:bg-slate-800/50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-slate-100">{c.name}</div>
-                    {c.description && <div className="text-xs text-slate-500">{c.description}</div>}
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.is_active
-                      ? <span className="flex items-center gap-1.5 text-xs text-green-400"><span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Ativo</span>
-                      : <span className="flex items-center gap-1.5 text-xs text-red-400"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Inativo</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/gestor/categorias/${c.id}`}>
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">Editar</Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CategoriasTable items={categorias} />
         )}
       </div>
       <p className="text-right text-xs text-slate-600">{categorias.length} categoria(s) encontrada(s)</p>
