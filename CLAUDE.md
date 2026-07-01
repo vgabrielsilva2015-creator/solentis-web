@@ -573,7 +573,7 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 
 # SOLENTIS — Relatório de Handoff Técnico
 ### Documento de transferência de contexto para colaboração entre IAs
-**Última atualização:** 2026-07-01 — Ondas 1, 2 e 3 concluídas (Onda 3 verificada no código)
+**Última atualização:** 2026-07-01 — Ondas 1–4 concluídas (itens acionáveis); falta QA de campo com usuários reais
 **Destino:** Antigravity / IA colaboradora
 **Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
 
@@ -764,18 +764,20 @@ Verificada no código em 2026-07-01 (os 5 itens já estavam implementados em com
 - ✅ Repensar o uso de "ocorrências" — reformuladas com kanban (`updateOccurrenceStatus`), comentários (`addOccurrenceComment`), tipos (`OPERATIONAL/LABORATORY/EQUIPMENT/ENVIRONMENTAL/SAFETY`), categoria, ação imediata obrigatória em severidade Alta/Crítica e alerta WhatsApp para gestores
 - ✅ Estoque: mostra **quem registrou** cada movimento — detalhe do produto (`gestor/produtos-quimicos/[id]/page.tsx`) lista cada movimentação com `{data} · {recorder.name}` em entradas, saídas e contagens
 
-### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
-- **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
-- Abertura automática de turno no login do operador
-- Resumo do turno anterior para o operador entrante
-- Notificações push/email para não-conformidade (severidade alta)
-- PWA (instalação no dispositivo, offline parcial)
-- DBO5 tratado como "último resultado com data" (não tempo real)
-- Deploy (Vercel/Railway, ~R$50-80/mês + domínio) → migração SQLite → PostgreSQL
-- **Sensores online** (DBO, OD, pH) — pesquisa de prazo LONGO; DBO exige 5 dias de incubação, é desafio técnico, não implementação imediata
+### 7.3 CONCLUÍDA — Onda 4 (pós-MVP, features grandes)
+Itens acionáveis concluídos e verificados no código/QA em 2026-07-01:
+- ✅ **Leitura de laudos com IA** — implementado com Gemini (`gemini-2.5-flash` + fallbacks, retries) em `/gestor/laudos/importar`
+- ✅ **Abertura automática de turno no login** — abertura *assistida* de 1 clique no dashboard do operador (turno da faixa horária atual via `encontrarTurnoAtual`); decisão deliberada de NÃO criar instância silenciosamente (evita turno errado/duplicado). Ver `operador/dashboard/abrir-turno-rapido.tsx`
+- ✅ **Resumo do turno anterior para o entrante** — card no dashboard do operador (leituras, ocorrências em aberto, tarefas não concluídas, observações do último turno encerrado)
+- ✅ **Notificações push para não-conformidade** — leitura fora do limite CONAMA dispara push aos gestores (`sendPushToRole`, tenant-safe via relação `user`); análises também notificam. Infra: `web-push.ts` / `push-actions.ts` (VAPID)
+- ✅ **PWA (instalação + offline parcial)** — Serwist
+- ✅ **Deploy + migração para PostgreSQL** — rodando na Vercel com Supabase (Postgres)
+- ⏸️ **DBO5 como "último resultado com data"** — pendente (refinamento de UX; avaliar com uso real)
+- ⏸️ **Sensores online** (DBO, OD, pH) — FORA de escopo por decisão do briefing (prazo LONGO; DBO exige 5 dias de incubação)
+- ⏸️ **Repensar fluxo de turno/passagem** — pendente; precisa de feedback de operadores em campo (não é tarefa de código)
 
 ### 7.4 Validação obrigatória antes de "produção"
-O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. NÃO está pronto para produção até Ondas 1-3 + QA completo.
+O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. As Ondas 1–4 (itens acionáveis) estão concluídas; falta o QA de campo com usuários reais.
 
 ---
 
@@ -813,7 +815,7 @@ Antes de propor qualquer mudança, confirme:
 
 # SOLENTIS — Relatório de Handoff Técnico
 ### Documento de transferência de contexto para colaboração entre IAs
-**Última atualização:** 2026-07-01 — Ondas 1, 2 e 3 concluídas (Onda 3 verificada no código)
+**Última atualização:** 2026-07-01 — Ondas 1–4 concluídas (itens acionáveis); falta QA de campo com usuários reais
 **Destino:** Antigravity / IA colaboradora
 **Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
 
@@ -1004,18 +1006,20 @@ Verificada no código em 2026-07-01 (os 5 itens já estavam implementados em com
 - ✅ Repensar o uso de "ocorrências" — reformuladas com kanban (`updateOccurrenceStatus`), comentários (`addOccurrenceComment`), tipos (`OPERATIONAL/LABORATORY/EQUIPMENT/ENVIRONMENTAL/SAFETY`), categoria, ação imediata obrigatória em severidade Alta/Crítica e alerta WhatsApp para gestores
 - ✅ Estoque: mostra **quem registrou** cada movimento — detalhe do produto (`gestor/produtos-quimicos/[id]/page.tsx`) lista cada movimentação com `{data} · {recorder.name}` em entradas, saídas e contagens
 
-### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
-- **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
-- Abertura automática de turno no login do operador
-- Resumo do turno anterior para o operador entrante
-- Notificações push/email para não-conformidade (severidade alta)
-- PWA (instalação no dispositivo, offline parcial)
-- DBO5 tratado como "último resultado com data" (não tempo real)
-- Deploy (Vercel/Railway, ~R$50-80/mês + domínio) → migração SQLite → PostgreSQL
-- **Sensores online** (DBO, OD, pH) — pesquisa de prazo LONGO; DBO exige 5 dias de incubação, é desafio técnico, não implementação imediata
+### 7.3 CONCLUÍDA — Onda 4 (pós-MVP, features grandes)
+Itens acionáveis concluídos e verificados no código/QA em 2026-07-01:
+- ✅ **Leitura de laudos com IA** — implementado com Gemini (`gemini-2.5-flash` + fallbacks, retries) em `/gestor/laudos/importar`
+- ✅ **Abertura automática de turno no login** — abertura *assistida* de 1 clique no dashboard do operador (turno da faixa horária atual via `encontrarTurnoAtual`); decisão deliberada de NÃO criar instância silenciosamente (evita turno errado/duplicado). Ver `operador/dashboard/abrir-turno-rapido.tsx`
+- ✅ **Resumo do turno anterior para o entrante** — card no dashboard do operador (leituras, ocorrências em aberto, tarefas não concluídas, observações do último turno encerrado)
+- ✅ **Notificações push para não-conformidade** — leitura fora do limite CONAMA dispara push aos gestores (`sendPushToRole`, tenant-safe via relação `user`); análises também notificam. Infra: `web-push.ts` / `push-actions.ts` (VAPID)
+- ✅ **PWA (instalação + offline parcial)** — Serwist
+- ✅ **Deploy + migração para PostgreSQL** — rodando na Vercel com Supabase (Postgres)
+- ⏸️ **DBO5 como "último resultado com data"** — pendente (refinamento de UX; avaliar com uso real)
+- ⏸️ **Sensores online** (DBO, OD, pH) — FORA de escopo por decisão do briefing (prazo LONGO; DBO exige 5 dias de incubação)
+- ⏸️ **Repensar fluxo de turno/passagem** — pendente; precisa de feedback de operadores em campo (não é tarefa de código)
 
 ### 7.4 Validação obrigatória antes de "produção"
-O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. NÃO está pronto para produção até Ondas 1-3 + QA completo.
+O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. As Ondas 1–4 (itens acionáveis) estão concluídas; falta o QA de campo com usuários reais.
 
 ---
 
