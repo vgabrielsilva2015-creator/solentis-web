@@ -9,6 +9,7 @@ import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
+import { getLogger } from '@/lib/logger'
 
 
 async function requireTechnician() {
@@ -149,7 +150,8 @@ export async function registrarAnalise(
     await sendPushToRole(tenantId, 'MANAGER', payload)
     await sendPushToRole(tenantId, 'OPERATOR', { ...payload, url: '/operador/dashboard' })
   } catch (err) {
-    console.error('Falha ao enviar push', err)
+    const log = await getLogger({ action: 'registrarAnalise' })
+    log.warn({ err }, 'Falha ao enviar push de análise')
   }
 
   revalidatePath('/tecnico/analises')

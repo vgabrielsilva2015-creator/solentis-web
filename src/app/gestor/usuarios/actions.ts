@@ -112,7 +112,8 @@ export async function criarUsuario(
       if (emailResult.success) inviteSent = true
       else inviteError = emailResult.error
     } catch (mailErr) {
-      console.error('[usuarios] Falha ao enviar convite por e-mail:', mailErr)
+      const log = await getLogger({ userId: managerId, tenantId, action: 'criarUsuario' })
+      log.error({ err: mailErr, targetUserId: newUserId }, 'Falha ao enviar convite por e-mail')
       inviteError = mailErr instanceof Error ? mailErr.message : 'Erro desconhecido ao enviar e-mail'
     }
 
@@ -125,7 +126,8 @@ export async function criarUsuario(
     if (e && e.code === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
-    console.error('[usuarios] Erro ao criar usuário:', e)
+    const log = await getLogger({ action: 'criarUsuario' })
+    log.error({ err: e }, 'Erro ao criar usuário')
     return { error: 'Não foi possível criar o usuário. Tente novamente.' }
   }
 }

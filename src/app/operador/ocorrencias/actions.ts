@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/audit'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
+import { logger } from '@/lib/logger'
 
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -187,8 +188,10 @@ export async function registrarOcorrencia(
     const locationText = point ? `no local: ${point.name}` : ''
     const msg = `🚨 *Alerta Solentis*\nNova Ocorrência *${parsed.data.severity === 'CRITICAL' ? 'CRÍTICA' : 'ALTA'}* reportada ${locationText}\n\n*Descrição:* ${parsed.data.description}\n\nAcesse o painel para mais detalhes.`
 
-    // Disparar assincronamente
-    Promise.all(managers.map(m => sendWhatsAppAlert(m.phone!, msg))).catch(console.error)
+    // Disparar assincronamente (fire-and-forget: usa o logger base, pois roda fora do escopo da requisição)
+    Promise.all(managers.map(m => sendWhatsAppAlert(m.phone!, msg))).catch((err) =>
+      logger.warn({ err, tenantId, component: 'ocorrencias' }, 'Falha ao enviar alerta WhatsApp aos gestores'),
+    )
   }
 
   revalidatePath('/operador/ocorrencias')

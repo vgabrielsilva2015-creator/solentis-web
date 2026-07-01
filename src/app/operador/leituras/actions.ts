@@ -9,6 +9,7 @@ import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
+import { getLogger } from '@/lib/logger'
 
 
 async function requireOperator() {
@@ -169,7 +170,8 @@ export async function registrarLeitura(
         url: '/gestor/dashboard',
       })
     } catch (err) {
-      console.error('Falha ao enviar push de não-conformidade', err)
+      const log = await getLogger({ userId, action: 'registrarLeitura' })
+      log.warn({ err }, 'Falha ao enviar push de não-conformidade')
     }
   }
 

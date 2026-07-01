@@ -1,6 +1,7 @@
 'use server'
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getLogger } from '@/lib/logger'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -44,6 +45,7 @@ Retorne um JSON ESTRITO seguindo este formato:
 Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apenas o objeto JSON válido.
 `
 
+  const log = await getLogger({ action: 'extractDataFromPDF' })
   const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-pro']
   const MAX_RETRIES = 3
   const BASE_DELAY_MS = 3000
@@ -65,7 +67,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
       } catch (err: any) {
         lastError = err
         const errorMsg = (err.message || '').toLowerCase()
-        console.warn(`[GEMINI] Modelo ${modelName}, tentativa ${attempt + 1}/${MAX_RETRIES} falhou: ${err.message}`)
+        log.warn({ err, model: modelName, attempt: attempt + 1, maxRetries: MAX_RETRIES }, 'Tentativa da IA (Gemini) falhou')
 
         // Detectar erros retryable de forma mais abrangente
         const isRetryable = errorMsg.includes('429') 
@@ -78,7 +80,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
         
         if (isRetryable && attempt < MAX_RETRIES - 1) {
           const waitTime = BASE_DELAY_MS * Math.pow(2, attempt) // 3s, 6s, 12s
-          console.log(`[GEMINI] Rate limit detectado. Aguardando ${waitTime}ms antes de retry...`)
+          log.info({ model: modelName, waitTime }, 'Rate limit da IA detectado — aguardando antes do retry')
           await delay(waitTime)
         } else if (!isRetryable) {
           // Se não for retryable (ex: modelo não existe), pular direto para o próximo modelo
@@ -92,7 +94,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
   const rawError = lastError?.message || 'Erro desconhecido'
   const friendlyError = `Falha ao processar PDF. Erro: ${rawError.substring(0, 150)}`
 
-  console.error('Erro em todos os modelos da IA:', lastError)
+  log.error({ err: lastError }, 'Erro em todos os modelos da IA')
   return { success: false, error: friendlyError }
 }
 
@@ -159,7 +161,8 @@ export async function createParameterFromImport(data: { name: string; unit: stri
 
     return { success: true, parameter: { id: param.id, name: param.name, unit: param.unit } }
   } catch (err: any) {
-    console.error('Erro ao criar parâmetro:', err)
+    const log = await getLogger({ action: 'criarParametroDoLaudo' })
+    log.error({ err }, 'Erro ao criar parâmetro')
     return { success: false, error: 'Não foi possível criar o parâmetro. Tente novamente.' }
   }
 }
@@ -289,7 +292,8 @@ export async function saveMappedReadings(data: {
     
     return { success: true }
   } catch (err: any) {
-    console.error('Erro ao salvar leituras do laudo:', err)
+    const log = await getLogger({ action: 'salvarLeiturasDoLaudo' })
+    log.error({ err }, 'Erro ao salvar leituras do laudo')
     return { success: false, error: 'Não foi possível salvar as leituras. Verifique os dados e tente novamente.' }
   }
 }
