@@ -87,8 +87,8 @@ Camada de log profissional adicionada (PR #14, branch `feat/observabilidade-logg
 ### Estado
 Zero `console.*` em código server-side (migração completa nas Fases 1–4). Falhas antes silenciosas agora deixam rastro (ex.: reset de senha, toggle de usuário, `getNotifications` que retornava `[]` mudo).
 
-### ⏳ Decisão pendente — fail-open do rate-limit
-Em `src/lib/auth.ts`, se a checagem de rate-limit no banco falhar, o login **prossegue sem proteção de brute-force** (*fail-open*), hoje registrado em `WARN`. Trade-off segurança × disponibilidade em aberto (mudar p/ fail-closed é ~1 linha).
+### ✅ Decisão — fail-open do rate-limit (2026-07-01)
+Em `src/lib/auth.ts`, se a checagem de rate-limit no banco falhar, o login **prossegue sem proteção de brute-force** (*fail-open*), registrado em `WARN`. **Decidido manter fail-open** (prioriza disponibilidade — não trava operadores em campo por um soluço do banco; o risco de brute-force é estreito, pois um banco instável já derrubaria os outros passos do login). Se um dia quiser fail-closed, é ~1 linha + ajuste de teste.
 
 ## ⚠️ CORREÇÕES ao restante deste documento (estado REAL em 2026-06-26)
 As seções antigas abaixo contêm afirmações **desatualizadas**. O estado real é:
