@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Beaker, FileCheck, Search, SlidersHorizontal, Upload, Download } from 'lucide-react'
@@ -7,8 +8,10 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default async function LaudosExternosPage() {
+  // @tenant-safe: deriva o tenant da sessão (JWT), nunca hardcoded.
+  const tenant_id = await getTenantId()
   const pontos = await prisma.collectionPoint.findMany({
-    where: { tenant_id: 'default', is_active: true },
+    where: { tenant_id, is_active: true },
     orderBy: { name: 'asc' },
     include: {
       analyses: {

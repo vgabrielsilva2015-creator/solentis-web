@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getTenantId } from '@/lib/tenant'
 import { notFound } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,9 +14,11 @@ export const dynamic = 'force-dynamic'
 export default async function LaudoPontoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const pontoId = params.id
+  // @tenant-safe: deriva o tenant da sessão (JWT), nunca hardcoded — evita IDOR cross-tenant.
+  const tenant_id = await getTenantId()
 
   const ponto = await prisma.collectionPoint.findUnique({
-    where: { id: pontoId, tenant_id: 'default' },
+    where: { id: pontoId, tenant_id },
     include: {
       analyses: {
         where: { laboratory_type: 'EXTERNAL' },
@@ -29,7 +32,7 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
 
   // Buscar os limites configurados para a matriz deste ponto
   const limitesMatriz = ponto.matrix ? await prisma.parameterLimit.findMany({
-    where: { tenant_id: 'default', matrix: ponto.matrix },
+    where: { tenant_id, matrix: ponto.matrix },
     include: { parameter: true }
   }) : []
 
