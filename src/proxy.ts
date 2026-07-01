@@ -59,9 +59,14 @@ function redirectToLogin(req: NextRequest) {
   return NextResponse.redirect(loginUrl)
 }
 
-// Aplica o middleware a todas as rotas exceto a API do NextAuth, internos do
-// Next e QUALQUER arquivo com extensão (manifest.json, sw.js, ícones, imagens).
-// Antes, manifest.json e sw.js eram redirecionados ao login, quebrando o PWA.
+// Aplica o middleware a todas as rotas exceto a API do NextAuth, o cron de
+// sistema, internos do Next e QUALQUER arquivo com extensão (manifest.json,
+// sw.js, ícones, imagens). Antes, manifest.json e sw.js eram redirecionados ao
+// login, quebrando o PWA.
+// `api/cron` é excluído porque roda sem sessão (Vercel Cron manda apenas
+// `Authorization: Bearer <CRON_SECRET>`); o próprio handler faz a auth
+// fail-closed. Sem essa exclusão, o middleware redirecionava o cron ao /login
+// e o handler nunca executava.
 export const config = {
-  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  matcher: ['/((?!api/auth|api/cron|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 }
