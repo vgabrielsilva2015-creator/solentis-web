@@ -1,15 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { getTenantId } from '@/lib/tenant'
-import { MapPin, Check, X } from 'lucide-react'
-
-const MATRIX_LABELS: Record<string, string> = {
-  EFLUENTE: 'Efluente',
-  SUBTERRANEA: 'Água Subterrânea',
-  SUPERFICIAL: 'Água Superficial',
-}
+import { PontosTable } from './pontos-table'
 
 export default async function PontosColetaPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams
@@ -54,64 +47,7 @@ export default async function PontosColetaPage({ searchParams }: { searchParams:
             {search ? `Nenhum ponto de coleta encontrado para "${search}".` : 'Nenhum ponto de coleta cadastrado.'}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-4 py-3">Ponto de Coleta</th>
-                <th className="px-4 py-3">Matriz</th>
-                <th className="px-4 py-3">Habilitado Para</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {pontos.map((p) => (
-                <tr key={p.id} className="transition-colors hover:bg-slate-800/50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
-                      <div>
-                        <div className="font-medium text-slate-100">{p.name}</div>
-                        {p.location && <div className="text-xs text-slate-500">Local: {p.location}</div>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">
-                    {p.matrix ? (MATRIX_LABELS[p.matrix] || p.matrix) : <span className="text-slate-600">-</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {p.is_field ? (
-                        <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Campo</Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-slate-800 text-slate-600">Campo</Badge>
-                      )}
-                      {p.is_internal ? (
-                        <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">Interno</Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-slate-800 text-slate-600">Interno</Badge>
-                      )}
-                      {p.is_external ? (
-                        <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20">Externo</Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-slate-800 text-slate-600">Externo</Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {p.is_active
-                      ? <span className="flex items-center gap-1.5 text-xs text-green-400"><span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Ativo</span>
-                      : <span className="flex items-center gap-1.5 text-xs text-red-400"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Inativo</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/gestor/pontos-de-coleta/${p.id}`}>
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">Editar</Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <PontosTable items={pontos} />
         )}
       </div>
       <p className="text-right text-xs text-slate-600">{pontos.length} ponto(s) de coleta encontrado(s)</p>
