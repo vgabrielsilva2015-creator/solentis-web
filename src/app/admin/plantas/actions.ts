@@ -7,6 +7,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getLogger } from '@/lib/logger'
 
 async function requireSuperAdmin() {
   const session = await auth()
@@ -98,7 +99,8 @@ export async function criarPlanta(
         }
       }
     }
-    console.error('Erro ao criar planta:', e)
+    const log = await getLogger({ action: 'criarPlanta' })
+    log.error({ err: e }, 'Erro ao criar planta')
     return { error: 'Erro ao criar planta. Tente novamente.' }
   }
 }

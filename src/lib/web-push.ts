@@ -1,4 +1,5 @@
 import webpush from 'web-push'
+import { logger } from '@/lib/logger'
 
 // Certifique-se de configurar essas variáveis no .env
 // Você pode gerar chaves executando `npx web-push generate-vapid-keys` no terminal
@@ -13,10 +14,10 @@ if (vapidPublicKey && vapidPrivateKey) {
       vapidPrivateKey
     )
   } catch (err) {
-    console.error('[web-push] Failed to set VAPID details:', err)
+    logger.error({ err, component: 'web-push' }, 'Falha ao configurar VAPID details')
   }
 } else {
-  console.warn('[web-push] VAPID keys are missing. Push notifications will not work.')
+  logger.warn({ component: 'web-push' }, 'Chaves VAPID ausentes — push notifications não vão funcionar')
 }
 
 export { webpush }

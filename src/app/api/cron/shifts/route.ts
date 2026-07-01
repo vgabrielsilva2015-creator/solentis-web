@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { startOfDay, addDays } from 'date-fns'
 import { toZonedTime, format } from 'date-fns-tz'
+import { getLogger } from '@/lib/logger'
 
 export async function GET(request: Request) {
   // Verificação de segurança: a Vercel Cron envia 'Authorization: Bearer <CRON_SECRET>'.
@@ -13,6 +14,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
+
+  const log = await getLogger({ action: 'cronShifts' })
 
   try {
     const today = new Date()
@@ -68,8 +71,9 @@ export async function GET(request: Request) {
       if (!openedById) {
         // Nenhum operador escalado nem gestor: pula ESTA instância (não quebra o loop)
         skipped++
-        console.warn(
-          `[cron/shifts] Pulado: sem operador escalado nem gestor. tenant_id=${schedule.tenant_id} shift_id=${schedule.shift_id} date=${targetDate.toISOString()}`
+        log.warn(
+          { tenantId: schedule.tenant_id, shiftId: schedule.shift_id, date: targetDate.toISOString() },
+          'Instância de turno pulada: sem operador escalado nem gestor',
         )
         continue
       }
@@ -89,9 +93,9 @@ export async function GET(request: Request) {
         created++
       } catch (err) {
         skipped++
-        console.error(
-          `[cron/shifts] Falha ao criar instância. tenant_id=${schedule.tenant_id} shift_id=${schedule.shift_id} date=${targetDate.toISOString()}`,
-          err
+        log.error(
+          { err, tenantId: schedule.tenant_id, shiftId: schedule.shift_id, date: targetDate.toISOString() },
+          'Falha ao criar instância de turno',
         )
       }
     }
@@ -103,7 +107,7 @@ export async function GET(request: Request) {
       skipped,
     })
   } catch (error) {
-    console.error('Error generating shift instances:', error)
+    log.error({ err: error }, 'Erro ao gerar instâncias de turno')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
