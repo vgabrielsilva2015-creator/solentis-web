@@ -54,7 +54,14 @@ Análise crítica + correção dos problemas que impediam virar produto. Todos o
 - Gráfico de tendência do dashboard: função `alpha()` gerava CSS inválido (`var(--x / 0.3)`) deixando o fundo preto → corrigida com `color-mix`; fontes dos eixos aumentadas.
 
 ### ⚠️ Ações pendentes na Vercel (Environment Variables)
-`RESEND_API_KEY` + `EMAIL_FROM` (e-mails de reset/convite) · `BLOB_READ_WRITE_TOKEN` via Blob Store (uploads) · `CRON_SECRET` (cron) · conferir `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push).
+`RESEND_API_KEY` + `EMAIL_FROM` (e-mails de reset/convite) · `BLOB_READ_WRITE_TOKEN` via Blob Store (uploads) · conferir `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push).
+
+### ✅ Cron de turnos — OPERACIONAL (2026-07-01)
+O cron `/api/cron/shifts` gera as instâncias `SCHEDULED` do dia. Estava quebrado por 3 motivos, todos corrigidos:
+- **FK:** `opened_by` recebia a string `'CRON'` (viola FK User) → agora usa fallback escala→gestor, com `create` item-a-item e `console.warn` em quem for pulado.
+- **Middleware:** `proxy.ts` redirecionava `/api/cron/*` ao `/login` → excluído do matcher (o handler já faz auth fail-closed via `CRON_SECRET`).
+- **Horário:** `vercel.json` estava `0 0 * * *` (21h BRT) → agora `5 3 * * *` (03:05 UTC = 00:05 BRT).
+Config viva: `CRON_SECRET` **setada na Vercel**; Cron Job registrado no painel (plano Hobby = janela flexível de 1h, ok); `ShiftSchedule` de Manhã/Tarde/Noite (todos os dias) criados no tenant Solentis. Depende da escala (`ShiftScale`) para o `opened_by` cair no operador certo; sem escala, cai no gestor.
 
 ### Próximos itens de robustez (não-bloqueantes)
 - Reduzir os ~77 `any` aos poucos (não fazer sweep cego).
