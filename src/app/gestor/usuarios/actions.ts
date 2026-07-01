@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
+import { getLogger } from '@/lib/logger'
 import { getTenantId } from '@/lib/tenant'
 import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
 import { sendEmail } from '@/lib/email'
@@ -219,6 +220,8 @@ export async function toggleAtivo(
       })
     })
   } catch (e) {
+    const log = await getLogger({ userId: managerId, tenantId, action: 'toggleAtivo' })
+    log.error({ err: e, targetUserId: userId }, 'Falha ao alterar status do usuário')
     return { error: 'Erro ao alterar status do usuário.' }
   }
 
@@ -263,6 +266,8 @@ export async function resetarSenha(
       })
     })
   } catch (e) {
+    const log = await getLogger({ userId: managerId, tenantId, action: 'resetarSenha' })
+    log.error({ err: e, targetUserId: userId }, 'Falha ao resetar senha do usuário')
     return { error: 'Erro ao resetar senha do usuário.' }
   }
 
