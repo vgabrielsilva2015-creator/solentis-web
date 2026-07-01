@@ -47,10 +47,25 @@ export async function criarTurno(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  const nome = parsed.data.name.trim()
+
+  // Impede turnos ativos com nome duplicado (case-insensitive) no mesmo tenant
+  const duplicado = await prisma.shift.findFirst({
+    where: {
+      tenant_id: (await getTenantId()),
+      is_active: true,
+      name:      { equals: nome, mode: 'insensitive' },
+    },
+    select: { id: true },
+  })
+  if (duplicado) {
+    return { error: `Já existe um turno chamado '${nome}'. Use um nome diferente ou edite o turno existente.` }
+  }
+
   await prisma.shift.create({
     data: {
       tenant_id:                (await getTenantId()),
-      name:                     parsed.data.name,
+      name:                     nome,
       start_time:               parsed.data.start_time,
       end_time:                 parsed.data.end_time,
       crosses_midnight:         parsed.data.crosses_midnight,
@@ -81,8 +96,24 @@ export async function editarTurno(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  const nome = parsed.data.name.trim()
+
+  // Impede colisão com OUTRO turno ativo do mesmo tenant (mesmo nome, case-insensitive)
+  const duplicado = await prisma.shift.findFirst({
+    where: {
+      tenant_id: (await getTenantId()),
+      is_active: true,
+      name:      { equals: nome, mode: 'insensitive' },
+      id:        { not: turnoId },
+    },
+    select: { id: true },
+  })
+  if (duplicado) {
+    return { error: `Já existe um turno chamado '${nome}'. Use um nome diferente ou edite o turno existente.` }
+  }
+
   await prisma.shift.updateMany({ where: { id: turnoId , tenant_id: (await getTenantId()) }, data: {
-      name:                     parsed.data.name,
+      name:                     nome,
       start_time:               parsed.data.start_time,
       end_time:                 parsed.data.end_time,
       crosses_midnight:         parsed.data.crosses_midnight,
