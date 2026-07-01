@@ -36,7 +36,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "recharts": "^3.8.1",
-    "resend": "^4.8.0",
+    "resend": "^6.16.0",
     "serwist": "^9.5.11",
     "string-similarity": "^4.0.4",
     "tailwind-merge": "^3.6.0",
