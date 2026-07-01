@@ -223,7 +223,7 @@ export default async function OperadorDashboard() {
         {/* Turno ativo */}
         {turnoAtivo ? (
           <Link
-            href="/operador/turnos"
+            href={`/operador/turnos/${turnoAtivo.id}`}
             className="block rounded-xl border border-green-800/60 bg-green-950/20 p-4 hover:bg-green-950/30 transition-colors"
           >
             <div className="flex items-center justify-between">

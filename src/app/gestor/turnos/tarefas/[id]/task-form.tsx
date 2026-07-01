@@ -8,6 +8,7 @@ import { atribuirTarefa, removerTarefa, type TaskFormState } from './task-action
 const INITIAL: TaskFormState = {}
 
 type Operator = { id: string; name: string }
+type Photo = { id: string; original_name: string }
 type Task = {
   id: string
   title: string
@@ -15,6 +16,7 @@ type Task = {
   status: string
   assignee: { name: string } | null
   creator: { name: string }
+  photos: Photo[]
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -66,6 +68,21 @@ export function TaskForm({
                 <p className="mt-1 text-xs text-slate-600">
                   {task.assignee ? `→ ${task.assignee.name}` : 'Qualquer operador'} · por {task.creator.name}
                 </p>
+                {task.status === 'DONE' && task.photos.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {task.photos.map((photo) => (
+                      <a
+                        key={photo.id}
+                        href={`/api/shift-task-photos/${photo.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-md border border-green-900/40 bg-green-950/40 px-2 py-0.5 text-xs text-green-400 hover:bg-green-950/70 transition-colors"
+                      >
+                        ↗ {photo.original_name}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <span className={`rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLOR[task.status] ?? ''}`}>
