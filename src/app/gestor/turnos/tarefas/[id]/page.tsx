@@ -56,6 +56,7 @@ export default async function InstanciaDetalhePage({
           include: {
             assignee: { select: { name: true } },
             creator:  { select: { name: true } },
+            photos:   { select: { id: true, original_name: true } },
           },
           orderBy: { created_at: 'asc' },
         },
