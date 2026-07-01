@@ -1,0 +1,55 @@
+version: 2
+
+updates:
+  # ── Dependências npm ──────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # Agrupa patches/minors num único PR por semana para reduzir ruído.
+      producao-minor-patch:
+        applies-to: version-updates
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      dev-minor-patch:
+        applies-to: version-updates
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+    ignore:
+      # 🔒 REGRA INVIOLÁVEL: Prisma fixo na v5.22.0 — subir para v6/v7 exige
+      # plano de migração de banco. NÃO deixar o Dependabot abrir esses PRs.
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
+      # next-auth está deliberadamente na linha v5 (beta); o "latest" é a v4 antiga.
+      - dependency-name: "next-auth"
+      # Majors de framework/tooling são revisados manualmente (React, Next, TS, ESLint).
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # @types/node segue o runtime da Vercel (Node 20).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  # ── GitHub Actions ────────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(ci)"
