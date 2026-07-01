@@ -67,6 +67,29 @@ Config viva: `CRON_SECRET` **setada na Vercel**; Cron Job registrado no painel (
 - Reduzir os ~77 `any` aos poucos (não fazer sweep cego).
 - Endurecer o service worker se o cache do PWA voltar a atrapalhar navegação de auth.
 
+## 📊 Observabilidade — Logger estruturado (2026-07-01)
+
+Camada de log profissional adicionada (PR #14, branch `feat/observabilidade-logger`). Antes: só `console.*` solto (38 ocorrências), sem estrutura, contexto ou masking, e alguns catches engolindo o erro sem rastro.
+
+### `src/lib/logger.ts` (Pino)
+- **Saída JSON** no stdout → cai no painel **Logs** da Vercel, filtrável por campo.
+- **Data masking** via `redact`: `password`, `senha`, `password_hash`, `token`, `tempPassword`, `authorization`, `cookie`, `secret` (inclusive aninhados `*.token`) → `[REDACTED]`. **Regra: nunca logar segredo/PII.**
+- **Níveis**: `trace<debug<info<warn<error<fatal`. `fatal`=dependência crítica fora · `error`=exceção que quebrou a operação · `warn`=degradação tolerada (retry, fail-open, notificação não enviada) · `info`=evento de negócio.
+- **`getLogger({ userId, tenantId, action })`** → logger-filho com `requestId` (usa `x-vercel-id` p/ correlação). Nunca lança. Use em Server Actions/rotas.
+- **`logger`** (base) → para código module-level ou fire-and-forget (fora do escopo de request).
+- **Nível configurável** via env `LOG_LEVEL` na Vercel (sem deploy).
+
+### ⚠️ Regras de uso
+- **NUNCA importar o logger em código Edge** (`src/proxy.ts`) — Pino é Node-only. Server Actions e rotas rodam em Node (Prisma), lá é seguro.
+- **Componentes client** (`push-manager`, `sync-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
+- Complementa (não substitui) o `logAudit()` (`src/lib/audit.ts`), que é auditoria **de negócio** (CONAMA), não observabilidade operacional.
+
+### Estado
+Zero `console.*` em código server-side (migração completa nas Fases 1–4). Falhas antes silenciosas agora deixam rastro (ex.: reset de senha, toggle de usuário, `getNotifications` que retornava `[]` mudo).
+
+### ⏳ Decisão pendente — fail-open do rate-limit
+Em `src/lib/auth.ts`, se a checagem de rate-limit no banco falhar, o login **prossegue sem proteção de brute-force** (*fail-open*), hoje registrado em `WARN`. Trade-off segurança × disponibilidade em aberto (mudar p/ fail-closed é ~1 linha).
+
 ## ⚠️ CORREÇÕES ao restante deste documento (estado REAL em 2026-06-26)
 As seções antigas abaixo contêm afirmações **desatualizadas**. O estado real é:
 - **Banco: PostgreSQL (Supabase)** — NÃO é mais SQLite. A "regra inviolável 3.1 (Prisma v5 / SQLite)" está **superada**: `provider = "postgresql"`. (Prisma client ainda na linha v5.)
@@ -77,7 +100,7 @@ Trate o texto histórico abaixo como registro de fases, não como verdade atual 
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
-- Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui
+- Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui, Pino (logs estruturados)
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
 - Modo offline e PWA: IMPLEMENTADO com Serwist (sincronização automática de leituras ao voltar online)
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
