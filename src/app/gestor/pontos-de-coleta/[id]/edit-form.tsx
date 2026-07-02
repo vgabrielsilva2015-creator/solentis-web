@@ -42,28 +42,28 @@ export function EditPontoColetaForm({ ponto }: { ponto: PontoColeta }) {
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">{ponto.name}</h1>
-          <p className="text-sm text-slate-400">Edite as informações e a visibilidade dos fluxos deste ponto.</p>
+          <h1 className="text-xl font-semibold text-foreground">{ponto.name}</h1>
+          <p className="text-sm text-muted-foreground">Edite as informações e a visibilidade dos fluxos deste ponto.</p>
         </div>
         {ponto.is_active
           ? <span className="mt-1 flex items-center gap-1.5 text-xs text-green-400"><span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Ativo</span>
           : <span className="mt-1 flex items-center gap-1.5 text-xs text-red-400"><span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Inativo</span>}
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-5">
         <form action={formAction} className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="name" className="text-sm font-medium text-slate-300">Nome do Ponto</label>
+            <label htmlFor="name" className="text-sm font-medium text-foreground">Nome do Ponto</label>
             <Input id="name" name="name" type="text" defaultValue={ponto.name} required disabled={isPendingForm}
-              className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500" />
+              className="border-border bg-muted text-foreground focus-visible:ring-ring" />
             {state.fieldErrors?.name && <p className="text-xs text-red-400">{state.fieldErrors.name[0]}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label htmlFor="matrix" className="text-sm font-medium text-slate-300">Matriz</label>
+              <label htmlFor="matrix" className="text-sm font-medium text-foreground">Matriz</label>
               <select id="matrix" name="matrix" defaultValue={ponto.matrix ?? ''} disabled={isPendingForm}
-                className="flex h-10 w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50">
+                className="flex h-10 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50">
                 <option value="">Nenhuma / Outra</option>
                 <option value="EFLUENTE">Efluente</option>
                 <option value="SUBTERRANEA">Água Subterrânea</option>
@@ -72,50 +72,50 @@ export function EditPontoColetaForm({ ponto }: { ponto: PontoColeta }) {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="location" className="text-sm font-medium text-slate-300">Localização</label>
+              <label htmlFor="location" className="text-sm font-medium text-foreground">Localização</label>
               <Input id="location" name="location" type="text" defaultValue={ponto.location ?? ''} disabled={isPendingForm}
-                className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500" />
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="description" className="text-sm font-medium text-slate-300">
-              Descrição <span className="font-normal text-slate-500">(opcional)</span>
+            <label htmlFor="description" className="text-sm font-medium text-foreground">
+              Descrição <span className="font-normal text-muted-foreground">(opcional)</span>
             </label>
             <textarea id="description" name="description" rows={3} disabled={isPendingForm}
               defaultValue={ponto.description ?? ''}
               placeholder="Descreva o ponto de amostragem ou sua função…"
-              className="flex w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 resize-none" />
+              className="flex w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 resize-none" />
           </div>
 
           <div className="space-y-3 pt-2">
-            <label className="text-sm font-medium text-slate-300 block">Habilitar visibilidade para:</label>
+            <label className="text-sm font-medium text-foreground block">Habilitar visibilidade para:</label>
             
             <div className="space-y-2">
-              <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-slate-800 bg-slate-950/40 p-3 hover:bg-slate-950/80 transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-background/40 p-3 hover:bg-background/80 transition-colors">
                 <input type="checkbox" name="is_field" defaultChecked={ponto.is_field} disabled={isPendingForm}
-                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-slate-100 focus:ring-slate-500 focus:ring-offset-slate-900" />
+                  className="h-4 w-4 rounded border-border bg-muted text-foreground focus:ring-ring focus:ring-offset-background" />
                 <div>
-                  <span className="text-sm font-medium text-slate-200">Leituras de Campo (Operador)</span>
-                  <p className="text-xs text-slate-500">Exibido na rotina diária de medições de campo do operador.</p>
+                  <span className="text-sm font-medium text-foreground">Leituras de Campo (Operador)</span>
+                  <p className="text-xs text-muted-foreground">Exibido na rotina diária de medições de campo do operador.</p>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-slate-800 bg-slate-950/40 p-3 hover:bg-slate-950/80 transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-background/40 p-3 hover:bg-background/80 transition-colors">
                 <input type="checkbox" name="is_internal" defaultChecked={ponto.is_internal} disabled={isPendingForm}
-                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-slate-100 focus:ring-slate-500 focus:ring-offset-slate-900" />
+                  className="h-4 w-4 rounded border-border bg-muted text-foreground focus:ring-ring focus:ring-offset-background" />
                 <div>
-                  <span className="text-sm font-medium text-slate-200">Análises Internas (Laboratório)</span>
-                  <p className="text-xs text-slate-500">Disponível para lançamento de análises feitas no laboratório próprio.</p>
+                  <span className="text-sm font-medium text-foreground">Análises Internas (Laboratório)</span>
+                  <p className="text-xs text-muted-foreground">Disponível para lançamento de análises feitas no laboratório próprio.</p>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-slate-800 bg-slate-950/40 p-3 hover:bg-slate-950/80 transition-colors">
+              <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-border bg-background/40 p-3 hover:bg-background/80 transition-colors">
                 <input type="checkbox" name="is_external" defaultChecked={ponto.is_external} disabled={isPendingForm}
-                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-slate-100 focus:ring-slate-500 focus:ring-offset-slate-900" />
+                  className="h-4 w-4 rounded border-border bg-muted text-foreground focus:ring-ring focus:ring-offset-background" />
                 <div>
-                  <span className="text-sm font-medium text-slate-200">Análises Externas (Laudos)</span>
-                  <p className="text-xs text-slate-500">Disponível para mapeamento de laudos de laboratório terceirizado.</p>
+                  <span className="text-sm font-medium text-foreground">Análises Externas (Laudos)</span>
+                  <p className="text-xs text-muted-foreground">Disponível para mapeamento de laudos de laboratório terceirizado.</p>
                 </div>
               </label>
             </div>
@@ -124,14 +124,14 @@ export function EditPontoColetaForm({ ponto }: { ponto: PontoColeta }) {
           {state.error && <p className="rounded-md border border-red-800/50 bg-red-950/40 px-3 py-2 text-sm text-red-400">{state.error}</p>}
           {state.success && <p className="rounded-md border border-green-800/50 bg-green-950/40 px-3 py-2 text-sm text-green-400">Ponto de coleta atualizado com sucesso.</p>}
 
-          <Button type="submit" disabled={isPendingForm} className="bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50">
+          <Button type="submit" disabled={isPendingForm} className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
             {isPendingForm ? 'Salvando…' : 'Salvar alterações'}
           </Button>
         </form>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
-        <h2 className="text-base font-medium text-slate-200 mb-4">Ações</h2>
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-base font-medium text-foreground mb-4">Ações</h2>
         <Button type="button" variant="outline" disabled={isPendingToggle} onClick={handleToggle}
           className={ponto.is_active
             ? 'border-red-800/60 text-red-400 hover:bg-red-950/30 disabled:opacity-50'

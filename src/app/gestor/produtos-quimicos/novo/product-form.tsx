@@ -23,23 +23,23 @@ export function ProductForm() {
       )}
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Nome *</label>
+        <label className="text-sm text-foreground">Nome *</label>
         <input
           name="name"
           required
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Ex: Cloro Granulado"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Unidade de medida *</label>
+        <label className="text-sm text-foreground">Unidade de medida *</label>
         <select
           name="unit_select"
           required
           value={unitSelect}
           onChange={(e) => setUnitSelect(e.target.value)}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Selecione...</option>
           {CHEMICAL_UNIT_OPTIONS.map((opt) => (
@@ -50,37 +50,37 @@ export function ProductForm() {
 
       {unitSelect === 'outro' && (
         <div className="space-y-1">
-          <label className="text-sm text-slate-300">Unidade personalizada *</label>
+          <label className="text-sm text-foreground">Unidade personalizada *</label>
           <input
             name="unit_custom"
             required
             maxLength={20}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Ex: caixa, fardo, tonelada..."
           />
         </div>
       )}
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Estoque mínimo *</label>
+        <label className="text-sm text-foreground">Estoque mínimo *</label>
         <input
           name="min_stock"
           type="number"
           min="0"
           step="0.01"
           required
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="0"
         />
-        <p className="text-xs text-slate-500">Alerta disparado quando calculado ou físico ficar abaixo deste valor.</p>
+        <p className="text-xs text-muted-foreground">Alerta disparado quando calculado ou físico ficar abaixo deste valor.</p>
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Descrição</label>
+        <label className="text-sm text-foreground">Descrição</label>
         <textarea
           name="description"
           rows={3}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Uso, concentração, fornecedor padrão..."
         />
       </div>
@@ -96,7 +96,7 @@ export function ProductForm() {
         <button
           type="button"
           onClick={() => router.push('/gestor/produtos-quimicos')}
-          className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+          className="rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
         >
           Cancelar
         </button>

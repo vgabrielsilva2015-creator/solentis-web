@@ -20,7 +20,7 @@ export default async function PreAgendarPage() {
     <div className="max-w-lg space-y-4">
       <BackButton href="/gestor/turnos/tarefas" label="Tarefas" />
       <h1 className="text-xl font-semibold">Pré-agendar Turno</h1>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Crie uma instância de turno com data futura para atribuir tarefas antecipadamente.
       </p>
       <PreAgendarForm shifts={shifts} />

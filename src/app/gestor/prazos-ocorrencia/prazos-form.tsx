@@ -33,9 +33,9 @@ export function PrazosForm({ initialValues, severityLabels }: Props) {
                   defaultValue={initialValues[severity] ?? ''}
                   required
                   disabled={isPending}
-                  className="w-28 border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+                  className="w-28 border-border bg-muted text-foreground focus-visible:ring-ring"
                 />
-                <span className="text-sm text-slate-500">horas</span>
+                <span className="text-sm text-muted-foreground">horas</span>
               </div>
             </div>
           )
@@ -56,7 +56,7 @@ export function PrazosForm({ initialValues, severityLabels }: Props) {
       <Button
         type="submit"
         disabled={isPending}
-        className="bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         {isPending ? 'Salvando…' : 'Salvar prazos'}
       </Button>

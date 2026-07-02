@@ -41,7 +41,7 @@ export default async function TemplatesDoTurnoPage({
       <BackButton href="/gestor/turnos/escala" label="Escala de turnos" />
       <div>
         <h1 className="text-xl font-semibold">Análises/tarefas padrão — {shift.name}</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
+        <p className="text-sm text-muted-foreground mt-0.5">
           {shift.start_time} – {shift.end_time} · essas tarefas são criadas automaticamente a cada abertura deste turno.
         </p>
       </div>

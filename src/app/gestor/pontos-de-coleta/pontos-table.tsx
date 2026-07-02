@@ -44,7 +44,7 @@ export function PontosTable({ items }: { items: PontoColeta[] }) {
     <>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
             <th className="px-4 py-3">Ponto de Coleta</th>
             <th className="px-4 py-3">Matriz</th>
             <th className="px-4 py-3">Habilitado Para</th>
@@ -68,27 +68,27 @@ export function PontosTable({ items }: { items: PontoColeta[] }) {
             >
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-slate-500 shrink-0" />
+                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div>
-                    <div className="font-medium text-slate-100">{p.name}</div>
-                    {p.location && <div className="text-xs text-slate-500">Local: {p.location}</div>}
+                    <div className="font-medium text-foreground">{p.name}</div>
+                    {p.location && <div className="text-xs text-muted-foreground">Local: {p.location}</div>}
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 text-slate-300">
-                {p.matrix ? (MATRIX_LABELS[p.matrix] || p.matrix) : <span className="text-slate-600">-</span>}
+              <td className="px-4 py-3 text-foreground">
+                {p.matrix ? (MATRIX_LABELS[p.matrix] || p.matrix) : <span className="text-muted-foreground">-</span>}
               </td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-1">
                   {p.is_field
                     ? <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Campo</Badge>
-                    : <Badge variant="outline" className="border-slate-800 text-slate-600">Campo</Badge>}
+                    : <Badge variant="outline" className="border-border text-muted-foreground">Campo</Badge>}
                   {p.is_internal
                     ? <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20">Interno</Badge>
-                    : <Badge variant="outline" className="border-slate-800 text-slate-600">Interno</Badge>}
+                    : <Badge variant="outline" className="border-border text-muted-foreground">Interno</Badge>}
                   {p.is_external
                     ? <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/20">Externo</Badge>
-                    : <Badge variant="outline" className="border-slate-800 text-slate-600">Externo</Badge>}
+                    : <Badge variant="outline" className="border-border text-muted-foreground">Externo</Badge>}
                 </div>
               </td>
               <td className="px-4 py-3">

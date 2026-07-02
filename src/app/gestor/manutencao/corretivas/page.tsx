@@ -23,7 +23,7 @@ export default async function CorrectiveMaintenancePage() {
   })
 
   const getStatusBadge = (status: string) => {
-    const colorClass = MAINTENANCE_STATUS_COLOR[status] || 'bg-slate-800 text-slate-400 border-slate-700'
+    const colorClass = MAINTENANCE_STATUS_COLOR[status] || 'bg-muted text-muted-foreground border-border'
     const label = MAINTENANCE_STATUS_LABEL[status] || status
 
     return (
@@ -38,7 +38,7 @@ export default async function CorrectiveMaintenancePage() {
 
   const getPriorityBadge = (priority: string | null) => {
     const safePriority = priority || 'MEDIUM'
-    const colorClass = SEVERITY_COLOR[safePriority] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+    const colorClass = SEVERITY_COLOR[safePriority] || 'bg-muted/10 text-muted-foreground border-border/20'
     const label = PRIORITY_LABEL[safePriority] || safePriority
     return <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${colorClass}`}>{label}</span>
   }

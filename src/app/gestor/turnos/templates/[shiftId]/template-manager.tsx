@@ -41,7 +41,7 @@ function TemplateFields({
           maxLength={120}
           defaultValue={defaults?.title ?? ''}
           placeholder="Título da análise/tarefa *"
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-600 focus:outline-none"
         />
         {fieldErrors?.title && <p className="mt-1 text-xs text-red-400">{fieldErrors.title[0]}</p>}
       </div>
@@ -52,13 +52,13 @@ function TemplateFields({
         maxLength={500}
         defaultValue={defaults?.description ?? ''}
         placeholder="Descrição / instruções (opcional)"
-        className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none"
+        className="w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-600 focus:outline-none"
       />
 
       <select
         name="assigned_to_id"
         defaultValue={defaults?.assigned_to_id ?? ''}
-        className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-emerald-600 focus:outline-none"
+        className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground focus:border-emerald-600 focus:outline-none"
       >
         <option value="">Qualquer operador</option>
         {operators.map((op) => (
@@ -67,16 +67,16 @@ function TemplateFields({
       </select>
 
       <div className="flex items-center gap-4">
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             name="requires_photo"
             defaultChecked={defaults?.requires_photo ?? false}
-            className="h-4 w-4 rounded border-slate-600 bg-slate-800 accent-emerald-600"
+            className="h-4 w-4 rounded border-border bg-muted accent-emerald-600"
           />
           Exigir foto de comprovação
         </label>
-        <label className="ml-auto flex items-center gap-2 text-xs text-slate-500">
+        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           Ordem
           <input
             type="number"
@@ -84,7 +84,7 @@ function TemplateFields({
             min={0}
             max={999}
             defaultValue={defaults?.sort_order ?? 0}
-            className="w-16 rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-slate-100 focus:border-emerald-600 focus:outline-none"
+            className="w-16 rounded-lg border border-border bg-muted px-2 py-1 text-sm text-foreground focus:border-emerald-600 focus:outline-none"
           />
         </label>
       </div>
@@ -109,14 +109,14 @@ function EditForm({
   }, [state.success, onDone])
 
   return (
-    <form action={formAction} className="space-y-3 border-t border-slate-800 pt-3">
+    <form action={formAction} className="space-y-3 border-t border-border pt-3">
       <TemplateFields operators={operators} defaults={template} fieldErrors={state.fieldErrors} />
       {state.error && <p className="text-xs text-red-400">{state.error}</p>}
       <div className="flex gap-2">
-        <Button type="button" onClick={onDone} className="h-9 border border-slate-700 bg-slate-800 text-sm text-slate-400 hover:bg-slate-700 px-4">
+        <Button type="button" onClick={onDone} className="h-9 border border-border bg-muted text-sm text-muted-foreground hover:bg-secondary px-4">
           Cancelar
         </Button>
-        <Button type="submit" disabled={isPending} className="h-9 flex-1 bg-slate-100 text-sm text-slate-900 hover:bg-white">
+        <Button type="submit" disabled={isPending} className="h-9 flex-1 bg-primary text-sm text-primary-foreground hover:bg-primary/90">
           {isPending ? 'Salvando…' : 'Salvar alterações'}
         </Button>
       </div>
@@ -147,30 +147,30 @@ export function TemplateManager({
       {/* Lista de templates ativos */}
       <div className="space-y-2">
         {templates.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-800 bg-slate-900/50 py-8 text-center text-sm text-slate-500">
+          <p className="rounded-lg border border-dashed border-border bg-card/50 py-8 text-center text-sm text-muted-foreground">
             Nenhuma análise/tarefa padrão configurada para este turno.
           </p>
         ) : (
           templates.map((t) => (
-            <div key={t.id} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+            <div key={t.id} className="rounded-lg border border-border bg-card p-4">
               {editingId === t.id ? (
                 <EditForm template={t} operators={operators} onDone={() => setEditingId(null)} />
               ) : (
                 <div className="flex items-start gap-3">
-                  <span className="mt-0.5 shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-xs font-mono text-slate-500">
+                  <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                     {t.sort_order}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium text-slate-100">{t.title}</p>
+                      <p className="text-sm font-medium text-foreground">{t.title}</p>
                       {t.requires_photo && (
                         <span className="rounded bg-amber-900/30 px-1.5 py-0.5 text-xs font-medium text-amber-400">
                           Foto obrigatória
                         </span>
                       )}
                     </div>
-                    {t.description && <p className="mt-0.5 text-xs text-slate-500">{t.description}</p>}
-                    <p className="mt-1 text-xs text-slate-600">
+                    {t.description && <p className="mt-0.5 text-xs text-muted-foreground">{t.description}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {t.assigneeName ? `→ ${t.assigneeName}` : 'Qualquer operador'}
                     </p>
                   </div>
@@ -196,11 +196,11 @@ export function TemplateManager({
       </div>
 
       {/* Formulário de criação */}
-      <form ref={formRef} action={formAction} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900 p-4">
-        <p className="text-xs font-medium text-slate-400">Nova análise/tarefa padrão</p>
+      <form ref={formRef} action={formAction} className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <p className="text-xs font-medium text-muted-foreground">Nova análise/tarefa padrão</p>
         <TemplateFields operators={operators} fieldErrors={state.fieldErrors} />
         {state.error && <p className="text-xs text-red-400">{state.error}</p>}
-        <Button type="submit" disabled={isPending} className="h-9 w-full bg-slate-100 text-sm text-slate-900 hover:bg-white">
+        <Button type="submit" disabled={isPending} className="h-9 w-full bg-primary text-sm text-primary-foreground hover:bg-primary/90">
           {isPending ? 'Salvando…' : '+ Adicionar ao turno'}
         </Button>
       </form>

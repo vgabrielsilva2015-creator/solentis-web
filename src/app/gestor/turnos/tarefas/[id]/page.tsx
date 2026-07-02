@@ -17,7 +17,7 @@ const STATUS_COLOR: Record<string, string> = {
   SCHEDULED:        'bg-blue-950/60 text-blue-400 border-blue-900/50',
   OPEN:             'bg-green-950/60 text-green-400 border-green-900/50',
   HANDOVER_PENDING: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  CLOSED:           'bg-slate-800/60 text-slate-400 border-slate-700/50',
+  CLOSED:           'bg-muted/60 text-muted-foreground border-border/50',
 }
 
 const HANDOVER_STATUS_LABEL: Record<string, string> = {
@@ -85,7 +85,7 @@ export default async function InstanciaDetalhePage({
       <div className="flex items-start justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {instance.shift.start_time} – {instance.shift.end_time} · {formatDatetime(instance.date)}
           </p>
         </div>
@@ -95,35 +95,35 @@ export default async function InstanciaDetalhePage({
       </div>
 
       {/* Dados da instância */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
-        <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tarefa</p>
+      <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tarefa</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
           <div>
-            <span className="text-slate-500">Aberto por</span>
-            <p className="text-slate-200">{instance.opener.name}</p>
+            <span className="text-muted-foreground">Aberto por</span>
+            <p className="text-foreground">{instance.opener.name}</p>
           </div>
           <div>
-            <span className="text-slate-500">Abertura</span>
-            <p className="text-slate-200">{formatDatetime(instance.opened_at)}</p>
+            <span className="text-muted-foreground">Abertura</span>
+            <p className="text-foreground">{formatDatetime(instance.opened_at)}</p>
           </div>
           {instance.closed_at && (
             <div>
-              <span className="text-slate-500">Fechamento</span>
-              <p className="text-slate-200">{formatDatetime(instance.closed_at)}</p>
+              <span className="text-muted-foreground">Fechamento</span>
+              <p className="text-foreground">{formatDatetime(instance.closed_at)}</p>
             </div>
           )}
           <div>
-            <span className="text-slate-500">Leituras</span>
-            <p className="text-slate-200">{instance.readings.length}</p>
+            <span className="text-muted-foreground">Leituras</span>
+            <p className="text-foreground">{instance.readings.length}</p>
           </div>
         </div>
       </div>
 
       {/* Tarefas do turno */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tarefas</p>
-          <span className="text-xs text-slate-500">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tarefas</p>
+          <span className="text-xs text-muted-foreground">
             {instance.shift_tasks.filter((t) => t.status === 'DONE').length}
             /{instance.shift_tasks.length} concluídas
           </span>
@@ -138,9 +138,9 @@ export default async function InstanciaDetalhePage({
 
       {/* Passagem de turno */}
       {h ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-4">
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Passagem</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Passagem</p>
             <span className={`rounded px-2 py-0.5 text-xs font-medium ${
               h.status === 'CONFIRMED'  ? 'bg-green-950/60 text-green-400'  :
               h.status === 'TIMED_OUT' ? 'bg-red-950/60 text-red-400'      :
@@ -152,65 +152,65 @@ export default async function InstanciaDetalhePage({
 
           {/* Checklist */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
               <p className="text-xl font-bold">{checklist.readings_count ?? 0}</p>
-              <p className="text-xs text-slate-500">leitura(s)</p>
+              <p className="text-xs text-muted-foreground">leitura(s)</p>
             </div>
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
               <p className={`text-xl font-bold ${(checklist.open_occurrences_count ?? 0) > 0 ? 'text-amber-400' : ''}`}>
                 {checklist.open_occurrences_count ?? 0}
               </p>
-              <p className="text-xs text-slate-500">ocorrência(s) em aberto</p>
+              <p className="text-xs text-muted-foreground">ocorrência(s) em aberto</p>
             </div>
           </div>
 
           {checklist.pending_items && (
             <div className="rounded-lg bg-amber-950/20 border border-amber-900/40 px-3 py-2">
               <p className="text-xs font-medium text-amber-400 mb-0.5">Pendências</p>
-              <p className="text-xs text-slate-300">{checklist.pending_items}</p>
+              <p className="text-xs text-foreground">{checklist.pending_items}</p>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
             <div>
-              <span className="text-slate-500">Sainte</span>
-              <p className="text-slate-200">{h.outgoing_user.name}</p>
+              <span className="text-muted-foreground">Sainte</span>
+              <p className="text-foreground">{h.outgoing_user.name}</p>
             </div>
             {h.incoming_user && (
               <div>
-                <span className="text-slate-500">Entrante</span>
-                <p className="text-slate-200">{h.incoming_user.name}</p>
+                <span className="text-muted-foreground">Entrante</span>
+                <p className="text-foreground">{h.incoming_user.name}</p>
               </div>
             )}
             <div>
-              <span className="text-slate-500">Iniciada em</span>
-              <p className="text-slate-200">{formatDatetime(h.handover_at)}</p>
+              <span className="text-muted-foreground">Iniciada em</span>
+              <p className="text-foreground">{formatDatetime(h.handover_at)}</p>
             </div>
             {h.confirmed_at && (
               <div>
-                <span className="text-slate-500">Confirmada em</span>
-                <p className="text-slate-200">{formatDatetime(h.confirmed_at)}</p>
+                <span className="text-muted-foreground">Confirmada em</span>
+                <p className="text-foreground">{formatDatetime(h.confirmed_at)}</p>
               </div>
             )}
           </div>
 
           {h.outgoing_observations && (
             <div>
-              <p className="text-xs text-slate-500 mb-0.5">Observações do sainte</p>
-              <p className="text-xs text-slate-300 rounded-lg bg-slate-800/40 px-3 py-2">{h.outgoing_observations}</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Observações do sainte</p>
+              <p className="text-xs text-foreground rounded-lg bg-muted/40 px-3 py-2">{h.outgoing_observations}</p>
             </div>
           )}
           {h.incoming_observations && (
             <div>
-              <p className="text-xs text-slate-500 mb-0.5">Observações do entrante</p>
-              <p className="text-xs text-slate-300 rounded-lg bg-slate-800/40 px-3 py-2">{h.incoming_observations}</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Observações do entrante</p>
+              <p className="text-xs text-foreground rounded-lg bg-muted/40 px-3 py-2">{h.incoming_observations}</p>
             </div>
           )}
 
           {/* Formulário de edição — apenas passagens confirmadas */}
           {h.status === 'CONFIRMED' && (
-            <div className="pt-2 border-t border-slate-800">
-              <p className="text-xs font-medium text-slate-400 mb-3">Editar observações</p>
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs font-medium text-muted-foreground mb-3">Editar observações</p>
               <EditHandoverForm
                 handoverId={h.id}
                 currentOutgoing={h.outgoing_observations ?? ''}
@@ -220,8 +220,8 @@ export default async function InstanciaDetalhePage({
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-center py-8">
-          <p className="text-sm text-slate-500">Nenhuma passagem registrada.</p>
+        <div className="rounded-xl border border-border bg-card p-4 text-center py-8">
+          <p className="text-sm text-muted-foreground">Nenhuma passagem registrada.</p>
         </div>
       )}
     </div>
