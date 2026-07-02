@@ -33,7 +33,7 @@ export type RowAction = {
 
 const iconBtn =
   'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted-foreground ' +
-  'transition-colors hover:bg-white/10 hover:text-foreground focus-visible:outline-none ' +
+  'transition-colors hover:bg-primary/90/10 hover:text-foreground focus-visible:outline-none ' +
   'focus-visible:ring-2 focus-visible:ring-[var(--brand)]/50'
 
 export function DataTableRow({

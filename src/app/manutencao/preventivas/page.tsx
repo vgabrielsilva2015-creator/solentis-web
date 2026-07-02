@@ -54,7 +54,7 @@ export default async function PreventivasPage({
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">Manutenções Preventivas</h1>
-          <p className="text-xs text-slate-400">{total} registro(s)</p>
+          <p className="text-xs text-muted-foreground">{total} registro(s)</p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -63,7 +63,7 @@ export default async function PreventivasPage({
               'rounded-md border px-3 py-1.5 text-xs flex items-center',
               !showAll
                 ? 'border-brand/40 bg-brand/10 text-brand'
-                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+                : 'border-border bg-muted text-muted-foreground hover:bg-secondary',
             ].join(' ')}
           >
             Pendentes
@@ -74,7 +74,7 @@ export default async function PreventivasPage({
               'rounded-md border px-3 py-1.5 text-xs flex items-center',
               showAll
                 ? 'border-brand/40 bg-brand/10 text-brand'
-                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+                : 'border-border bg-muted text-muted-foreground hover:bg-secondary',
             ].join(' ')}
           >
             Todas
@@ -84,13 +84,13 @@ export default async function PreventivasPage({
 
       {/* Tabela */}
       {preventivas.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-border bg-card/50 py-14 text-center text-sm text-muted-foreground">
           Nenhuma preventiva agendada.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-left text-xs text-slate-500 uppercase tracking-wider">
+            <thead className="bg-card text-left text-xs text-muted-foreground uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">Equipamento</th>
                 <th className="px-4 py-3">Agendamento</th>
@@ -98,19 +98,19 @@ export default async function PreventivasPage({
                 <th className="px-4 py-3">Realizada Por</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {preventivas.map((prev) => {
                 const atrasado = prev.status !== 'COMPLETED' && new Date(prev.scheduled_date) < now
 
                 return (
-                  <tr key={prev.id} className="bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
+                  <tr key={prev.id} className="bg-card/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3">
                       <Link href={`/manutencao/equipamentos/${prev.equipment_id}`} className="text-blue-400 hover:underline font-medium">
                         {prev.equipment.name}
                       </Link>
-                      <p className="text-xs text-slate-500 mt-0.5">{prev.equipment.location || 'Sem localização'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{prev.equipment.location || 'Sem localização'}</p>
                     </td>
-                    <td className={`px-4 py-3 ${atrasado ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+                    <td className={`px-4 py-3 ${atrasado ? 'text-red-400 font-medium' : 'text-muted-foreground'}`}>
                       {formatDatetime(prev.scheduled_date)}
                     </td>
                     <td className="px-4 py-3">
@@ -124,7 +124,7 @@ export default async function PreventivasPage({
                             Em Andamento
                           </span>
                         ) : (
-                          <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+                          <span className="rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                             Agendada
                           </span>
                         )}
@@ -135,7 +135,7 @@ export default async function PreventivasPage({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {prev.completer ? prev.completer.name : '-'}
                     </td>
                   </tr>
@@ -152,16 +152,16 @@ export default async function PreventivasPage({
           {page > 1 ? (
             <Link
               href={`/manutencao/preventivas?page=${page - 1}${showAll ? '&status=all' : ''}`}
-              className="text-slate-400 hover:text-slate-200"
+              className="text-muted-foreground hover:text-foreground"
             >
               ← Anterior
             </Link>
           ) : <span />}
-          <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+          <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
           {page < totalPages ? (
             <Link
               href={`/manutencao/preventivas?page=${page + 1}${showAll ? '&status=all' : ''}`}
-              className="text-slate-400 hover:text-slate-200"
+              className="text-muted-foreground hover:text-foreground"
             >
               Próxima →
             </Link>

@@ -18,7 +18,7 @@ const overlayCls =
 
 const contentCls =
   'fixed right-0 top-0 z-[300] flex h-dvh w-[460px] max-w-[94vw] flex-col ' +
-  'border-l border-white/10 bg-[var(--surface)] shadow-2xl ' +
+  'border-l border-primary/10 bg-[var(--surface)] shadow-2xl ' +
   'ease-[cubic-bezier(.16,1,.3,1)] focus:outline-none ' +
   'data-[state=open]:animate-in data-[state=open]:slide-in-from-right ' +
   'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right duration-300'
@@ -37,7 +37,7 @@ export function Sheet({ open, onOpenChange, title, description, children }: Shee
       <Dialog.Portal>
         <Dialog.Overlay className={overlayCls} />
         <Dialog.Content className={contentCls}>
-          <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+          <div className="flex items-start justify-between gap-4 border-b border-primary/10 px-6 py-5">
             <div className="min-w-0">
               <Dialog.Title className="font-heading text-lg font-semibold tracking-tight text-foreground">
                 {title}
@@ -50,7 +50,7 @@ export function Sheet({ open, onOpenChange, title, description, children }: Shee
             </div>
             <Dialog.Close
               aria-label="Fechar"
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/90/10 hover:text-foreground"
             >
               <X className="size-[18px]" strokeWidth={2.2} />
             </Dialog.Close>

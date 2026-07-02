@@ -66,10 +66,10 @@ export default async function AdminPlantasPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Plantas Cadastradas
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Gerencie os Tenants e seus Gestores
           </p>
         </div>
@@ -89,7 +89,7 @@ export default async function AdminPlantasPage() {
             className={`rounded-xl border bg-gradient-to-br ${kpi.color} p-5 transition-all hover:scale-[1.02]`}
           >
             <div className="flex items-center justify-between">
-              <div className={`rounded-lg bg-slate-900/50 p-2 ${kpi.iconColor}`}>
+              <div className={`rounded-lg bg-card/50 p-2 ${kpi.iconColor}`}>
                 {kpi.icon}
               </div>
             </div>
@@ -97,7 +97,7 @@ export default async function AdminPlantasPage() {
               <p className={`text-3xl font-bold ${kpi.valueColor}`}>
                 {kpi.value}
               </p>
-              <p className="text-xs text-slate-400 mt-1">{kpi.label}</p>
+              <p className="text-xs text-muted-foreground mt-1">{kpi.label}</p>
             </div>
           </div>
         ))}
@@ -105,18 +105,18 @@ export default async function AdminPlantasPage() {
 
       {/* Cards de Plantas */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
           Todas as Plantas ({tenants.length})
         </h2>
 
         {tenants.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/30 p-12 text-center">
-            <Factory className="mx-auto h-12 w-12 text-slate-600 mb-4" />
-            <p className="text-slate-400 text-sm">
+          <div className="rounded-xl border border-dashed border-border bg-card/30 p-12 text-center">
+            <Factory className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-sm">
               Nenhuma planta cadastrada ainda.
             </p>
             <Link href="/admin/plantas/nova">
-              <Button variant="outline" className="mt-4 border-slate-700 text-slate-300 hover:bg-slate-800">
+              <Button variant="outline" className="mt-4 border-border text-foreground hover:bg-muted">
                 Criar primeira planta
               </Button>
             </Link>
@@ -125,12 +125,12 @@ export default async function AdminPlantasPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {tenants.map((t, index) => {
               const gradients = [
-                'from-indigo-600/10 via-slate-900 to-slate-900',
-                'from-emerald-600/10 via-slate-900 to-slate-900',
-                'from-violet-600/10 via-slate-900 to-slate-900',
-                'from-cyan-600/10 via-slate-900 to-slate-900',
-                'from-amber-600/10 via-slate-900 to-slate-900',
-                'from-rose-600/10 via-slate-900 to-slate-900',
+                'from-indigo-600/10 via-card to-card',
+                'from-emerald-600/10 via-card to-card',
+                'from-violet-600/10 via-card to-card',
+                'from-cyan-600/10 via-card to-card',
+                'from-amber-600/10 via-card to-card',
+                'from-rose-600/10 via-card to-card',
               ]
               const accentColors = [
                 'border-indigo-500/30',
@@ -159,7 +159,7 @@ export default async function AdminPlantasPage() {
                   className="block"
                 >
                   <div
-                    className={`group relative rounded-xl border ${accent} bg-gradient-to-br ${gradient} p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-slate-950/50 cursor-pointer`}
+                    className={`group relative rounded-xl border ${accent} bg-gradient-to-br ${gradient} p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/50 cursor-pointer`}
                   >
                   {/* Header do Card */}
                   <div className="flex items-start justify-between">
@@ -178,22 +178,22 @@ export default async function AdminPlantasPage() {
 
                   {/* Info */}
                   <div className="mt-4 space-y-1">
-                    <h3 className="text-lg font-semibold text-slate-100 group-hover:text-white transition-colors">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-white transition-colors">
                       {t.name}
                     </h3>
-                    <p className="font-mono text-xs text-slate-500">
+                    <p className="font-mono text-xs text-muted-foreground">
                       {t.slug}
                     </p>
                   </div>
 
                   {/* Stats */}
                   <div className="mt-4 flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1.5 text-slate-400">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
                       <Users className="w-3.5 h-3.5" />
                       <span>{t._count.users} usuário{t._count.users !== 1 ? 's' : ''}</span>
                     </div>
-                    <span className="text-slate-700">·</span>
-                    <span className="text-slate-500 text-xs">
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground text-xs">
                       {t.created_at.toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: 'short',
@@ -203,8 +203,8 @@ export default async function AdminPlantasPage() {
                   </div>
 
                   {/* Divider + Action */}
-                  <div className="mt-4 pt-4 border-t border-slate-800/50">
-                    <span className="flex items-center gap-1 text-xs text-slate-500 group-hover:text-indigo-400 transition-colors">
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-indigo-400 transition-colors">
                       Gerenciar planta
                       <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                     </span>

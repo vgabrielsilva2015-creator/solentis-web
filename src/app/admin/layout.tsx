@@ -15,9 +15,9 @@ export default async function AdminLayout({
   if (!session || session.user.role !== 'SUPER_ADMIN') redirect('/login')
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="dark min-h-screen bg-background text-foreground flex flex-col">
       {/* Barra superior */}
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <MobileNav><AdminSidebar /></MobileNav>
@@ -29,7 +29,7 @@ export default async function AdminLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-muted-foreground">
               {session.user.name ?? session.user.email}
             </span>
             <SignOutButton />
@@ -39,7 +39,7 @@ export default async function AdminLayout({
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-900/50">
+        <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-border bg-card/50">
           <AdminSidebar />
         </aside>
 

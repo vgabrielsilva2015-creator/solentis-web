@@ -21,7 +21,7 @@ export function TopNav() {
   if (isDashboard) return null
 
   return (
-    <div className="sticky top-[53px] z-20 w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 lg:hidden">
+    <div className="sticky top-[53px] z-20 w-full bg-card/80 backdrop-blur-md border-b border-border lg:hidden">
       <div className="mx-auto max-w-lg px-4 py-2">
         <button 
           onClick={() => {
@@ -34,7 +34,7 @@ export function TopNav() {
               else router.push('/')
             }
           }}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white transition-colors py-1"
+          className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-white transition-colors py-1"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar

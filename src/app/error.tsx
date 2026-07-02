@@ -17,19 +17,19 @@ export default function Error({
   }, [error])
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
+    <main className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="max-w-md text-center space-y-4">
         <div className="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto border border-red-900/30">
           <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-100">Algo deu errado</h1>
-        <p className="text-sm text-slate-400 mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Algo deu errado</h1>
+        <p className="text-sm text-muted-foreground mb-6">
           Um erro inesperado ocorreu. Nossa equipe já foi notificada.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <button
             onClick={() => reset()}
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-slate-800 px-6 font-medium text-slate-200 transition-colors hover:bg-slate-700"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-muted px-6 font-medium text-foreground transition-colors hover:bg-secondary"
           >
             Tentar novamente
           </button>

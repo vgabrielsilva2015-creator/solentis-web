@@ -22,8 +22,8 @@ const STATUS_CONFIG: Record<PointStatus, { color: string; label: string; dot: st
 export function StatusHeatmap({ points }: StatusHeatmapProps) {
   if (points.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-800">
-        <p className="text-sm text-slate-500">Nenhum ponto de coleta</p>
+      <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border">
+        <p className="text-sm text-muted-foreground">Nenhum ponto de coleta</p>
       </div>
     )
   }
@@ -35,9 +35,9 @@ export function StatusHeatmap({ points }: StatusHeatmapProps) {
         return (
           <div
             key={point.id}
-            className="group flex flex-col rounded-lg border border-slate-800 bg-slate-900/40 p-3 hover:bg-slate-800/80 hover:border-slate-700 transition-colors"
+            className="group flex flex-col rounded-lg border border-border bg-card/40 p-3 hover:bg-muted/80 hover:border-border transition-colors"
           >
-            <span className="truncate text-xs font-medium text-slate-300 group-hover:text-slate-100 transition-colors">
+            <span className="truncate text-xs font-medium text-foreground group-hover:text-foreground transition-colors">
               {point.name}
             </span>
             <div className="mt-2 flex items-center gap-1.5">

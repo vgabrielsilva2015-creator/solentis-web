@@ -98,47 +98,47 @@ export function CommandMenu() {
       open={open} 
       onOpenChange={setOpen} 
       label="Global Command Menu"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/80 backdrop-blur-sm p-4 pt-[20vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 backdrop-blur-sm p-4 pt-[20vh]"
       shouldFilter={false} // We are doing server-side filtering
     >
-      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl">
-        <div className="flex items-center border-b border-slate-800 px-3">
-          <Search className="mr-2 h-4 w-4 shrink-0 text-slate-500" />
+      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+        <div className="flex items-center border-b border-border px-3">
+          <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
           <Command.Input 
             value={search}
             onValueChange={setSearch}
             placeholder="Digite um comando, equipamento, ponto ou ocorrência..." 
-            className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-slate-500 text-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
-        <Command.List className="max-h-[300px] overflow-y-auto overflow-x-hidden p-2 text-slate-200">
+        <Command.List className="max-h-[300px] overflow-y-auto overflow-x-hidden p-2 text-foreground">
           
           {loading && (
-            <div className="py-6 text-center text-sm text-slate-500">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               Buscando...
             </div>
           )}
 
           {!loading && search.length >= 2 && results.length === 0 && (
-            <Command.Empty className="py-6 text-center text-sm text-slate-500">
+            <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
               Nenhum resultado encontrado para "{search}".
             </Command.Empty>
           )}
 
           {!loading && results.length > 0 && (
-            <Command.Group heading="Resultados da Busca" className="px-2 text-xs font-medium text-slate-500 mb-2">
+            <Command.Group heading="Resultados da Busca" className="px-2 text-xs font-medium text-muted-foreground mb-2">
               {results.map((item) => (
                 <Command.Item 
                   key={item.id} 
                   onSelect={() => runCommand(() => router.push(item.href))} 
-                  className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800"
+                  className="flex items-center gap-3 px-2 py-2 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted"
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/80 shrink-0 text-slate-400">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/80 shrink-0 text-muted-foreground">
                     {getIconForType(item.type)}
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
-                    <span className="font-medium text-slate-200 truncate">{item.title}</span>
-                    <span className="text-[11px] text-slate-500 truncate">{item.subtitle}</span>
+                    <span className="font-medium text-foreground truncate">{item.title}</span>
+                    <span className="text-[11px] text-muted-foreground truncate">{item.subtitle}</span>
                   </div>
                 </Command.Item>
               ))}
@@ -148,56 +148,56 @@ export function CommandMenu() {
           {!search && (
             <>
               {isOperador && (
-                <Command.Group heading="Ações de Operação" className="px-2 text-xs font-medium text-slate-500 mb-2">
-                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                <Command.Group heading="Ações de Operação" className="px-2 text-xs font-medium text-muted-foreground mb-2">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/leituras/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/leituras/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <Droplet className="h-4 w-4" /> Cadastrar Leitura Manual
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/turnos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/turnos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <FileCheck className="h-4 w-4" /> Passagem de Turno
                   </Command.Item>
                 </Command.Group>
               )}
 
               {isTecnico && (
-                <Command.Group heading="Manutenção & Análise" className="px-2 text-xs font-medium text-slate-500 mb-2">
-                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                <Command.Group heading="Manutenção & Análise" className="px-2 text-xs font-medium text-muted-foreground mb-2">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/ocorrencias/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/ocorrencias/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <AlertTriangle className="h-4 w-4" /> Relatar Ocorrência
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/equipamentos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/equipamentos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <Wrench className="h-4 w-4" /> Gerir Equipamentos
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/analises/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/analises/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <FileText className="h-4 w-4" /> Cadastrar Análise Laboratorial
                   </Command.Item>
                 </Command.Group>
               )}
 
               {isGestor && (
-                <Command.Group heading="Gestão Hídrica" className="px-2 text-xs font-medium text-slate-500 mb-2">
-                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                <Command.Group heading="Gestão Hídrica" className="px-2 text-xs font-medium text-muted-foreground mb-2">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/relatorios'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/relatorios'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <FileText className="h-4 w-4 text-emerald-500" /> Gerar Relatório de Auditoria
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/laudos/importar'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/laudos/importar'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <UploadCloud className="h-4 w-4 text-blue-500" /> Importar Laudos com IA
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/ocorrencias'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/ocorrencias'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <AlertTriangle className="h-4 w-4 text-amber-500" /> Painel de Ocorrências
                   </Command.Item>
                 </Command.Group>
               )}
 
-              <Command.Separator className="-mx-2 my-1 h-px bg-slate-800" />
+              <Command.Separator className="-mx-2 my-1 h-px bg-muted" />
               <Command.Group className="px-2">
-                <Command.Item onSelect={() => runCommand(() => router.push('/login'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-slate-800 rounded-md aria-selected:bg-slate-800 text-slate-400">
+                <Command.Item onSelect={() => runCommand(() => router.push('/login'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted text-muted-foreground">
                   <Power className="h-4 w-4" /> Fazer Logoff
                 </Command.Item>
               </Command.Group>

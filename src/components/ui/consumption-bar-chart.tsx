@@ -20,7 +20,7 @@ export type ConsumptionData = {
 export function ConsumptionBarChart({ data }: { data: ConsumptionData[] }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
         Nenhum registro de consumo no período.
       </div>
     )
@@ -29,8 +29,8 @@ export function ConsumptionBarChart({ data }: { data: ConsumptionData[] }) {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg shadow-xl text-sm">
-          <p className="text-slate-300 font-medium mb-1">{label}</p>
+        <div className="bg-card border border-border p-3 rounded-lg shadow-xl text-sm">
+          <p className="text-foreground font-medium mb-1">{label}</p>
           <p className="text-sky-400 font-bold">
             {payload[0].value.toFixed(2)} {payload[0].payload.unit}
           </p>

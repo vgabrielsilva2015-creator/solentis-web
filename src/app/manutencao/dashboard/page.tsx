@@ -43,7 +43,7 @@ export default async function ManutencaoDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{preventivas.length}</div>
-            <p className="text-xs text-slate-400">Atividades preventivas programadas</p>
+            <p className="text-xs text-muted-foreground">Atividades preventivas programadas</p>
           </CardContent>
         </Card>
 
@@ -54,7 +54,7 @@ export default async function ManutencaoDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{corretivas.length}</div>
-            <p className="text-xs text-slate-400">Ordens de serviço em andamento</p>
+            <p className="text-xs text-muted-foreground">Ordens de serviço em andamento</p>
           </CardContent>
         </Card>
       </div>
@@ -66,20 +66,20 @@ export default async function ManutencaoDashboardPage() {
             <Calendar className="w-5 h-5 text-blue-400" /> Preventivas Próximas
           </h2>
           {preventivas.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               Nenhuma preventiva programada.
             </div>
           ) : (
             <div className="space-y-2">
               {preventivas.map(p => (
-                <div key={p.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex justify-between items-center">
+                <div key={p.id} className="p-4 rounded-xl border border-border bg-card/50 flex justify-between items-center">
                   <div>
                     <Link href={`/manutencao/equipamentos/${p.equipment_id}`} className="font-medium text-sm text-blue-400 hover:underline">
                       {p.equipment.name}
                     </Link>
-                    <p className="text-xs text-slate-500 mt-0.5">Agendada: {formatDateDisplay(p.scheduled_date)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Agendada: {formatDateDisplay(p.scheduled_date)}</p>
                   </div>
-                  <span className="text-xs font-medium px-2 py-1 bg-slate-800 text-slate-300 rounded">
+                  <span className="text-xs font-medium px-2 py-1 bg-muted text-foreground rounded">
                     {p.status}
                   </span>
                 </div>
@@ -94,22 +94,22 @@ export default async function ManutencaoDashboardPage() {
             <Settings className="w-5 h-5 text-amber-400" /> Corretivas Pendentes
           </h2>
           {corretivas.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               Nenhuma corretiva aberta.
             </div>
           ) : (
             <div className="space-y-2">
               {corretivas.map(c => (
-                <div key={c.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col gap-2">
+                <div key={c.id} className="p-4 rounded-xl border border-border bg-card/50 flex flex-col gap-2">
                   <div className="flex justify-between items-start">
                     <div>
                       <Link href={`/manutencao/equipamentos/${c.equipment_id}`} className="font-medium text-sm text-blue-400 hover:underline">
                         {c.equipment.name}
                       </Link>
-                      <p className="text-xs text-slate-500 mt-1">{c.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{c.description}</p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-1 rounded ${
-                      c.priority === 'HIGH' ? 'bg-red-900/40 text-red-400' : 'bg-slate-800 text-slate-300'
+                      c.priority === 'HIGH' ? 'bg-red-900/40 text-red-400' : 'bg-muted text-foreground'
                     }`}>
                       {c.priority}
                     </span>
