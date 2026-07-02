@@ -6,7 +6,6 @@ import { GestorSidebar } from '@/components/gestor/sidebar'
 import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
-import { ThemeToggle } from '@/components/theme-provider'
 import { NotificationBell } from '@/components/ui/notification-bell'
 
 export default async function GestorLayout({
@@ -27,9 +26,9 @@ export default async function GestorLayout({
   if (!session || session.user.role !== 'MANAGER') redirect('/acesso-negado')
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Barra superior */}
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
+      <header className="sticky top-0 z-10 border-b border-border bg-card">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/gestor/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
@@ -38,10 +37,9 @@ export default async function GestorLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm text-slate-400">
+            <span className="hidden sm:block text-sm text-muted-foreground">
               {session.user.name ?? session.user.email}
             </span>
-            <ThemeToggle />
             <NotificationBell />
             <PushManager />
             <SignOutButton />
@@ -51,7 +49,7 @@ export default async function GestorLayout({
 
       <div className="flex flex-1">
         {/* Sidebar (visível apenas em telas lg+) */}
-        <aside className="hidden lg:flex w-[244px] shrink-0 flex-col border-r border-slate-800 bg-slate-900/50">
+        <aside className="hidden lg:flex w-[244px] shrink-0 flex-col border-r border-border bg-card/50">
           <GestorSidebar />
         </aside>
 

@@ -136,7 +136,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
       onMouseLeave={() => setPaused(false)}
       data-leaving={leaving}
       className={cn(
-        'pointer-events-auto relative overflow-hidden rounded-xl border border-white/10',
+        'pointer-events-auto relative overflow-hidden rounded-xl border border-primary/10',
         'bg-[var(--surface-2)] shadow-[0_1px_2px_rgba(0,0,0,.4),0_16px_34px_rgba(0,0,0,.34)]',
         'ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:animate-none',
         leaving
@@ -170,7 +170,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
         <button
           onClick={close}
           aria-label="Fechar"
-          className="flex size-6 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+          className="flex size-6 shrink-0 items-center justify-center rounded-[7px] text-muted-foreground transition-colors hover:bg-primary/90/10 hover:text-foreground"
         >
           <X className="size-[13px]" strokeWidth={2.4} />
         </button>

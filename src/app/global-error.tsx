@@ -10,10 +10,10 @@ export default function GlobalError({
   return (
     <html lang="pt-BR">
       <body>
-        <main className="min-h-screen flex items-center justify-center bg-slate-950 p-6 font-sans">
+        <main className="min-h-screen flex items-center justify-center bg-background p-6 font-sans">
           <div className="max-w-md text-center space-y-4">
-            <h1 className="text-2xl font-bold text-slate-100">Erro fatal</h1>
-            <p className="text-sm text-slate-400">
+            <h1 className="text-2xl font-bold text-foreground">Erro fatal</h1>
+            <p className="text-sm text-muted-foreground">
               O aplicativo encontrou um erro crítico.
             </p>
             <button

@@ -20,7 +20,7 @@ export function OccurrencesPieChart({ data }: { data: OccurrencesData[] }) {
 
   if (total === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
         Nenhuma ocorrência registrada no período.
       </div>
     )
@@ -29,8 +29,8 @@ export function OccurrencesPieChart({ data }: { data: OccurrencesData[] }) {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-900 border border-slate-800 p-2 rounded shadow-xl text-sm">
-          <p className="text-slate-300 font-medium">{payload[0].name}</p>
+        <div className="bg-card border border-border p-2 rounded shadow-xl text-sm">
+          <p className="text-foreground font-medium">{payload[0].name}</p>
           <p className="font-bold" style={{ color: payload[0].payload.color }}>
             {payload[0].value} ocorrência(s)
           </p>

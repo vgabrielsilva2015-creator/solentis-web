@@ -11,7 +11,7 @@ const PRIORITY_LABEL: Record<string, string> = {
   LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
 }
 const PRIORITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
+  LOW:      'bg-muted text-muted-foreground border-border',
   MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
   HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
   CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
@@ -63,7 +63,7 @@ export default async function CorretivasPage({
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-xl font-semibold">Manutenções Corretivas</h1>
-          <p className="text-xs text-slate-400">{total} ordem(ns) de serviço</p>
+          <p className="text-xs text-muted-foreground">{total} ordem(ns) de serviço</p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -72,7 +72,7 @@ export default async function CorretivasPage({
               'rounded-md border px-3 py-1.5 text-xs flex items-center',
               !showAll
                 ? 'border-brand/40 bg-brand/10 text-brand'
-                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+                : 'border-border bg-muted text-muted-foreground hover:bg-secondary',
             ].join(' ')}
           >
             Abertas
@@ -83,7 +83,7 @@ export default async function CorretivasPage({
               'rounded-md border px-3 py-1.5 text-xs flex items-center',
               showAll
                 ? 'border-brand/40 bg-brand/10 text-brand'
-                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+                : 'border-border bg-muted text-muted-foreground hover:bg-secondary',
             ].join(' ')}
           >
             Todas
@@ -93,13 +93,13 @@ export default async function CorretivasPage({
 
       {/* Tabela */}
       {corretivas.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-border bg-card/50 py-14 text-center text-sm text-muted-foreground">
           Nenhuma manutenção corretiva encontrada.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-left text-xs text-slate-500 uppercase tracking-wider">
+            <thead className="bg-card text-left text-xs text-muted-foreground uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">Equipamento</th>
                 <th className="px-4 py-3">Descrição da Falha</th>
@@ -108,26 +108,26 @@ export default async function CorretivasPage({
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {corretivas.map((corr) => {
                 return (
-                  <tr key={corr.id} className="bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
+                  <tr key={corr.id} className="bg-card/50 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3">
                       <Link href={`/manutencao/equipamentos/${corr.equipment_id}`} className="text-blue-400 hover:underline font-medium">
                         {corr.equipment.name}
                       </Link>
-                      <p className="text-xs text-slate-500 mt-0.5">{corr.equipment.location || 'Sem localização'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{corr.equipment.location || 'Sem localização'}</p>
                     </td>
                     <td className="px-4 py-3 max-w-xs">
-                      <p className="text-slate-200 line-clamp-1">{corr.description}</p>
-                      <p className="text-xs text-slate-600 mt-0.5">Resp: {corr.responsible.name}</p>
+                      <p className="text-foreground line-clamp-1">{corr.description}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Resp: {corr.responsible.name}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`rounded border px-2 py-0.5 text-xs font-medium ${PRIORITY_COLOR[corr.priority || 'LOW'] ?? ''}`}>
                         {PRIORITY_LABEL[corr.priority || 'LOW'] ?? corr.priority}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {formatDatetime(corr.start_date)}
                     </td>
                     <td className="px-4 py-3">
@@ -140,7 +140,7 @@ export default async function CorretivasPage({
                           Em Andamento
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted-foreground">
                           Aberta
                         </span>
                       )}
@@ -159,16 +159,16 @@ export default async function CorretivasPage({
           {page > 1 ? (
             <Link
               href={`/manutencao/corretivas?page=${page - 1}${showAll ? '&status=all' : ''}`}
-              className="text-slate-400 hover:text-slate-200"
+              className="text-muted-foreground hover:text-foreground"
             >
               ← Anterior
             </Link>
           ) : <span />}
-          <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+          <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
           {page < totalPages ? (
             <Link
               href={`/manutencao/corretivas?page=${page + 1}${showAll ? '&status=all' : ''}`}
-              className="text-slate-400 hover:text-slate-200"
+              className="text-muted-foreground hover:text-foreground"
             >
               Próxima →
             </Link>

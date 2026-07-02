@@ -74,7 +74,7 @@ export function StatusButton({
             <Button
               onClick={() => handleTransition('CANCELLED')}
               disabled={isPending}
-              className="h-8 px-3 text-xs bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
+              className="h-8 px-3 text-xs bg-muted text-muted-foreground hover:bg-secondary border border-border"
             >
               Cancelar
             </Button>
@@ -93,7 +93,7 @@ export function StatusButton({
             <Button
               onClick={() => handleTransition('CANCELLED')}
               disabled={isPending}
-              className="h-8 px-3 text-xs bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
+              className="h-8 px-3 text-xs bg-muted text-muted-foreground hover:bg-secondary border border-border"
             >
               Cancelar
             </Button>
@@ -112,7 +112,7 @@ export function StatusButton({
             <Button
               onClick={() => handleTransition('CANCELLED')}
               disabled={isPending}
-              className="h-8 px-3 text-xs bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
+              className="h-8 px-3 text-xs bg-muted text-muted-foreground hover:bg-secondary border border-border"
             >
               Cancelar
             </Button>
@@ -124,14 +124,14 @@ export function StatusButton({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <form
             onSubmit={handleModalSubmit}
-            className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-xl border border-border bg-card p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
           >
-            <h3 className="text-base font-semibold text-slate-200">
+            <h3 className="text-base font-semibold text-foreground">
               {modalAction === 'COMPLETED' ? 'Concluir Ordem de Serviço' : 'Validar Ordem de Serviço'}
             </h3>
             
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">
+              <label className="text-xs font-semibold text-muted-foreground">
                 Custo Real (R$)
               </label>
               <Input
@@ -140,12 +140,12 @@ export function StatusButton({
                 placeholder="0.00"
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
-                className="w-full bg-slate-950 border-slate-800 focus:border-brand text-slate-200"
+                className="w-full bg-background border-border focus:border-brand text-foreground"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">
+              <label className="text-xs font-semibold text-muted-foreground">
                 Observações / Resolução
               </label>
               <textarea
@@ -154,7 +154,7 @@ export function StatusButton({
                 placeholder="Descreva o que foi feito..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
 
@@ -162,7 +162,7 @@ export function StatusButton({
               <Button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="h-9 px-4 text-xs bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700"
+                className="h-9 px-4 text-xs bg-muted text-muted-foreground hover:bg-secondary border border-border"
               >
                 Voltar
               </Button>

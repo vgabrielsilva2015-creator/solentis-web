@@ -12,7 +12,7 @@ const SEVERITY_LABEL: Record<string, string> = {
   LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
 }
 const SEVERITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
+  LOW:      'bg-muted text-muted-foreground border-border',
   MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
   HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
   CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
@@ -65,12 +65,12 @@ export default async function OcorrenciaDetailPage({
 
         {/* Card da ocorrência */}
         <div className={[
-          'rounded-xl border bg-slate-900 p-4 space-y-3',
-          prazoVencido ? 'border-red-900/60' : 'border-slate-800',
+          'rounded-xl border bg-card p-4 space-y-3',
+          prazoVencido ? 'border-red-900/60' : 'border-border',
         ].join(' ')}>
           {/* Badges */}
           <div className="flex flex-wrap gap-2">
-            <span className={`rounded border px-2 py-0.5 text-xs font-medium ${SEVERITY_COLOR[occurrence.severity] ?? 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+            <span className={`rounded border px-2 py-0.5 text-xs font-medium ${SEVERITY_COLOR[occurrence.severity] ?? 'bg-muted text-muted-foreground border-border'}`}>
               {SEVERITY_LABEL[occurrence.severity] ?? occurrence.severity}
             </span>
             {prazoVencido && (
@@ -96,28 +96,28 @@ export default async function OcorrenciaDetailPage({
           </div>
 
           {/* Descrição */}
-          <p className="text-sm text-slate-200 leading-relaxed">{occurrence.description}</p>
+          <p className="text-sm text-foreground leading-relaxed">{occurrence.description}</p>
 
           {/* Metadados */}
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
             <div>
-              <dt className="text-slate-500">Registrado por</dt>
-              <dd className="text-slate-300">{occurrence.reporter.name}</dd>
+              <dt className="text-muted-foreground">Registrado por</dt>
+              <dd className="text-foreground">{occurrence.reporter.name}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Data</dt>
-              <dd className="text-slate-300">{formatDatetime(occurrence.created_at)}</dd>
+              <dt className="text-muted-foreground">Data</dt>
+              <dd className="text-foreground">{formatDatetime(occurrence.created_at)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Prazo</dt>
-              <dd className={prazoVencido ? 'text-red-400 font-medium' : 'text-slate-300'}>
+              <dt className="text-muted-foreground">Prazo</dt>
+              <dd className={prazoVencido ? 'text-red-400 font-medium' : 'text-foreground'}>
                 {formatDatetime(occurrence.deadline)}
               </dd>
             </div>
             {occurrence.responsible && (
               <div>
-                <dt className="text-slate-500">Responsável</dt>
-                <dd className="text-slate-300">{occurrence.responsible.name}</dd>
+                <dt className="text-muted-foreground">Responsável</dt>
+                <dd className="text-foreground">{occurrence.responsible.name}</dd>
               </div>
             )}
           </dl>
@@ -130,7 +130,7 @@ export default async function OcorrenciaDetailPage({
                   key={photo.id}
                   href={`/api/occurrences/${occurrence.id}/photo?index=${i}`}
                   target="_blank"
-                  className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 border border-slate-800 bg-slate-950 px-2 py-1 rounded"
+                  className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 border border-border bg-background px-2 py-1 rounded"
                 >
                   Ver foto {i + 1} anexada →
                 </Link>
@@ -142,12 +142,12 @@ export default async function OcorrenciaDetailPage({
           {occurrence.immediate_action && (
             <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4 space-y-1">
               <span className="block text-[10px] font-bold text-amber-400 uppercase tracking-wider">Ação Imediata Executada</span>
-              <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
+              <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
             </div>
           )}
 
           {/* Timeline e Comentários */}
-          <div className="border-t border-slate-800 pt-4 mt-4">
+          <div className="border-t border-border pt-4 mt-4">
             <OccurrenceTimeline
               occurrenceId={occurrence.id}
               reporterName={occurrence.reporter.name}
@@ -162,7 +162,7 @@ export default async function OcorrenciaDetailPage({
 
           {/* Formulário de resolução (só se aberta) */}
           {occurrence.status !== 'RESOLVED' && (
-            <div className="border-t border-slate-800 pt-4">
+            <div className="border-t border-border pt-4">
               <ResolveForm ocorrenciaId={occurrence.id} />
             </div>
           )}

@@ -55,7 +55,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
 
         <>
           <div className="space-y-1">
-            <label className="text-sm text-slate-300">
+            <label className="text-sm text-foreground">
               Quantidade usada ({unit}) *
             </label>
             <input
@@ -67,7 +67,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
               required
               value={qty}
               onChange={(e) => setQty(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-muted px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="0"
             />
             {ficaNegativo && (
@@ -79,22 +79,22 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm text-slate-300">Data e hora do uso *</label>
+            <label className="text-sm text-foreground">Data e hora do uso *</label>
             <input
               name="used_at"
               type="datetime-local"
               required
               defaultValue={defaultDate}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-muted px-3 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm text-slate-300">Observações</label>
+            <label className="text-sm text-foreground">Observações</label>
             <textarea
               name="notes"
               rows={2}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-muted px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Onde foi usado, processo, turno..."
             />
           </div>
@@ -110,7 +110,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
             <button
               type="button"
               onClick={() => router.push('/tecnico/estoque')}
-              className="rounded-lg border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+              className="rounded-lg border border-border px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
             >
               Cancelar
             </button>

@@ -72,32 +72,32 @@ export default async function TurnoDetalhePage({
       <BackButton href="/operador/turnos" label="Turnos" />
 
       {/* Cabeçalho */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-1">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
           <span className={[
             'rounded px-2 py-0.5 text-xs font-medium border',
             isOpen ? 'bg-green-950/60 text-green-400 border-green-900/50' :
             instance.status === 'HANDOVER_PENDING' ? 'bg-amber-950/60 text-amber-400 border-amber-900/50' :
-            'bg-slate-800 text-slate-400 border-slate-700',
+            'bg-muted text-muted-foreground border-border',
           ].join(' ')}>
             {STATUS_LABEL[instance.status] ?? instance.status}
           </span>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           {instance.shift.start_time} – {instance.shift.end_time}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Aberto por {instance.opener.name} às {formatTime(new Date(instance.opened_at))} · {tempoDecorrido(new Date(instance.opened_at), now)}
         </p>
       </div>
 
       {/* Tarefas */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-200">Tarefas</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm font-medium text-foreground">Tarefas</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {done} de {total} concluída(s){pending > 0 ? ` · ${pending} pendente(s)` : ''}
             </p>
           </div>
@@ -108,21 +108,21 @@ export default async function TurnoDetalhePage({
           )}
         </div>
         <Link href={`/operador/turnos/${instance.id}/tarefas`}>
-          <Button className="h-11 w-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm">
+          <Button className="h-11 w-full border border-border bg-muted text-foreground hover:bg-secondary text-sm">
             Ver tarefas
           </Button>
         </Link>
       </div>
 
       {/* Leituras do turno */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div>
-          <p className="text-sm font-medium text-slate-200">Leituras deste turno</p>
-          <p className="text-2xl font-bold text-slate-100 mt-0.5">{leiturasNoTurno}</p>
-          <p className="text-xs text-slate-500">registrada(s) na janela {instance.shift.start_time}–{instance.shift.end_time}</p>
+          <p className="text-sm font-medium text-foreground">Leituras deste turno</p>
+          <p className="text-2xl font-bold text-foreground mt-0.5">{leiturasNoTurno}</p>
+          <p className="text-xs text-muted-foreground">registrada(s) na janela {instance.shift.start_time}–{instance.shift.end_time}</p>
         </div>
         <Link href="/operador/leituras">
-          <Button className="h-11 w-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm">
+          <Button className="h-11 w-full border border-border bg-muted text-foreground hover:bg-secondary text-sm">
             Ver leituras
           </Button>
         </Link>

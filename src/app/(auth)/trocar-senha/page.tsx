@@ -25,15 +25,15 @@ export default function TrocarSenhaPage() {
     <div className="w-full max-w-sm space-y-6">
       {/* Logo */}
       <div className="text-center space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-100">Solentis</h1>
-        <p className="text-sm text-slate-400">Sistema de Gestão de ETE</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Solentis</h1>
+        <p className="text-sm text-muted-foreground">Sistema de Gestão de ETE</p>
       </div>
 
       {/* Card */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-lg space-y-5">
+      <div className="rounded-xl border border-border bg-card p-6 shadow-lg space-y-5">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-slate-100">Criar nova senha</h2>
-          <p className="text-xs text-slate-400">
+          <h2 className="text-lg font-semibold text-foreground">Criar nova senha</h2>
+          <p className="text-xs text-muted-foreground">
             Crie uma senha segura para continuar acessando o sistema.
           </p>
         </div>
@@ -41,7 +41,7 @@ export default function TrocarSenhaPage() {
         <form action={formAction} className="space-y-4">
           {/* Nova senha */}
           <div className="space-y-1.5">
-            <label htmlFor="newPassword" className="text-sm font-medium text-slate-300">
+            <label htmlFor="newPassword" className="text-sm font-medium text-foreground">
               Nova senha
             </label>
             <div className="relative">
@@ -55,13 +55,13 @@ export default function TrocarSenhaPage() {
                 disabled={isPending}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500 pr-10"
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -79,7 +79,7 @@ export default function TrocarSenhaPage() {
                 return (
                   <li
                     key={req.label}
-                    className={`flex items-center gap-1.5 text-xs transition-colors ${ok ? 'text-green-400' : 'text-slate-500'}`}
+                    className={`flex items-center gap-1.5 text-xs transition-colors ${ok ? 'text-green-400' : 'text-muted-foreground'}`}
                   >
                     {ok ? <Check size={12} /> : <X size={12} />}
                     {req.label}
@@ -91,7 +91,7 @@ export default function TrocarSenhaPage() {
 
           {/* Confirmar senha */}
           <div className="space-y-1.5">
-            <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-300">
+            <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
               Confirmar senha
             </label>
             <div className="relative">
@@ -103,13 +103,13 @@ export default function TrocarSenhaPage() {
                 placeholder="••••••••"
                 required
                 disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500 pr-10"
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm((v) => !v)}
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -129,7 +129,7 @@ export default function TrocarSenhaPage() {
           <Button
             type="submit"
             disabled={isPending}
-            className="w-full bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {isPending ? 'Salvando…' : 'Salvar nova senha'}
           </Button>
@@ -140,7 +140,7 @@ export default function TrocarSenhaPage() {
         <SignOutButton />
       </div>
 
-      <p className="text-center text-xs text-slate-600">
+      <p className="text-center text-xs text-muted-foreground">
         Solentis © {new Date().getFullYear()}
       </p>
     </div>

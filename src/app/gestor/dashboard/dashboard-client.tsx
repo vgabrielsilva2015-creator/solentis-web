@@ -1458,8 +1458,8 @@ export function DashboardClient({
           </div>
 
           {drawerLoading ? (
-            <div className="flex flex-col items-center justify-center flex-1 py-12 gap-3 text-slate-400">
-              <span className="w-6 h-6 border-2 border-t-brand border-slate-700 rounded-full animate-spin" />
+            <div className="flex flex-col items-center justify-center flex-1 py-12 gap-3 text-muted-foreground">
+              <span className="w-6 h-6 border-2 border-t-brand border-border rounded-full animate-spin" />
               <span>Buscando histórico...</span>
             </div>
           ) : drawerError ? (

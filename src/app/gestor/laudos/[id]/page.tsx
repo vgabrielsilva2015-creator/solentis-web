@@ -61,25 +61,25 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
       {/* Header com Navegação */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-100">
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
             <Link href="/gestor/laudos">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <span className="text-sm font-medium text-slate-500">Voltar para visão geral</span>
+          <span className="text-sm font-medium text-muted-foreground">Voltar para visão geral</span>
         </div>
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-100 flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
               {ponto.name}
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <Badge variant="outline" className="bg-slate-800/50 text-slate-300 border-slate-700">
+              <Badge variant="outline" className="bg-muted/50 text-foreground border-border">
                 Matriz: {ponto.matrix || 'Não configurada'}
               </Badge>
               {ponto.location && (
-                <span className="text-sm text-slate-400">{ponto.location}</span>
+                <span className="text-sm text-muted-foreground">{ponto.location}</span>
               )}
             </div>
           </div>
@@ -96,24 +96,24 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Coluna Principal: Histórico de Campanhas */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-slate-800 bg-slate-900/40">
+          <Card className="border-border bg-card/40">
             <CardHeader>
-              <CardTitle className="text-lg text-slate-200 flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-slate-400" />
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-muted-foreground" />
                 Histórico de Campanhas Legais
               </CardTitle>
             </CardHeader>
             <CardContent>
               {campanhasList.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
+                <div className="text-center py-12 text-muted-foreground">
                   <p>Nenhuma campanha registrada para este ponto.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {campanhasList.map((campanha: any, idx: number) => (
-                    <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-slate-800 bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
+                    <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-border bg-card/50 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center">
+                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                           {campanha.isConformant ? (
                             <CheckCircle2 className="h-5 w-5 text-[var(--success)]" />
                           ) : (
@@ -121,10 +121,10 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
                           )}
                         </div>
                         <div>
-                          <div className="font-medium text-slate-200">
+                          <div className="font-medium text-foreground">
                             Campanha {format(campanha.date, "MMMM 'de' yyyy", { locale: ptBR })}
                           </div>
-                          <div className="text-sm text-slate-400 flex items-center gap-2 mt-1">
+                          <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                             <span>{format(campanha.date, "dd/MM/yyyy")}</span>
                             <span>•</span>
                             <span>{campanha.analyses.length} parâmetros avaliados</span>
@@ -135,7 +135,7 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
                         <Badge variant="outline" className={campanha.isConformant ? "text-[var(--success)] border-[var(--success)]/20 bg-[var(--success)]/10" : "text-[var(--alarm)] border-[var(--alarm)]/20 bg-[var(--alarm)]/10"}>
                           {campanha.isConformant ? "Conforme" : "Não conforme"}
                         </Badge>
-                        <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-200">
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                           <FileDown className="h-4 w-4" />
                         </Button>
                       </div>
@@ -149,24 +149,24 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
 
         {/* Coluna Lateral: Tabela de Referência da Matriz */}
         <div className="space-y-6">
-          <Card className="border-slate-800 bg-slate-900/40">
+          <Card className="border-border bg-card/40">
             <CardHeader>
-              <CardTitle className="text-lg text-slate-200">Tabela de Referência</CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardTitle className="text-lg text-foreground">Tabela de Referência</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Limites legais para {ponto.matrix || 'esta matriz'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {limitesMatriz.length === 0 ? (
-                <div className="text-sm text-slate-500 py-4 text-center border border-dashed border-slate-700 rounded-lg">
+                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed border-border rounded-lg">
                   Nenhum limite configurado para a matriz <b>{ponto.matrix || '?'}</b>.
                 </div>
               ) : (
                 <div className="space-y-3">
                   {limitesMatriz.map((limite) => (
-                    <div key={limite.id} className="flex justify-between items-center text-sm p-2 rounded bg-slate-800/30 border border-slate-800/50">
-                      <span className="text-slate-300">{limite.parameter.name}</span>
-                      <div className="text-slate-400 font-mono text-xs text-right">
+                    <div key={limite.id} className="flex justify-between items-center text-sm p-2 rounded bg-muted/30 border border-border/50">
+                      <span className="text-foreground">{limite.parameter.name}</span>
+                      <div className="text-muted-foreground font-mono text-xs text-right">
                         {limite.rule_type === 'TETO' && (
                           <span>≤ {limite.max_limit} {limite.parameter.unit}</span>
                         )}

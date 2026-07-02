@@ -53,7 +53,7 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold">{parametro.name}</h1>
-          <p className="text-sm text-slate-400">{parametro.unit}</p>
+          <p className="text-sm text-muted-foreground">{parametro.unit}</p>
         </div>
         {parametro.is_active ? (
           <span className="mt-1 flex items-center gap-1.5 text-xs text-green-400">
@@ -67,18 +67,18 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
       </div>
 
       {/* Formulário */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-5">
-        <h2 className="text-base font-medium text-slate-200">Dados do parâmetro</h2>
+      <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+        <h2 className="text-base font-medium text-foreground">Dados do parâmetro</h2>
 
         <form action={formAction} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label htmlFor="name" className="text-sm font-medium text-slate-300">Nome</label>
+              <label htmlFor="name" className="text-sm font-medium text-foreground">Nome</label>
               <Input
                 id="name" name="name" type="text"
                 defaultValue={parametro.name}
                 required disabled={isPending}
-                className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+                className="border-border bg-muted text-foreground focus-visible:ring-ring"
               />
               {state.fieldErrors?.name && (
                 <p className="text-xs text-red-400">{state.fieldErrors.name[0]}</p>
@@ -86,13 +86,13 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="unit" className="text-sm font-medium text-slate-300">Unidade</label>
+              <label htmlFor="unit" className="text-sm font-medium text-foreground">Unidade</label>
               <Input
                 id="unit" name="unit" type="text"
                 defaultValue={parametro.unit}
                 placeholder="mg/L, NTU, pH…"
                 required disabled={isPending}
-                className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
               />
               {state.fieldErrors?.unit && (
                 <p className="text-xs text-red-400">{state.fieldErrors.unit[0]}</p>
@@ -102,80 +102,80 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label htmlFor="min_limit" className="text-sm font-medium text-slate-300">
-                Limite mínimo <span className="text-slate-500 font-normal">(opcional)</span>
+              <label htmlFor="min_limit" className="text-sm font-medium text-foreground">
+                Limite mínimo <span className="text-muted-foreground font-normal">(opcional)</span>
               </label>
               <Input
                 id="min_limit" name="min_limit" type="number" step="0.01"
                 defaultValue={parametro.min_limit ?? ''}
                 disabled={isPending}
-                className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+                className="border-border bg-muted text-foreground focus-visible:ring-ring"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="max_limit" className="text-sm font-medium text-slate-300">
-                Limite máximo <span className="text-slate-500 font-normal">(opcional)</span>
+              <label htmlFor="max_limit" className="text-sm font-medium text-foreground">
+                Limite máximo <span className="text-muted-foreground font-normal">(opcional)</span>
               </label>
               <Input
                 id="max_limit" name="max_limit" type="number" step="0.01"
                 defaultValue={parametro.max_limit ?? ''}
                 disabled={isPending}
-                className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+                className="border-border bg-muted text-foreground focus-visible:ring-ring"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="legal_reference" className="text-sm font-medium text-slate-300">
-              Referência legal <span className="text-slate-500 font-normal">(opcional)</span>
+            <label htmlFor="legal_reference" className="text-sm font-medium text-foreground">
+              Referência legal <span className="text-muted-foreground font-normal">(opcional)</span>
             </label>
             <Input
               id="legal_reference" name="legal_reference" type="text"
               defaultValue={parametro.legal_reference ?? ''}
               placeholder="Ex: CONAMA 430/2011 Art. 16"
               disabled={isPending}
-              className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+              className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label htmlFor="default_method_name" className="text-sm font-medium text-slate-300">
-                Método Padrão <span className="font-normal text-slate-500">(opcional)</span>
+              <label htmlFor="default_method_name" className="text-sm font-medium text-foreground">
+                Método Padrão <span className="font-normal text-muted-foreground">(opcional)</span>
               </label>
               <Input
                 id="default_method_name" name="default_method_name" type="text"
                 defaultValue={parametro.method?.name ?? ''}
                 placeholder="Ex: SM 4500-H+ B"
                 disabled={isPending}
-                className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="collection_points" className="text-sm font-medium text-slate-300">
-                Pontos de Coleta <span className="font-normal text-slate-500">(opcional)</span>
+              <label htmlFor="collection_points" className="text-sm font-medium text-foreground">
+                Pontos de Coleta <span className="font-normal text-muted-foreground">(opcional)</span>
               </label>
               <Input
                 id="collection_points" name="collection_points" type="text"
                 defaultValue={parametro.collection_points?.map(p => p.name).join(', ') ?? ''}
                 placeholder="Separe por vírgula (ex: Tanque 1, Entrada)"
                 disabled={isPending}
-                className="border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-slate-500"
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="effective_date" className="text-sm font-medium text-slate-300">
+            <label htmlFor="effective_date" className="text-sm font-medium text-foreground">
               Data de vigência
             </label>
             <Input
               id="effective_date" name="effective_date" type="date"
               defaultValue={effectiveDateStr}
               required disabled={isPending}
-              className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+              className="border-border bg-muted text-foreground focus-visible:ring-ring"
             />
             {state.fieldErrors?.effective_date && (
               <p className="text-xs text-red-400">{state.fieldErrors.effective_date[0]}</p>
@@ -196,7 +196,7 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
 
           <Button
             type="submit" disabled={isPending}
-            className="bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {isPendingForm ? 'Salvando…' : 'Salvar alterações'}
           </Button>
@@ -204,8 +204,8 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
       </div>
 
       {/* Ações */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4">
-        <h2 className="text-base font-medium text-slate-200">Ações</h2>
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <h2 className="text-base font-medium text-foreground">Ações</h2>
         <Button
           type="button" variant="outline" disabled={isPending}
           onClick={handleToggle}

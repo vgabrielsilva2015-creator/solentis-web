@@ -32,7 +32,7 @@ export function AdminSidebar() {
           return (
             <p
               key={i}
-              className="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wider text-slate-500"
+              className="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground"
             >
               {item.label}
             </p>
@@ -46,7 +46,7 @@ export function AdminSidebar() {
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
               isActive
                 ? 'bg-indigo-600/20 font-medium text-indigo-300 border border-indigo-500/20'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             }`}
           >
             {item.icon}

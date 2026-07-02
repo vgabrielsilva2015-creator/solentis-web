@@ -19,7 +19,7 @@ export function BackButton({ href, label = 'Voltar' }: BackButtonProps) {
       <Link
         href={href}
         onClick={() => setIsPending(true)}
-        className="inline-flex items-center gap-1.5 h-11 px-1 text-sm text-muted-foreground hover:text-slate-200 transition-colors"
+        className="inline-flex items-center gap-1.5 h-11 px-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         {isPending ? <Loader2 size={16} className="animate-spin" /> : <ArrowLeft size={16} strokeWidth={1.75} />}
         {label}
@@ -35,7 +35,7 @@ export function BackButton({ href, label = 'Voltar' }: BackButtonProps) {
         router.back()
       }}
       disabled={isPending}
-      className="inline-flex items-center gap-1.5 h-11 px-1 text-sm text-muted-foreground hover:text-slate-200 transition-colors disabled:opacity-70"
+      className="inline-flex items-center gap-1.5 h-11 px-1 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-70"
     >
       {isPending ? <Loader2 size={16} className="animate-spin" /> : <ArrowLeft size={16} strokeWidth={1.75} />}
       {label}

@@ -27,29 +27,29 @@ export default async function LaudosExternosPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <FileCheck className="h-8 w-8 text-[var(--brand)]" />
             Laudos Externos
           </h1>
-          <p className="text-slate-400 mt-1 text-sm">
+          <p className="text-muted-foreground mt-1 text-sm">
             Gestão de campanhas legais e laudos laboratoriais por ponto de coleta
           </p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input 
               type="text" 
               placeholder="Buscar ponto de coleta..." 
-              className="w-full bg-slate-900/50 border border-slate-800 rounded-md pl-9 pr-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
+              className="w-full bg-card/50 border border-border rounded-md pl-9 pr-4 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
             />
           </div>
-          <Button variant="outline" size="icon" className="border-slate-800 bg-slate-900/50 text-slate-400 hover:text-slate-200">
+          <Button variant="outline" size="icon" className="border-border bg-card/50 text-muted-foreground hover:text-foreground">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
           <Link href={`/api/export?type=external_analyses`} target="_blank">
-            <Button variant="outline" className="border-slate-800 bg-slate-900/50 text-slate-300 hover:text-slate-200 hover:bg-slate-800 h-10 px-3">
+            <Button variant="outline" className="border-border bg-card/50 text-foreground hover:text-foreground hover:bg-muted h-10 px-3">
               <Download className="h-4 w-4 mr-2" />
               Exportar CSV
             </Button>
@@ -59,13 +59,13 @@ export default async function LaudosExternosPage() {
 
       {/* Grid de Pontos de Coleta */}
       {pontos.length === 0 ? (
-        <Card className="border-slate-800 bg-slate-900/40">
+        <Card className="border-border bg-card/40">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="h-16 w-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">
-              <Beaker className="h-8 w-8 text-slate-500" />
+            <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Beaker className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium text-slate-200">Nenhum ponto de coleta</h3>
-            <p className="text-sm text-slate-400 mt-1 max-w-sm">
+            <h3 className="text-lg font-medium text-foreground">Nenhum ponto de coleta</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
               Cadastre pontos de coleta com matriz de referência legal para começar a registrar laudos.
             </p>
             <Button className="mt-6 bg-[var(--brand)] text-white hover:bg-[var(--brand)]/90">
@@ -79,16 +79,16 @@ export default async function LaudosExternosPage() {
             const lastAnalysis = ponto.analyses[0]
             
             return (
-              <Card key={ponto.id} className="border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors">
+              <Card key={ponto.id} className="border-border bg-card/40 hover:bg-card/60 transition-colors">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-lg font-semibold text-slate-200">
+                      <CardTitle className="text-lg font-semibold text-foreground">
                         {ponto.name}
                       </CardTitle>
-                      <CardDescription className="text-sm text-slate-400 mt-1">
+                      <CardDescription className="text-sm text-muted-foreground mt-1">
                         {ponto.matrix ? (
-                          <span className="inline-flex items-center rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-300">
+                          <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
                             Matriz: {ponto.matrix}
                           </span>
                         ) : (
@@ -103,18 +103,18 @@ export default async function LaudosExternosPage() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="text-sm">
-                      <span className="text-slate-500">Último Laudo: </span>
+                      <span className="text-muted-foreground">Último Laudo: </span>
                       {lastAnalysis ? (
-                        <span className="text-slate-300 font-medium">
+                        <span className="text-foreground font-medium">
                           {lastAnalysis.collected_at.toLocaleDateString('pt-BR')}
                         </span>
                       ) : (
-                        <span className="text-slate-500 italic">Nenhum registro</span>
+                        <span className="text-muted-foreground italic">Nenhum registro</span>
                       )}
                     </div>
                     
                     <div className="flex gap-2 pt-2">
-                      <Button asChild variant="outline" className="flex-1 border-slate-700 bg-slate-800/50 hover:bg-slate-800 text-slate-300">
+                      <Button asChild variant="outline" className="flex-1 border-border bg-muted/50 hover:bg-muted text-foreground">
                         <Link href={`/gestor/laudos/${ponto.id}`}>
                           Ver Histórico
                         </Link>

@@ -24,7 +24,7 @@ export default async function OperadorEstoquePage() {
     <main className="px-4 py-6 max-w-lg mx-auto space-y-3">
         <h1 className="text-xl font-semibold">Estoque Químico</h1>
         {products.length === 0 ? (
-          <p className="text-sm text-slate-500 text-center py-12">Nenhum produto cadastrado.</p>
+          <p className="text-sm text-muted-foreground text-center py-12">Nenhum produto cadastrado.</p>
         ) : (
           products.map((p) => {
             const totalEntradas = p.entries.reduce((s, e) => s + e.quantity, 0)
@@ -38,35 +38,35 @@ export default async function OperadorEstoquePage() {
               <div
                 key={p.id}
                 className={`rounded-xl border p-4 space-y-3 ${
-                  alerta ? 'border-red-800/60 bg-slate-900' : 'border-slate-700 bg-slate-900'
+                  alerta ? 'border-red-800/60 bg-card' : 'border-border bg-card'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-slate-100">{p.name}</span>
+                      <span className="font-medium text-foreground">{p.name}</span>
                       {alerta && (
                         <span className="text-xs font-medium text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">
                           ESTOQUE BAIXO
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-4 mt-1 text-xs text-slate-400">
+                    <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
                       <span>
                         Calculado:{' '}
-                        <span className={calculado < p.min_stock ? 'text-red-400 font-medium' : 'text-slate-200'}>
+                        <span className={calculado < p.min_stock ? 'text-red-400 font-medium' : 'text-foreground'}>
                           {formatarQuantidade(calculado)} {p.unit}
                         </span>
                       </span>
                       <span>
                         Físico:{' '}
-                        <span className={fisico !== null && fisico < p.min_stock ? 'text-red-400 font-medium' : 'text-slate-200'}>
+                        <span className={fisico !== null && fisico < p.min_stock ? 'text-red-400 font-medium' : 'text-foreground'}>
                           {fisico !== null ? `${formatarQuantidade(fisico)} ${p.unit}` : '—'}
                         </span>
                       </span>
                     </div>
                     {ultimaContagem && (
-                      <p className="text-xs text-slate-600 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Última contagem: {ultimaContagem.toLocaleDateString('pt-BR')}
                       </p>
                     )}

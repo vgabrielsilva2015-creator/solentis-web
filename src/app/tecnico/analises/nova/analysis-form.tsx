@@ -37,8 +37,8 @@ function formatDatetimeLocal(d: Date): string {
 const initialState: AnaliseFormState = {}
 
 const SELECT_CLS =
-  'w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2.5 text-sm ' +
-  'focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50'
+  'w-full rounded-md border border-border bg-muted text-foreground px-3 py-2.5 text-sm ' +
+  'focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50'
 
 export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
   const router = useRouter()
@@ -121,20 +121,20 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
 
   return (
     <div className="space-y-5">
-      <Link href="/tecnico/analises" className="inline-block text-sm text-slate-400 hover:text-slate-200">
+      <Link href="/tecnico/analises" className="inline-block text-sm text-muted-foreground hover:text-foreground">
         ← Voltar para análises
       </Link>
 
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Nova análise</h1>
-        <p className="text-xs text-slate-400">Registre o resultado da análise laboratorial.</p>
+        <p className="text-xs text-muted-foreground">Registre o resultado da análise laboratorial.</p>
       </div>
 
       <form action={formAction} className="space-y-5">
 
         {/* ── Ponto de coleta ───────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="collection_point_id" className="text-sm font-medium text-slate-300">
+          <label htmlFor="collection_point_id" className="text-sm font-medium text-foreground">
             Ponto de coleta
           </label>
           <select
@@ -156,7 +156,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
 
         {/* ── Parâmetro ─────────────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="parameter_id" className="text-sm font-medium text-slate-300">
+          <label htmlFor="parameter_id" className="text-sm font-medium text-foreground">
             Parâmetro
           </label>
           <select
@@ -180,13 +180,13 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
         {selectedParam?.default_method_id && methods.find(m => m.id === selectedParam.default_method_id)?.pop_content && (
           <div className="rounded-md border border-blue-900/50 bg-blue-950/20 p-4">
             <h4 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Instrução de Trabalho (POP)</h4>
-            <p className="text-sm text-slate-300 whitespace-pre-wrap">{methods.find(m => m.id === selectedParam.default_method_id)?.pop_content}</p>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{methods.find(m => m.id === selectedParam.default_method_id)?.pop_content}</p>
           </div>
         )}
 
         {/* ── Valor medido ──────────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="value" className="text-sm font-medium text-slate-300">
+          <label htmlFor="value" className="text-sm font-medium text-foreground">
             Valor medido
           </label>
           <div className="relative">
@@ -199,20 +199,20 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
               disabled={isPending} required
               className={[
                 selectedParam ? 'pr-16' : '',
-                'bg-slate-800 text-slate-100 placeholder:text-slate-500',
+                'bg-muted text-foreground placeholder:text-muted-foreground',
                 nonConformant === true
                   ? 'border-red-600 focus-visible:ring-red-600'
-                  : 'border-slate-700 focus-visible:ring-slate-500',
+                  : 'border-border focus-visible:ring-ring',
               ].join(' ')}
             />
             {selectedParam && (
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-500">
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
                 {selectedParam.unit}
               </span>
             )}
           </div>
           {hasLimits && (
-            <p className={`text-xs ${nonConformant === true ? 'text-red-400' : 'text-slate-500'}`}>
+            <p className={`text-xs ${nonConformant === true ? 'text-red-400' : 'text-muted-foreground'}`}>
               {nonConformant === true ? 'Fora do limite CONAMA: ' : 'Limite CONAMA: '}
               {limitLabel}
             </p>
@@ -224,7 +224,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
 
         {/* ── Data/hora da coleta ────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="collected_at" className="text-sm font-medium text-slate-300">
+          <label htmlFor="collected_at" className="text-sm font-medium text-foreground">
             Data/hora da coleta
           </label>
           <Input
@@ -233,7 +233,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
             value={collectedAt}
             onChange={(e) => setCollectedAt(e.target.value)}
             disabled={isPending} required
-            className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+            className="border-border bg-muted text-foreground focus-visible:ring-ring"
           />
           {state.fieldErrors?.collected_at && (
             <p className="text-xs text-red-400">{state.fieldErrors.collected_at[0]}</p>
@@ -242,7 +242,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
 
         {/* ── Tipo de Laboratório ─────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="laboratory_type" className="text-sm font-medium text-slate-300">
+          <label htmlFor="laboratory_type" className="text-sm font-medium text-foreground">
             Laboratório
           </label>
           <select
@@ -262,8 +262,8 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
 
         {/* ── Laudo (texto livre) ───────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="report_text" className="text-sm font-medium text-slate-300">
-            Laudo <span className="font-normal text-slate-500">(opcional)</span>
+          <label htmlFor="report_text" className="text-sm font-medium text-foreground">
+            Laudo <span className="font-normal text-muted-foreground">(opcional)</span>
           </label>
           <textarea
             id="report_text" name="report_text"
@@ -272,7 +272,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
             value={reportText}
             onChange={(e) => setReportText(e.target.value)}
             disabled={isPending}
-            className="w-full resize-none rounded-md border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50"
+            className="w-full resize-none rounded-md border border-border bg-muted px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
           />
           {state.fieldErrors?.report_text && (
             <p className="text-xs text-red-400">{state.fieldErrors.report_text[0]}</p>
@@ -288,7 +288,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
 
         <Button
           type="submit" disabled={isPending}
-          className="h-14 w-full bg-slate-100 text-slate-900 text-base hover:bg-white disabled:opacity-50"
+          className="h-14 w-full bg-primary text-primary-foreground text-base hover:bg-primary/90 disabled:opacity-50"
         >
           {isPending ? 'Registrando…' : 'Registrar análise'}
         </Button>

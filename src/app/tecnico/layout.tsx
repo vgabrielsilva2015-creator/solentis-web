@@ -26,9 +26,9 @@ export default async function TecnicoLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="dark min-h-screen bg-background text-foreground">
       {/* Barra superior */}
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
+      <header className="sticky top-0 z-10 border-b border-border bg-card">
         <div className="mx-auto max-w-lg flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/tecnico/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
@@ -37,7 +37,7 @@ export default async function TecnicoLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-muted-foreground">
               {session.user.name ?? session.user.email}
             </span>
             <NotificationBell />

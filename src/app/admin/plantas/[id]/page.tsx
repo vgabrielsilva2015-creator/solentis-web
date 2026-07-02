@@ -95,9 +95,9 @@ export default async function AdminPlantaDetalhePage({
       icon: <AlertTriangle className="w-5 h-5" />,
       color: openOccurrences > 0
         ? 'from-red-500/20 to-red-600/5 border-red-500/20'
-        : 'from-slate-500/20 to-slate-600/5 border-slate-500/20',
-      iconColor: openOccurrences > 0 ? 'text-red-400' : 'text-slate-400',
-      valueColor: openOccurrences > 0 ? 'text-red-300' : 'text-slate-300',
+        : 'from-muted/20 to-muted/5 border-border/20',
+      iconColor: openOccurrences > 0 ? 'text-red-400' : 'text-muted-foreground',
+      valueColor: openOccurrences > 0 ? 'text-red-300' : 'text-foreground',
     },
     {
       label: 'Total Ocorrências',
@@ -115,7 +115,7 @@ export default async function AdminPlantaDetalhePage({
       <div>
         <Link
           href="/admin/plantas"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Voltar para Plantas
@@ -127,11 +127,11 @@ export default async function AdminPlantaDetalhePage({
               <Factory className="w-7 h-7" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 {tenant.name}
               </h1>
               <div className="flex items-center gap-3 mt-1">
-                <span className="font-mono text-xs text-slate-500">{tenant.slug}</span>
+                <span className="font-mono text-xs text-muted-foreground">{tenant.slug}</span>
                 <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                   tenant.is_active
                     ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/20'
@@ -153,12 +153,12 @@ export default async function AdminPlantaDetalhePage({
             key={kpi.label}
             className={`rounded-xl border bg-gradient-to-br ${kpi.color} p-5 transition-all hover:scale-[1.02]`}
           >
-            <div className={`rounded-lg bg-slate-900/50 p-2 ${kpi.iconColor} w-fit`}>
+            <div className={`rounded-lg bg-card/50 p-2 ${kpi.iconColor} w-fit`}>
               {kpi.icon}
             </div>
             <div className="mt-3">
               <p className={`text-3xl font-bold ${kpi.valueColor}`}>{kpi.value}</p>
-              <p className="text-xs text-slate-400 mt-1">{kpi.label}</p>
+              <p className="text-xs text-muted-foreground mt-1">{kpi.label}</p>
             </div>
           </div>
         ))}
@@ -167,15 +167,15 @@ export default async function AdminPlantaDetalhePage({
       {/* Tabela de Usuários */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             <UserCog className="w-4 h-4" />
             Equipe ({tenant.users.length})
           </h2>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-950/50 text-slate-400">
+            <thead className="bg-background/50 text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Nome</th>
                 <th className="px-4 py-3 font-medium">E-mail</th>
@@ -185,13 +185,13 @@ export default async function AdminPlantaDetalhePage({
                 <th className="px-4 py-3 font-medium">Senha</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {tenant.users.map(u => (
-                <tr key={u.id} className="hover:bg-slate-800/50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-100">{u.name}</td>
-                  <td className="px-4 py-3 text-slate-400 text-xs font-mono">{u.email}</td>
+                <tr key={u.id} className="hover:bg-muted/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-foreground">{u.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs font-mono">{u.email}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${roleColors[u.role] ?? 'bg-slate-800 text-slate-400'}`}>
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${roleColors[u.role] ?? 'bg-muted text-muted-foreground'}`}>
                       {roleLabels[u.role] ?? u.role}
                     </span>
                   </td>
@@ -205,7 +205,7 @@ export default async function AdminPlantaDetalhePage({
                       {u.is_active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">
+                  <td className="px-4 py-3 text-muted-foreground text-xs">
                     {u.last_login_at
                       ? u.last_login_at.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                       : '—'}
@@ -226,7 +226,7 @@ export default async function AdminPlantaDetalhePage({
       </div>
 
       {/* Metadados */}
-      <div className="text-xs text-slate-600 border-t border-slate-800 pt-4">
+      <div className="text-xs text-muted-foreground border-t border-border pt-4">
         Tenant ID: <span className="font-mono">{tenant.id}</span> · 
         Criado em: {tenant.created_at.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
       </div>

@@ -27,7 +27,7 @@ export function CategoriasTable({ items }: { items: Categoria[] }) {
     <>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
             <th className="px-4 py-3">Categoria</th>
             <th className="px-4 py-3">Status</th>
             <th className="px-3 py-3 text-right">Ações</th>
@@ -48,8 +48,8 @@ export function CategoriasTable({ items }: { items: Categoria[] }) {
               ]}
             >
               <td className="px-4 py-3">
-                <div className="font-medium text-slate-100">{c.name}</div>
-                {c.description && <div className="text-xs text-slate-500">{c.description}</div>}
+                <div className="font-medium text-foreground">{c.name}</div>
+                {c.description && <div className="text-xs text-muted-foreground">{c.description}</div>}
               </td>
               <td className="px-4 py-3">
                 {c.is_active ? (

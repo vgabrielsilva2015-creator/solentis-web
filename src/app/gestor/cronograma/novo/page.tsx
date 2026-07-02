@@ -16,17 +16,17 @@ export default async function NovoCronogramaPage() {
     <main className="mx-auto max-w-2xl px-6 py-8">
       <div className="mb-8">
         <h1 className="text-xl font-semibold">Novo Agendamento</h1>
-        <p className="text-sm text-slate-400">Configure a periodicidade de uma análise.</p>
+        <p className="text-sm text-muted-foreground">Configure a periodicidade de uma análise.</p>
       </div>
 
-      <form action={createMonitoringSchedule} className="space-y-6 rounded-xl border border-slate-800 bg-slate-900 p-6">
+      <form action={createMonitoringSchedule} className="space-y-6 rounded-xl border border-border bg-card p-6">
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Ponto de Coleta</label>
+            <label className="text-sm font-medium text-foreground">Ponto de Coleta</label>
             <select
               name="collection_point_id"
               required
-              className="w-full h-10 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+              className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Selecione...</option>
               {pontos.map(p => (
@@ -36,11 +36,11 @@ export default async function NovoCronogramaPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Parâmetro</label>
+            <label className="text-sm font-medium text-foreground">Parâmetro</label>
             <select
               name="parameter_id"
               required
-              className="w-full h-10 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+              className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Selecione...</option>
               {parametros.map(p => (
@@ -51,11 +51,11 @@ export default async function NovoCronogramaPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Tipo de Análise (Define quem fará)</label>
+          <label className="text-sm font-medium text-foreground">Tipo de Análise (Define quem fará)</label>
           <select
             name="sample_type"
             required
-            className="w-full h-10 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Selecione...</option>
             <option value="FIELD">Medição de Campo (Operador)</option>
@@ -65,11 +65,11 @@ export default async function NovoCronogramaPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Frequência Base</label>
+          <label className="text-sm font-medium text-foreground">Frequência Base</label>
           <select
             name="frequency"
             required
-            className="w-full h-10 rounded-md border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+            className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="DAILY">Diária / Dias Específicos</option>
             <option value="PER_SHIFT">Por Turno</option>
@@ -79,7 +79,7 @@ export default async function NovoCronogramaPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Dias da Semana (Opcional)</label>
+          <label className="text-sm font-medium text-foreground">Dias da Semana (Opcional)</label>
           <div className="flex flex-wrap gap-3">
             {[
               { val: 0, label: 'Dom' },
@@ -90,20 +90,20 @@ export default async function NovoCronogramaPage() {
               { val: 5, label: 'Sex' },
               { val: 6, label: 'Sáb' },
             ].map(day => (
-              <label key={day.val} className="flex items-center gap-2 text-sm text-slate-300">
-                <input type="checkbox" name="days_of_week" value={day.val} className="rounded border-slate-700 bg-slate-950 text-slate-500" />
+              <label key={day.val} className="flex items-center gap-2 text-sm text-foreground">
+                <input type="checkbox" name="days_of_week" value={day.val} className="rounded border-border bg-background text-muted-foreground" />
                 {day.label}
               </label>
             ))}
           </div>
-          <p className="text-xs text-slate-500 mt-1">Se nenhum for selecionado, entende-se que é "Todos os Dias".</p>
+          <p className="text-xs text-muted-foreground mt-1">Se nenhum for selecionado, entende-se que é "Todos os Dias".</p>
         </div>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-800">
+        <div className="flex justify-end gap-3 pt-6 border-t border-border">
           <Link href="/gestor/cronograma">
-            <Button type="button" variant="ghost" className="text-slate-300">Cancelar</Button>
+            <Button type="button" variant="ghost" className="text-foreground">Cancelar</Button>
           </Link>
-          <Button type="submit" className="bg-slate-100 text-slate-900 hover:bg-white">Salvar Agendamento</Button>
+          <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">Salvar Agendamento</Button>
         </div>
       </form>
     </main>

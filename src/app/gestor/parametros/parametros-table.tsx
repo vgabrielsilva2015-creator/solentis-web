@@ -46,7 +46,7 @@ export function ParametrosTable({ items }: { items: ParametroRow[] }) {
     <>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
             <th className="px-4 py-3">Parâmetro</th>
             <th className="px-4 py-3">Limites</th>
             <th className="px-4 py-3">Vigência</th>
@@ -69,14 +69,14 @@ export function ParametrosTable({ items }: { items: ParametroRow[] }) {
               ]}
             >
               <td className="px-4 py-3">
-                <div className="font-medium text-slate-100">{p.name}</div>
-                <div className="text-xs text-slate-500">{p.unit}</div>
-                {p.legal_reference && <div className="text-xs text-slate-600">{p.legal_reference}</div>}
+                <div className="font-medium text-foreground">{p.name}</div>
+                <div className="text-xs text-muted-foreground">{p.unit}</div>
+                {p.legal_reference && <div className="text-xs text-muted-foreground">{p.legal_reference}</div>}
               </td>
-              <td className="px-4 py-3 text-xs text-slate-300 font-mono">
+              <td className="px-4 py-3 text-xs text-foreground font-mono">
                 {formatLimit(p.min_limit)} – {formatLimit(p.max_limit)}
               </td>
-              <td className="px-4 py-3 text-xs text-slate-400">{formatDate(p.effective_date)}</td>
+              <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(p.effective_date)}</td>
               <td className="px-4 py-3">
                 {p.is_active
                   ? <span className="flex items-center gap-1.5 text-xs text-green-400"><span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Ativo</span>

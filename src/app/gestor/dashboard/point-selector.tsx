@@ -28,7 +28,7 @@ export function PointSelector({ points, pontoId }: PointSelectorProps) {
       value={pontoId ?? ''}
       onChange={handleChange}
       disabled={isPending}
-      className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50"
+      className="bg-card border border-border text-foreground text-xs rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
     >
       <option value="">{isPending ? 'Atualizando…' : 'Todos os pontos'}</option>
       {points.map((p) => (

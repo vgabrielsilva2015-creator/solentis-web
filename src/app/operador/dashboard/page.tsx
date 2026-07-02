@@ -188,7 +188,7 @@ export default async function OperadorDashboard() {
     <main className="mx-auto max-w-lg px-4 py-8 space-y-4">
         <div>
           <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Painel do Operador</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Painel do Operador</p>
         </div>
 
         {/* Passagens urgentes */}
@@ -246,31 +246,31 @@ export default async function OperadorDashboard() {
         ) : currentShift && currentShiftOpen ? (
           <Link
             href="/operador/turnos"
-            className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+            className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
           >
-            <p className="text-sm text-slate-400">Turno {currentShift.name} já está aberto</p>
-            <p className="text-xs text-slate-600 mt-0.5">Toque para acompanhar ou assumir a passagem →</p>
+            <p className="text-sm text-muted-foreground">Turno {currentShift.name} já está aberto</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toque para acompanhar ou assumir a passagem →</p>
           </Link>
         ) : (
           <Link
             href="/operador/turnos"
-            className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+            className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
           >
-            <p className="text-sm text-slate-500">Nenhum turno ativo</p>
-            <p className="text-xs text-slate-600 mt-0.5">Toque para abrir um turno →</p>
+            <p className="text-sm text-muted-foreground">Nenhum turno ativo</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toque para abrir um turno →</p>
           </Link>
         )}
 
         {/* Resumo do turno anterior — para o operador entrante */}
         {!turnoAtivo && resumoAnterior && (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
+          <div className="rounded-xl border border-border bg-card/60 p-4 space-y-2">
             <div>
-              <p className="text-sm font-medium text-slate-300">Resumo do turno anterior</p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-sm font-medium text-foreground">Resumo do turno anterior</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {resumoAnterior.shiftName} · {resumoAnterior.who}
               </p>
             </div>
-            <div className="flex gap-4 text-xs text-slate-400">
+            <div className="flex gap-4 text-xs text-muted-foreground">
               <span>{resumoAnterior.readings} leitura(s)</span>
               <span>{resumoAnterior.occurrences} ocorrência(s) em aberto</span>
             </div>
@@ -281,14 +281,14 @@ export default async function OperadorDashboard() {
                 </p>
                 <ul className="mt-0.5 space-y-0.5">
                   {resumoAnterior.pendingTasks.map((t, i) => (
-                    <li key={i} className="text-slate-300">• {t}</li>
+                    <li key={i} className="text-foreground">• {t}</li>
                   ))}
                 </ul>
               </div>
             )}
             {resumoAnterior.observations && (
-              <p className="text-xs text-slate-400">
-                Observações: <span className="text-slate-300">{resumoAnterior.observations}</span>
+              <p className="text-xs text-muted-foreground">
+                Observações: <span className="text-foreground">{resumoAnterior.observations}</span>
               </p>
             )}
           </div>
@@ -309,25 +309,25 @@ export default async function OperadorDashboard() {
           ) : (
             <Link
               href={`/operador/turnos/${turnoAtivo.id}/tarefas`}
-              className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+              className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
             >
-              <p className="text-sm text-slate-400">Nenhuma tarefa atribuída</p>
-              <p className="text-xs text-slate-600 mt-0.5">Toque para ver tarefas do turno →</p>
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa atribuída</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Toque para ver tarefas do turno →</p>
             </Link>
           )
         ) : (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <p className="text-sm text-slate-600">Tarefas do turno</p>
-            <p className="text-xs text-slate-700 mt-0.5">Abra um turno primeiro</p>
+          <div className="rounded-xl border border-border bg-card/50 p-4">
+            <p className="text-sm text-muted-foreground">Tarefas do turno</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Abra um turno primeiro</p>
           </div>
         )}
 
         {/* Checklist de Coletas Diárias */}
         <div className="space-y-2 pt-2">
-          <h2 className="text-sm font-medium text-slate-400">Checklist de Coletas (Hoje)</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Checklist de Coletas (Hoje)</h2>
           {todaySchedules.length === 0 ? (
-             <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-               <p className="text-sm text-slate-500">Nenhuma coleta agendada para hoje.</p>
+             <div className="rounded-xl border border-border bg-card/50 p-4">
+               <p className="text-sm text-muted-foreground">Nenhuma coleta agendada para hoje.</p>
              </div>
           ) : pendingChecklist.length === 0 ? (
              <div className="rounded-xl border border-green-900/40 bg-green-950/20 p-4 flex items-center justify-between">
@@ -358,7 +358,7 @@ export default async function OperadorDashboard() {
                
                {todaySchedules.length - pendingChecklist.length > 0 && (
                  <div className="text-center pt-2">
-                   <p className="text-xs text-slate-500">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} coletas realizadas.</p>
+                   <p className="text-xs text-muted-foreground">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} coletas realizadas.</p>
                  </div>
                )}
              </div>
@@ -369,10 +369,10 @@ export default async function OperadorDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/operador/leituras"
-            className="rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+            className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
           >
-            <p className="text-2xl font-bold text-slate-100">{leiturasDoDia}</p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-2xl font-bold text-foreground">{leiturasDoDia}</p>
+            <p className="text-xs text-muted-foreground mt-1">
               {leiturasDoDia === 1 ? 'Leitura hoje' : 'Leituras hoje'}
             </p>
           </Link>
@@ -380,14 +380,14 @@ export default async function OperadorDashboard() {
           <Link
             href="/operador/ocorrencias"
             className={[
-              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
-              openOcorrencias > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-slate-700 bg-slate-900',
+              'rounded-xl border p-4 hover:bg-muted/60 transition-colors',
+              openOcorrencias > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-border bg-card',
             ].join(' ')}
           >
-            <p className={['text-2xl font-bold', openOcorrencias > 0 ? 'text-amber-400' : 'text-slate-100'].join(' ')}>
+            <p className={['text-2xl font-bold', openOcorrencias > 0 ? 'text-amber-400' : 'text-foreground'].join(' ')}>
               {openOcorrencias}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {openOcorrencias === 1 ? 'Ocorrência em aberto' : 'Ocorrências em aberto'}
             </p>
           </Link>
@@ -395,16 +395,16 @@ export default async function OperadorDashboard() {
 
         {/* Atalhos */}
         <div className="space-y-2 pt-2">
-          <h2 className="text-sm font-medium text-slate-400">Atalhos</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Atalhos</h2>
           <div className="grid grid-cols-2 gap-3">
             {SHORTCUTS.map((s) => (
               <Link
                 key={s.href}
                 href={s.href}
-                className="rounded-xl border border-slate-800 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+                className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
               >
-                <p className="text-sm font-medium text-slate-200">{s.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+                <p className="text-sm font-medium text-foreground">{s.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
               </Link>
             ))}
           </div>

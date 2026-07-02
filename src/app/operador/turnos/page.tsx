@@ -87,12 +87,12 @@ export default async function TurnosPage() {
           <h1 className="text-xl font-semibold">Turnos</h1>
           <div className="flex items-center gap-2">
             <Link href="/operador/turnos/escala">
-              <Button className="border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+              <Button className="border border-border bg-muted text-foreground hover:bg-secondary text-xs h-8">
                 Ver escala
               </Button>
             </Link>
             <Link href="/operador/turnos/abrir">
-              <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8">
                 + Abrir turno
               </Button>
             </Link>
@@ -118,14 +118,14 @@ export default async function TurnosPage() {
                 <div
                   key={inst.id}
                   className={[
-                    'rounded-xl border bg-slate-900 p-4 space-y-3',
+                    'rounded-xl border bg-card p-4 space-y-3',
                     vencido ? 'border-red-900/60' : 'border-amber-900/60',
                   ].join(' ')}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-medium">{inst.shift.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Sainte: {h.outgoing_user.name} · {formatTime(new Date(inst.opened_at))}
                       </p>
                     </div>
@@ -137,7 +137,7 @@ export default async function TurnosPage() {
                   </div>
 
                   {/* Resumo do checklist */}
-                  <div className="rounded-md bg-slate-800/60 px-3 py-2 text-xs text-slate-400 space-y-1">
+                  <div className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
                     <p>{checklist.readings_count ?? 0} leitura(s) no turno</p>
                     <p>{checklist.open_occurrences_count ?? 0} ocorrência(s) em aberto</p>
                     {(checklist.pending_tasks_count ?? 0) > 0 && (
@@ -147,17 +147,17 @@ export default async function TurnosPage() {
                         </p>
                         <ul className="mt-0.5 space-y-0.5">
                           {(checklist.pending_tasks ?? []).map((title, i) => (
-                            <li key={i} className="text-slate-300">• {title}</li>
+                            <li key={i} className="text-foreground">• {title}</li>
                           ))}
                         </ul>
                       </div>
                     )}
                     {checklist.pending_items && (
-                      <p className="text-slate-300">Pendências: {checklist.pending_items}</p>
+                      <p className="text-foreground">Pendências: {checklist.pending_items}</p>
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted-foreground">
                     Prazo de confirmação: {formatDatetime(new Date(h.timeout_at))}
                   </p>
 
@@ -175,13 +175,13 @@ export default async function TurnosPage() {
         {/* ─── Meus turnos abertos (posso iniciar passagem) ─── */}
         {myOpenShifts.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-sm font-medium text-slate-400">Meu turno ativo</h2>
+            <h2 className="text-sm font-medium text-muted-foreground">Meu turno ativo</h2>
             {myOpenShifts.map((inst) => (
-              <div key={inst.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+              <div key={inst.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">{inst.shift.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {inst.shift.start_time} – {inst.shift.end_time} · aberto às {formatTime(new Date(inst.opened_at))}
                     </p>
                   </div>
@@ -203,7 +203,7 @@ export default async function TurnosPage() {
                   </div>
                 )}
                 <Link href={`/operador/turnos/${inst.id}/passagem`}>
-                  <Button className="h-10 w-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm">
+                  <Button className="h-10 w-full border border-border bg-muted text-foreground hover:bg-secondary text-sm">
                     Iniciar passagem de turno
                   </Button>
                 </Link>
@@ -215,13 +215,13 @@ export default async function TurnosPage() {
         {/* ─── Outros turnos abertos (outros operadores) ─── */}
         {otherOpenShifts.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-sm font-medium text-slate-400">Outros turnos ativos</h2>
+            <h2 className="text-sm font-medium text-muted-foreground">Outros turnos ativos</h2>
             {otherOpenShifts.map((inst) => (
-              <div key={inst.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
+              <div key={inst.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">{inst.shift.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Aberto por {inst.opener.name} às {formatTime(new Date(inst.opened_at))}
                     </p>
                   </div>
@@ -242,7 +242,7 @@ export default async function TurnosPage() {
                   </div>
                 )}
                 <Link href={`/operador/turnos/${inst.id}/passagem`}>
-                  <Button className="h-10 w-full border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm">
+                  <Button className="h-10 w-full border border-border bg-muted text-foreground hover:bg-secondary text-sm">
                     Iniciar passagem deste turno
                   </Button>
                 </Link>
@@ -253,10 +253,10 @@ export default async function TurnosPage() {
 
         {/* ─── Sem atividade ─── */}
         {activeInstances.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center space-y-3">
-            <p className="text-sm text-slate-500">Nenhum turno ativo hoje.</p>
+          <div className="rounded-xl border border-dashed border-border bg-card/50 py-14 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">Nenhum turno ativo hoje.</p>
             <Link href="/operador/turnos/abrir">
-              <Button className="bg-slate-100 text-slate-900 hover:bg-white text-sm h-10 px-6">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-sm h-10 px-6">
                 Abrir turno
               </Button>
             </Link>
