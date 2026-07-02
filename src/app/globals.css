@@ -11,6 +11,33 @@
   --color-status-danger: var(--color-red-500);
   --color-status-critical: var(--color-red-700);
 
+  /* Vocabulário fixo de status do design system (StatusBadge / severidade).
+     Expostos como utilitários Tailwind: bg-ok / text-danger / border-warn … */
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+
+  /* Camada semântica --c-* (surface-aware: claro no dashboard, escuro no .op-shell) */
+  --color-c-bg: var(--c-bg);
+  --color-c-surface: var(--c-surface);
+  --color-c-surface-2: var(--c-surface-2);
+  --color-c-surface-3: var(--c-surface-3);
+  --color-c-border: var(--c-border);
+  --color-c-border-2: var(--c-border-2);
+  --color-c-text: var(--c-text);
+  --color-c-text-2: var(--c-text-2);
+  --color-c-text-3: var(--c-text-3);
+  --color-c-brand: var(--c-brand);
+  --color-c-brand-soft: var(--c-brand-soft);
+  --color-c-brand-line: var(--c-brand-line);
+  --color-c-accent: var(--c-accent);
+  --color-c-accent-on: var(--c-accent-on);
+
   /* Auth UI Tokens */
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -130,6 +157,89 @@
   --dash-danger-soft: oklch(0.55 0.21 25 / 14%);
   --dash-consumption-2: oklch(0.72 0.03 248);
   --dash-consumption-3: oklch(0.84 0.015 248);
+
+  /* ---- STATUS (vocabulário fixo do design system) --------- */
+  --ok: oklch(0.50 0.15 150);               /* Conforme / dentro do limite */
+  --ok-soft: oklch(0.50 0.15 150 / 14%);
+  --warn: oklch(0.60 0.14 70);              /* Atenção / próximo do limite */
+  --warn-soft: oklch(0.60 0.14 70 / 14%);
+  --danger: oklch(0.55 0.21 25);            /* Fora / não-conformidade */
+  --danger-soft: oklch(0.55 0.21 25 / 14%);
+  --critical: oklch(0.44 0.20 27);          /* Crítica — severidade máxima */
+  --critical-soft: oklch(0.44 0.20 27 / 14%);
+
+  /* Severidade de ocorrência (Baixa / Média / Alta / Crítica) */
+  --sev-baixa: var(--ok);
+  --sev-media: var(--warn);
+  --sev-alta: var(--danger);
+  --sev-critica: var(--critical);
+
+  --brand-strong: oklch(0.44 0.13 205);     /* pressed / deep water */
+  --brand-on: oklch(0.99 0 0);              /* text/icon sobre fill de marca */
+
+  /* ---- OPERATIONAL SHELL SURFACES (dark slate) ------------ */
+  --op-bg: oklch(0.145 0.02 250);
+  --op-surface: oklch(0.205 0.02 250);
+  --op-surface-2: oklch(0.27 0.02 250);
+  --op-border: oklch(0.30 0.02 250);
+  --op-border-2: oklch(0.37 0.02 250);
+  --op-txt: oklch(0.97 0.01 250);
+  --op-txt-2: oklch(0.70 0.02 250);
+  --op-txt-3: oklch(0.55 0.02 250);
+  --op-brand: oklch(0.82 0.13 195);         /* aqua mais claro no escuro */
+  --op-accent: oklch(0.80 0.165 78);        /* âmbar — CTA no modo escuro */
+  --op-accent-on: oklch(0.16 0.018 235);
+
+  --shadow: var(--dash-shadow);
+  --shadow-sm: var(--dash-shadow-sm);
+  --shadow-op: 0 1px 2px rgba(0,0,0,.45), 0 12px 30px rgba(0,0,0,.30);
+  --shadow-op-sm: 0 1px 2px rgba(0,0,0,.4);
+
+  /* ---- CAMADA SEMÂNTICA --c-* (dashboard claro, padrão) ---
+     Componentes leem --c-* para renderizar certo nos dois modos.
+     Envolva UI de campo/turno (escura) em <div class="op-shell">. */
+  --c-bg: var(--dash-bg);
+  --c-surface: var(--dash-s1);
+  --c-surface-2: var(--dash-s2);
+  --c-surface-3: var(--dash-s3);
+  --c-border: var(--dash-border);
+  --c-border-2: var(--dash-border2);
+  --c-text: var(--dash-txt);
+  --c-text-2: var(--dash-txt2);
+  --c-text-3: var(--dash-txt3);
+  --c-brand: var(--dash-brand);
+  --c-brand-soft: var(--dash-brand-soft);
+  --c-brand-line: var(--dash-brand-line);
+  --c-on-brand: var(--dash-on-brand);
+  --c-accent: var(--dash-brand);            /* CTA = marca no modo claro */
+  --c-accent-on: var(--dash-on-brand);
+  --c-shadow: var(--dash-shadow);
+  --c-shadow-sm: var(--dash-shadow-sm);
+}
+
+/* Operational shell (escuro) — envolva UI de operador/técnico em campo.
+   Sobrescreve apenas a camada --c-*; o acento vira âmbar. */
+.op-shell {
+  --c-bg: var(--op-bg);
+  --c-surface: var(--op-surface);
+  --c-surface-2: var(--op-surface-2);
+  --c-surface-3: var(--op-surface-2);
+  --c-border: var(--op-border);
+  --c-border-2: var(--op-border-2);
+  --c-text: var(--op-txt);
+  --c-text-2: var(--op-txt-2);
+  --c-text-3: var(--op-txt-3);
+  --c-brand: var(--op-brand);
+  --c-brand-soft: oklch(0.82 0.13 195 / 14%);
+  --c-brand-line: oklch(0.82 0.13 195 / 32%);
+  --c-on-brand: var(--op-accent-on);
+  --c-accent: var(--op-accent);             /* CTA = âmbar no modo escuro */
+  --c-accent-on: var(--op-accent-on);
+  --c-shadow: var(--shadow-op);
+  --c-shadow-sm: var(--shadow-op-sm);
+
+  background: var(--c-bg);
+  color: var(--c-text);
 }
 
 .dark {
