@@ -61,7 +61,7 @@ export default async function EquipamentosPage({
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-xl font-semibold">Equipamentos</h1>
-            <p className="text-xs text-slate-400">{total} registro(s)</p>
+            <p className="text-xs text-muted-foreground">{total} registro(s)</p>
           </div>
         </div>
 
@@ -71,21 +71,21 @@ export default async function EquipamentosPage({
             name="q"
             defaultValue={search}
             placeholder="Buscar equipamento…"
-            className="flex-1 min-w-40 rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="flex-1 min-w-40 rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
             <input
               type="checkbox"
               name="inactive"
               value="1"
               defaultChecked={showAll}
-              className="accent-slate-400"
+              className="accent-muted-foreground"
             />
             Ver inativos
           </label>
           <button
             type="submit"
-            className="h-9 rounded-md border border-slate-700 bg-slate-800 px-4 text-sm text-slate-300 hover:bg-slate-700"
+            className="h-9 rounded-md border border-border bg-muted px-4 text-sm text-foreground hover:bg-secondary"
           >
             Buscar
           </button>
@@ -93,7 +93,7 @@ export default async function EquipamentosPage({
 
         {/* Lista */}
         {equipamentos.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-border bg-card py-14 text-center text-sm text-muted-foreground">
             Nenhum equipamento encontrado.
           </div>
         ) : (
@@ -109,21 +109,21 @@ export default async function EquipamentosPage({
                   key={eq.id}
                   href={`/tecnico/equipamentos/${eq.id}`}
                   className={[
-                    'block rounded-xl border bg-slate-900 p-4 hover:bg-slate-800 transition-colors',
-                    isOverdue ? 'border-red-900/60' : 'border-slate-800',
+                    'block rounded-xl border bg-card p-4 hover:bg-muted transition-colors',
+                    isOverdue ? 'border-red-900/60' : 'border-border',
                   ].join(' ')}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-100 truncate">{eq.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-sm font-medium text-foreground truncate">{eq.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {eq.category.name}
                         {eq.location ? ` · ${eq.location}` : ''}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       {!eq.is_active && (
-                        <span className="rounded px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-500 border border-slate-700">
+                        <span className="rounded px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border">
                           Inativo
                         </span>
                       )}
@@ -135,9 +135,9 @@ export default async function EquipamentosPage({
                     </div>
                   </div>
 
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     Próxima preventiva:{' '}
-                    <span className={isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}>
+                    <span className={isOverdue ? 'text-red-400 font-medium' : 'text-muted-foreground'}>
                       {nextPreventive ? formatDate(new Date(nextPreventive.scheduled_date)) : 'Nenhuma agendada'}
                     </span>
                   </p>
@@ -153,16 +153,16 @@ export default async function EquipamentosPage({
             {page > 1 ? (
               <Link
                 href={`/tecnico/equipamentos?page=${page - 1}${search ? `&q=${encodeURIComponent(search)}` : ''}${showAll ? '&inactive=1' : ''}`}
-                className="text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground"
               >
                 ← Anterior
               </Link>
             ) : <span />}
-            <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+            <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
             {page < totalPages ? (
               <Link
                 href={`/tecnico/equipamentos?page=${page + 1}${search ? `&q=${encodeURIComponent(search)}` : ''}${showAll ? '&inactive=1' : ''}`}
-                className="text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Próxima →
               </Link>

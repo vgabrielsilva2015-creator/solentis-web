@@ -21,7 +21,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_COLOR: Record<string, string> = {
   OPEN:             'bg-green-950/60 text-green-400 border-green-900/50',
   HANDOVER_PENDING: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  CLOSED:           'bg-slate-800/60 text-slate-400 border-slate-700/50',
+  CLOSED:           'bg-muted/60 text-muted-foreground border-border/50',
 }
 
 export default async function TecnicoInstanciasPage() {
@@ -57,8 +57,8 @@ export default async function TecnicoInstanciasPage() {
         <h1 className="text-xl font-semibold">Turnos — Atribuir tarefas</h1>
 
         {instances.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-12 text-center">
-            <p className="text-sm text-slate-500">Nenhum turno encontrado hoje.</p>
+          <div className="rounded-xl border border-border bg-card py-12 text-center">
+            <p className="text-sm text-muted-foreground">Nenhum turno encontrado hoje.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -67,15 +67,15 @@ export default async function TecnicoInstanciasPage() {
               return (
                 <div
                   key={inst.id}
-                  className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3"
+                  className="rounded-xl border border-border bg-card p-4 space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-medium">{inst.shift.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {inst.shift.start_time} – {inst.shift.end_time} · aberto por {inst.opener.name}
                       </p>
-                      <p className="text-xs text-slate-600 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {formatDatetime(inst.opened_at)}
                       </p>
                     </div>
@@ -85,15 +85,15 @@ export default async function TecnicoInstanciasPage() {
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-muted-foreground">
                       {inst._count.shift_tasks} tarefa(s) ·{' '}
                       {pending > 0
                         ? <span className="text-amber-400">{pending} pendente(s)</span>
-                        : <span className="text-slate-600">nenhuma pendente</span>
+                        : <span className="text-muted-foreground">nenhuma pendente</span>
                       }
                     </span>
                     <Link href={`/tecnico/turnos/tarefas/${inst.id}`}>
-                      <Button className="h-8 border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">
+                      <Button className="h-8 border border-border bg-muted text-foreground hover:bg-secondary text-xs">
                         Gerenciar tarefas
                       </Button>
                     </Link>
