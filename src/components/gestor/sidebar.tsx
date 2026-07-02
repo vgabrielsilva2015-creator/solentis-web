@@ -14,7 +14,7 @@ export function GestorSidebar() {
           return (
             <p
               key={i}
-              className="px-3 pt-5 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500 font-mono"
+              className="px-3 pt-5 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground font-mono"
             >
               {item.label}
             </p>
@@ -30,7 +30,7 @@ export function GestorSidebar() {
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
               isActive
                 ? 'font-semibold border border-[var(--brand)]/10'
-                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             }`}
             style={
               isActive

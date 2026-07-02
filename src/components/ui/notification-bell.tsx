@@ -45,7 +45,7 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={handleOpen}
-        className="relative p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+        className="relative p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Notificações"
       >
         <Bell className="w-5 h-5" />
@@ -57,23 +57,23 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-700 bg-slate-800 shadow-xl z-50 overflow-hidden">
-          <div className="border-b border-slate-700 bg-slate-900/50 px-4 py-3">
-            <h3 className="text-sm font-semibold text-slate-200">Notificações</h3>
+        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border bg-popover shadow-xl z-50 overflow-hidden">
+          <div className="border-b border-border bg-muted/50 px-4 py-3">
+            <h3 className="text-sm font-semibold text-foreground">Notificações</h3>
           </div>
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">
+              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                 Nenhuma notificação no momento.
               </div>
             ) : (
-              <ul className="divide-y divide-slate-700/50">
+              <ul className="divide-y divide-border/50">
                 {notifications.map((item) => (
                   <li key={item.id}>
                     <Link
                       href={item.href}
                       onClick={() => setIsOpen(false)}
-                      className="flex items-start gap-3 px-4 py-3 hover:bg-slate-700/50 transition-colors"
+                      className="flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors"
                     >
                       <div className={cn(
                         "mt-0.5 shrink-0 rounded-full p-1.5",
@@ -86,13 +86,13 @@ export function NotificationBell() {
                         {item.type === 'MAINTENANCE' && <Wrench className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 space-y-1">
-                        <p className="text-xs font-medium text-slate-200">
+                        <p className="text-xs font-medium text-foreground">
                           {item.title}
                         </p>
-                        <p className="line-clamp-2 text-xs text-slate-400">
+                        <p className="line-clamp-2 text-xs text-muted-foreground">
                           {item.description}
                         </p>
-                        <p className="text-[10px] text-slate-500">
+                        <p className="text-[10px] text-muted-foreground/70">
                           {new Date(item.date).toLocaleString('pt-BR')}
                         </p>
                       </div>
