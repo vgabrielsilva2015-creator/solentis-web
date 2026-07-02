@@ -67,28 +67,28 @@ export default async function OcorrenciasOperadorPage({
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+      <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
         <div>
           <h1 className="text-xl font-bold tracking-tight">Ocorrências</h1>
-          <p className="text-xs text-slate-400 mt-1">{total} registro(s)</p>
+          <p className="text-xs text-muted-foreground mt-1">{total} registro(s)</p>
         </div>
         <div className="flex items-center gap-2">
           {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
             <Link href={`/operador/ocorrencias?view=kanban${filter ? `&filter=${filter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'kanban' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} title="Kanban">
+              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </Link>
             <Link href={`/operador/ocorrencias?view=list${filter ? `&filter=${filter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'list' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} title="Lista">
+              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
                 <Table className="w-4 h-4" />
               </Button>
             </Link>
           </div>
 
           <Link href="/operador/ocorrencias/nova">
-            <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8 font-semibold">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8 font-semibold">
               + Nova
             </Button>
           </Link>
@@ -97,16 +97,16 @@ export default async function OcorrenciasOperadorPage({
 
       {/* Filtros rápidos */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        <Link href={`/operador/ocorrencias?view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${!filter ? 'bg-slate-100 text-slate-900 border-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+        <Link href={`/operador/ocorrencias?view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${!filter ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
           Todas
         </Link>
-        <Link href={`/operador/ocorrencias?filter=open&view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${filter === 'open' ? 'bg-slate-100 text-slate-900 border-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+        <Link href={`/operador/ocorrencias?filter=open&view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${filter === 'open' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
           Abertas
         </Link>
-        <Link href={`/operador/ocorrencias?filter=high&view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${filter === 'high' ? 'bg-slate-100 text-slate-900 border-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+        <Link href={`/operador/ocorrencias?filter=high&view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${filter === 'high' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
           Alta Prioridade
         </Link>
-        <Link href={`/operador/ocorrencias?filter=resolved&view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${filter === 'resolved' ? 'bg-slate-100 text-slate-900 border-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+        <Link href={`/operador/ocorrencias?filter=resolved&view=${view}`} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold border ${filter === 'resolved' ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
           Resolvidas
         </Link>
       </div>
@@ -124,7 +124,7 @@ export default async function OcorrenciasOperadorPage({
       {view === 'list' && (
         <>
           {ocorrencias.length === 0 ? (
-            <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-border bg-card py-14 text-center text-sm text-muted-foreground">
               Nenhuma ocorrência registrada ainda.
             </div>
           ) : (
@@ -137,14 +137,14 @@ export default async function OcorrenciasOperadorPage({
                   <div
                     key={oc.id}
                     className={[
-                      'rounded-xl border bg-slate-900 p-4 space-y-3 transition-colors hover:border-slate-700',
-                      prazoVencido ? 'border-red-900/60' : 'border-slate-800',
+                      'rounded-xl border bg-card p-4 space-y-3 transition-colors hover:border-border',
+                      prazoVencido ? 'border-red-900/60' : 'border-border',
                     ].join(' ')}
                   >
                     {/* Linha superior: badges */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-wrap gap-1.5">
-                        <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${SEVERITY_COLOR[oc.severity] ?? 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                        <span className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase ${SEVERITY_COLOR[oc.severity] ?? 'bg-muted text-muted-foreground border-border'}`}>
                           {SEVERITY_LABEL[oc.severity] ?? oc.severity}
                         </span>
                         {prazoVencido && (
@@ -154,19 +154,19 @@ export default async function OcorrenciasOperadorPage({
                           </span>
                         )}
                       </div>
-                      <span className="shrink-0 text-xs text-slate-550 font-bold">
+                      <span className="shrink-0 text-xs text-muted-foreground font-bold">
                         {OCCURRENCE_STATUS_LABEL[oc.status] ?? oc.status}
                       </span>
                     </div>
 
                     {/* Descrição */}
                     <Link href={`/operador/ocorrencias/${oc.id}`} className="block group">
-                      <p className="text-sm font-bold text-slate-200 group-hover:text-sky-400 transition-colors line-clamp-1">{oc.category || 'Incidente'}</p>
-                      <p className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">{oc.description}</p>
+                      <p className="text-sm font-bold text-foreground group-hover:text-sky-400 transition-colors line-clamp-1">{oc.category || 'Incidente'}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1 leading-relaxed">{oc.description}</p>
                     </Link>
 
                     {/* Rodapé */}
-                    <div className="flex items-center justify-between gap-2 text-[10px] text-slate-550 pt-2 border-t border-slate-950/40">
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground pt-2 border-t border-border/40">
                       <span>{formatDatetime(oc.created_at)}</span>
                       <div className="flex items-center gap-2">
                         {hasPhoto && (
@@ -193,13 +193,13 @@ export default async function OcorrenciasOperadorPage({
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-1 text-sm">
               {page > 1 ? (
-                <Link href={`/operador/ocorrencias?page=${page - 1}${filter ? `&filter=${filter}` : ''}&view=list`} className="text-slate-400 hover:text-slate-200">
+                <Link href={`/operador/ocorrencias?page=${page - 1}${filter ? `&filter=${filter}` : ''}&view=list`} className="text-muted-foreground hover:text-foreground">
                   ← Anterior
                 </Link>
               ) : <span />}
-              <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+              <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
               {page < totalPages ? (
-                <Link href={`/operador/ocorrencias?page=${page + 1}${filter ? `&filter=${filter}` : ''}&view=list`} className="text-slate-400 hover:text-slate-200">
+                <Link href={`/operador/ocorrencias?page=${page + 1}${filter ? `&filter=${filter}` : ''}&view=list`} className="text-muted-foreground hover:text-foreground">
                   Próxima →
                 </Link>
               ) : <span />}

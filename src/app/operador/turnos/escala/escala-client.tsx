@@ -43,10 +43,10 @@ const SHIFT_CLASSES: Record<string, { border: string; bg: string; text: string; 
     label: 'Noite'
   },
   Folga: {
-    border: 'border-slate-800',
-    bg: 'bg-slate-900/30',
-    text: 'text-slate-500',
-    dot: 'bg-slate-700',
+    border: 'border-border',
+    bg: 'bg-card/30',
+    text: 'text-muted-foreground',
+    dot: 'bg-secondary',
     label: 'Folga'
   }
 }
@@ -253,29 +253,29 @@ export function EscalaClient({
   return (
     <div className="space-y-6">
       {/* Header with Navigation */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
-          <Link href={backHref} className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 mb-1">
+          <Link href={backHref} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mb-1">
             <ChevronLeft className="w-3.5 h-3.5" /> Voltar
           </Link>
           <h1 className="text-xl font-bold tracking-tight">Escala & Agenda</h1>
         </div>
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-1">
-          <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8 text-slate-400 hover:text-slate-100 hover:bg-slate-800">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-1">
+          <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-xs font-semibold px-2 min-w-[100px] text-center">
             {MONTH_NAMES[currentMonth - 1]} {currentYear}
           </span>
-          <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 text-slate-400 hover:text-slate-100 hover:bg-slate-800">
+          <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted">
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* Legend Block */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Legenda de Turnos</h3>
+      <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Legenda de Turnos</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {Object.entries(SHIFT_CLASSES).map(([key, style]) => (
             <div key={key} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${style.border} ${style.bg}`}>
@@ -291,21 +291,21 @@ export function EscalaClient({
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-slate-900/40 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-card/40 border border-border rounded-xl overflow-hidden shadow-2xl">
         {/* Days of week */}
-        <div className="grid grid-cols-7 border-b border-slate-850 bg-slate-900/80 text-center py-2 text-xs font-bold text-slate-400">
+        <div className="grid grid-cols-7 border-b border-border bg-card/80 text-center py-2 text-xs font-bold text-muted-foreground">
           {DAYS_OF_WEEK_SHORT.map((day, idx) => (
             <div key={idx}>{day}</div>
           ))}
         </div>
 
         {/* Day cells */}
-        <div className="grid grid-cols-7 divide-x divide-y divide-slate-850 bg-slate-950/20">
+        <div className="grid grid-cols-7 divide-x divide-y divide-border bg-background/20">
           {calendarCells.map((cell, idx) => {
             const { isMaintenanceDay, operatorScale, totalTasks, doneTasks, hasAlert } = getCellData(cell.dateStr)
 
             // Shift style selection
-            let cellStyle = 'border-slate-850 hover:bg-slate-900/30'
+            let cellStyle = 'border-border hover:bg-card/30'
             let dotColor = ''
             let shiftName = ''
 
@@ -328,7 +328,7 @@ export function EscalaClient({
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span className={`text-xs font-mono font-bold ${cell.isCurrentMonth ? 'text-slate-200' : 'text-slate-600'}`}>
+                  <span className={`text-xs font-mono font-bold ${cell.isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {cell.dayNum}
                   </span>
 
@@ -346,7 +346,7 @@ export function EscalaClient({
                   {operatorScale && !isMaintenanceDay && (
                     <div className="flex items-center gap-1">
                       <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-                      <span className="text-[10px] font-bold tracking-tight uppercase truncate max-w-[42px] sm:max-w-none text-slate-300">
+                      <span className="text-[10px] font-bold tracking-tight uppercase truncate max-w-[42px] sm:max-w-none text-foreground">
                         {shiftName}
                       </span>
                     </div>
@@ -354,7 +354,7 @@ export function EscalaClient({
 
                   {/* Tasks progress badge */}
                   {totalTasks > 0 && (
-                    <div className="text-[9px] font-semibold text-slate-500 flex items-center gap-0.5">
+                    <div className="text-[9px] font-semibold text-muted-foreground flex items-center gap-0.5">
                       <CheckSquare className="w-2.5 h-2.5" />
                       <span>{doneTasks}/{totalTasks}</span>
                     </div>
@@ -368,18 +368,18 @@ export function EscalaClient({
 
       {/* Side Details Drawer */}
       {selectedDateStr && selectedCellData && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md h-full bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-slide-in">
+        <div className="fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md h-full bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden animate-slide-in">
             {/* Header */}
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 sticky top-0 z-10">
+            <div className="p-5 border-b border-border flex items-center justify-between bg-card/90 sticky top-0 z-10">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-emerald-500" />
                 <div>
-                  <h2 className="text-base font-bold text-slate-200">Agenda do Dia</h2>
-                  <p className="text-xs text-slate-400 capitalize">{formatPtDate(selectedDateStr)}</p>
+                  <h2 className="text-base font-bold text-foreground">Agenda do Dia</h2>
+                  <p className="text-xs text-muted-foreground capitalize">{formatPtDate(selectedDateStr)}</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedDateStr(null)} className="h-8 w-8 text-slate-400 hover:text-slate-100">
+              <Button variant="ghost" size="icon" onClick={() => setSelectedDateStr(null)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -392,7 +392,7 @@ export function EscalaClient({
                   <Wrench className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                   <div>
                     <h4 className="text-sm font-bold text-red-400">Dia de Manutenção Programada</h4>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {selectedCellData.maintenanceDayInfo?.description || 'Os turnos regulares de operação estão suspensos neste dia.'}
                     </p>
                   </div>
@@ -401,11 +401,11 @@ export function EscalaClient({
 
               {/* Escala de Operação */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-300 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b border-border pb-2">
                   <UserCheck className="w-4 h-4 text-emerald-400" /> Escala do Dia
                 </h3>
                 {selectedCellData.isMaintenanceDay ? (
-                  <p className="text-xs text-slate-500 italic">Nenhum operador escalado devido à manutenção programada.</p>
+                  <p className="text-xs text-muted-foreground italic">Nenhum operador escalado devido à manutenção programada.</p>
                 ) : (
                   <div className="space-y-2">
                     {shifts.map((s) => {
@@ -414,21 +414,21 @@ export function EscalaClient({
                       const style = SHIFT_CLASSES[s.name] || SHIFT_CLASSES.Folga
 
                       return (
-                        <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-800 bg-slate-950/40">
+                        <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-background/40">
                           <div className="flex items-center gap-3">
                             <span className={`h-2 w-2 rounded-full ${style.dot}`} />
                             <div>
-                              <p className="text-xs font-bold text-slate-200">{s.name}</p>
-                              <p className="text-[10px] text-slate-500 font-mono">{s.start_time} - {s.end_time}</p>
+                              <p className="text-xs font-bold text-foreground">{s.name}</p>
+                              <p className="text-[10px] text-muted-foreground font-mono">{s.start_time} - {s.end_time}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {scale ? (
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isMe ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' : 'bg-slate-800 text-slate-300'}`}>
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isMe ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' : 'bg-muted text-foreground'}`}>
                                 {scale.operator.name} {isMe && '(Você)'}
                               </span>
                             ) : (
-                              <span className="text-xs text-slate-500 italic">Sem operador</span>
+                              <span className="text-xs text-muted-foreground italic">Sem operador</span>
                             )}
                           </div>
                         </div>
@@ -440,29 +440,29 @@ export function EscalaClient({
 
               {/* Checklist / Tarefas */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-300 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b border-border pb-2">
                   <CheckSquare className="w-4 h-4 text-amber-400" /> Checklist de Tarefas
                 </h3>
                 {selectedDayInstances.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">Nenhuma tarefa registrada para os turnos desta data.</p>
+                  <p className="text-xs text-muted-foreground italic">Nenhuma tarefa registrada para os turnos desta data.</p>
                 ) : (
                   <div className="space-y-3">
                     {selectedDayInstances.map((inst) => (
                       <div key={inst.id} className="space-y-2">
                         <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          <span className="text-xs font-bold text-slate-400">Turno: {inst.shift.name} ({inst.status === 'SCHEDULED' ? 'Planejado' : inst.status === 'OPEN' ? 'Ativo' : 'Concluído'})</span>
+                          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs font-bold text-muted-foreground">Turno: {inst.shift.name} ({inst.status === 'SCHEDULED' ? 'Planejado' : inst.status === 'OPEN' ? 'Ativo' : 'Concluído'})</span>
                         </div>
                         {inst.shift_tasks.length === 0 ? (
-                          <p className="text-[11px] text-slate-500 pl-5 italic">Nenhuma tarefa associada a este turno.</p>
+                          <p className="text-[11px] text-muted-foreground pl-5 italic">Nenhuma tarefa associada a este turno.</p>
                         ) : (
-                          <div className="space-y-2 pl-4 border-l border-slate-800">
+                          <div className="space-y-2 pl-4 border-l border-border">
                             {inst.shift_tasks.map((task: any) => (
-                              <div key={task.id} className="p-3 rounded-lg border border-slate-850 bg-slate-950/20 space-y-1">
+                              <div key={task.id} className="p-3 rounded-lg border border-border bg-background/20 space-y-1">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
-                                    <p className="text-xs font-bold text-slate-200">{task.title}</p>
-                                    {task.description && <p className="text-[10px] text-slate-400 mt-0.5">{task.description}</p>}
+                                    <p className="text-xs font-bold text-foreground">{task.title}</p>
+                                    {task.description && <p className="text-[10px] text-muted-foreground mt-0.5">{task.description}</p>}
                                   </div>
                                   <Badge className={
                                     task.status === 'DONE' ? 'bg-green-950 text-green-400 hover:bg-green-950 border border-green-900/40 text-[9px]' :
@@ -473,7 +473,7 @@ export function EscalaClient({
                                   </Badge>
                                 </div>
                                 {task.assignee && (
-                                  <div className="flex items-center gap-1 pt-1.5 border-t border-slate-850 text-[10px] text-slate-500">
+                                  <div className="flex items-center gap-1 pt-1.5 border-t border-border text-[10px] text-muted-foreground">
                                     <User className="w-3 h-3" />
                                     <span>Executor: {task.assignee.name}</span>
                                   </div>
@@ -490,22 +490,22 @@ export function EscalaClient({
 
               {/* Análises Agendadas */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-300 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b border-border pb-2">
                   <FileCheck className="w-4 h-4 text-sky-400" /> Análises Agendadas
                 </h3>
                 {selectedCellData.daySchedules.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">Nenhum agendamento de análise ativa para este dia da semana.</p>
+                  <p className="text-xs text-muted-foreground italic">Nenhum agendamento de análise ativa para este dia da semana.</p>
                 ) : (
                   <div className="space-y-2">
                     {selectedCellData.daySchedules.map((s) => (
-                      <div key={s.id} className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 space-y-1">
+                      <div key={s.id} className="p-3 rounded-lg border border-border bg-background/40 space-y-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-slate-200">{s.collection_point.name}</p>
+                          <p className="text-xs font-bold text-foreground">{s.collection_point.name}</p>
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.executor_role === 'OPERATOR' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
                             {s.executor_role === 'OPERATOR' ? 'Operador' : 'Técnico'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[11px] text-muted-foreground">
                           {s.parameter.name} ({s.parameter.unit}) · Tipo: {s.sample_type === 'FIELD' ? 'Campo' : s.sample_type === 'INTERNAL' ? 'Interna' : 'Externa'}
                         </p>
                       </div>
@@ -516,7 +516,7 @@ export function EscalaClient({
 
               {/* Ocorrências e Corretivas */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-slate-300 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5 border-b border-border pb-2">
                   <AlertTriangle className="w-4 h-4 text-red-400" /> Ocorrências & Manutenções
                 </h3>
 
@@ -527,18 +527,18 @@ export function EscalaClient({
                     {selectedCellData.dayOccurrences.map((o) => (
                       <div key={o.id} className="p-3 rounded-lg border border-red-950/50 bg-red-950/5 space-y-1">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold text-slate-200">{o.collection_point?.name || 'Geral'}</p>
+                          <p className="text-xs font-bold text-foreground">{o.collection_point?.name || 'Geral'}</p>
                           <Badge variant="outline" className={
                             o.severity === 'CRITICAL' ? 'border-red-500/40 text-red-400 bg-red-950/20 text-[9px]' :
                             o.severity === 'HIGH' ? 'border-orange-500/40 text-orange-400 bg-orange-950/20 text-[9px]' :
                             o.severity === 'MEDIUM' ? 'border-yellow-500/40 text-yellow-400 bg-yellow-950/20 text-[9px]' :
-                            'border-slate-500/40 text-slate-400 bg-slate-800/20 text-[9px]'
+                            'border-border/40 text-muted-foreground bg-muted/20 text-[9px]'
                           }>
                             {o.severity}
                           </Badge>
                         </div>
-                        <p className="text-xs text-slate-300">{o.description}</p>
-                        <p className="text-[10px] text-slate-500">Relatado por: {o.reporter.name}</p>
+                        <p className="text-xs text-foreground">{o.description}</p>
+                        <p className="text-[10px] text-muted-foreground">Relatado por: {o.reporter.name}</p>
                       </div>
                     ))}
                   </div>
@@ -549,10 +549,10 @@ export function EscalaClient({
                   <div className="space-y-2">
                     <p className="text-[11px] font-bold text-orange-400 tracking-wide uppercase">Manutenções Corretivas</p>
                     {selectedCellData.dayCorrectives.map((c) => (
-                      <div key={c.id} className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 space-y-1">
-                        <p className="text-xs font-bold text-slate-200">{c.equipment.name}</p>
-                        <p className="text-xs text-slate-400">{c.description}</p>
-                        <div className="flex justify-between items-center text-[10px] text-slate-500">
+                      <div key={c.id} className="p-3 rounded-lg border border-border bg-background/40 space-y-1">
+                        <p className="text-xs font-bold text-foreground">{c.equipment.name}</p>
+                        <p className="text-xs text-muted-foreground">{c.description}</p>
+                        <div className="flex justify-between items-center text-[10px] text-muted-foreground">
                           <span>Status: {c.status}</span>
                           <span>Responsável: {c.responsible.name}</span>
                         </div>
@@ -566,10 +566,10 @@ export function EscalaClient({
                   <div className="space-y-2">
                     <p className="text-[11px] font-bold text-emerald-400 tracking-wide uppercase">Manutenções Preventivas</p>
                     {selectedCellData.dayPreventives.map((p) => (
-                      <div key={p.id} className="p-3 rounded-lg border border-slate-800 bg-slate-950/40 space-y-1">
-                        <p className="text-xs font-bold text-slate-200">{p.equipment.name}</p>
-                        <p className="text-xs text-slate-400">Patrimônio: {p.equipment.serial_number || 'S/N'}</p>
-                        <div className="flex justify-between items-center text-[10px] text-slate-500">
+                      <div key={p.id} className="p-3 rounded-lg border border-border bg-background/40 space-y-1">
+                        <p className="text-xs font-bold text-foreground">{p.equipment.name}</p>
+                        <p className="text-xs text-muted-foreground">Patrimônio: {p.equipment.serial_number || 'S/N'}</p>
+                        <div className="flex justify-between items-center text-[10px] text-muted-foreground">
                           <span>Status: {p.status}</span>
                         </div>
                       </div>
@@ -580,7 +580,7 @@ export function EscalaClient({
                 {selectedCellData.dayOccurrences.length === 0 &&
                  selectedCellData.dayCorrectives.length === 0 &&
                  selectedCellData.dayPreventives.length === 0 && (
-                  <p className="text-xs text-slate-500 italic">Sem ocorrências ou manutenções registradas para este dia.</p>
+                  <p className="text-xs text-muted-foreground italic">Sem ocorrências ou manutenções registradas para este dia.</p>
                 )}
               </div>
             </div>

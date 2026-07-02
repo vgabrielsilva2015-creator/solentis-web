@@ -46,7 +46,7 @@ const CHIP_CLS =
 const chipActive = (active: boolean) =>
   active
     ? 'bg-[#3ad0d6]/15 border-[#3ad0d6] text-[#3ad0d6]'
-    : 'bg-slate-800 border-slate-700 text-slate-300'
+    : 'bg-muted border-border text-foreground'
 
 export function ReadingForm({ collectionPoints, parameters, allowedParams }: Props) {
   const router = useRouter()
@@ -143,13 +143,13 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
 
   return (
     <div className="space-y-5">
-      <Link href="/operador/leituras" className="inline-block text-sm text-slate-400 hover:text-slate-200">
+      <Link href="/operador/leituras" className="inline-block text-sm text-muted-foreground hover:text-foreground">
         ← Voltar para leituras
       </Link>
 
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Nova leitura</h1>
-        <p className="text-xs text-slate-400">Registre a leitura de campo do turno atual.</p>
+        <p className="text-xs text-muted-foreground">Registre a leitura de campo do turno atual.</p>
       </div>
 
       <form
@@ -181,7 +181,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
 
         {/* ── Ponto de coleta (chips) ───────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">Ponto de coleta</label>
+          <label className="text-sm font-medium text-foreground">Ponto de coleta</label>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {collectionPoints.map((cp) => {
               const active = collectionPointId === cp.id
@@ -206,9 +206,9 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
 
         {/* ── Parâmetro (opcional, chips) ────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-slate-300">
+          <label className="text-sm font-medium text-foreground">
             Parâmetro{' '}
-            <span className="font-normal text-slate-500">(opcional)</span>
+            <span className="font-normal text-muted-foreground">(opcional)</span>
           </label>
           <div className="flex gap-2 overflow-x-auto pb-1">
             <button
@@ -246,9 +246,9 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
         {selectedParam && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label htmlFor="value" className="text-sm font-medium text-slate-300">Valor medido</label>
+              <label htmlFor="value" className="text-sm font-medium text-foreground">Valor medido</label>
               {hasLimits && (
-                <span className="text-xs font-mono text-slate-500">limite {limitLabel}</span>
+                <span className="text-xs font-mono text-muted-foreground">limite {limitLabel}</span>
               )}
             </div>
             <div className="relative">
@@ -264,15 +264,15 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
                 disabled={isPending}
                 required
                 className={cn(
-                  'w-full h-16 rounded-2xl bg-slate-800 px-4 pr-16 text-3xl font-bold font-mono text-slate-100 outline-none border-2 transition-colors disabled:opacity-50',
+                  'w-full h-16 rounded-2xl bg-muted px-4 pr-16 text-3xl font-bold font-mono text-foreground outline-none border-2 transition-colors disabled:opacity-50',
                   nonConformant === true
                     ? 'border-red-500'
                     : nonConformant === false
                       ? 'border-emerald-500'
-                      : 'border-slate-700',
+                      : 'border-border',
                 )}
               />
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                 {selectedParam.unit}
               </span>
             </div>
@@ -293,9 +293,9 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
 
         {/* ── Observação ─────────────────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="notes" className="text-sm font-medium text-slate-300">
+          <label htmlFor="notes" className="text-sm font-medium text-foreground">
             Observação{' '}
-            <span className="font-normal text-slate-500">(opcional)</span>
+            <span className="font-normal text-muted-foreground">(opcional)</span>
           </label>
           <textarea
             id="notes"
@@ -306,7 +306,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             disabled={isPending}
-            className="w-full resize-none rounded-md border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:opacity-50"
+            className="w-full resize-none rounded-md border border-border bg-muted px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
           />
           {state.fieldErrors?.notes && (
             <p className="text-xs text-red-400">{state.fieldErrors.notes[0]}</p>
@@ -315,7 +315,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
 
         {/* ── Data/hora da leitura ───────────────────────────────────────── */}
         <div className="space-y-1.5">
-          <label htmlFor="recorded_at" className="text-sm font-medium text-slate-300">
+          <label htmlFor="recorded_at" className="text-sm font-medium text-foreground">
             Data/hora da leitura
           </label>
           <Input
@@ -326,7 +326,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
             onChange={(e) => setRecordedAt(e.target.value)}
             disabled={isPending}
             required
-            className="border-slate-700 bg-slate-800 text-slate-100 focus-visible:ring-slate-500"
+            className="border-border bg-muted text-foreground focus-visible:ring-ring"
           />
           {state.fieldErrors?.recorded_at && (
             <p className="text-xs text-red-400">{state.fieldErrors.recorded_at[0]}</p>
@@ -344,7 +344,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
         <Button
           type="submit"
           disabled={isPending}
-          className="h-14 w-full bg-slate-100 text-slate-900 text-base hover:bg-white disabled:opacity-50"
+          className="h-14 w-full bg-primary text-primary-foreground text-base hover:bg-primary/90 disabled:opacity-50"
         >
           {isPending ? 'Registrando…' : 'Registrar leitura'}
         </Button>

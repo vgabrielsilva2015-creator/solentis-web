@@ -55,10 +55,10 @@ export default async function LeituraListPage({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">Leituras</h1>
-            <p className="text-xs text-slate-400">{total} registro(s) no total</p>
+            <p className="text-xs text-muted-foreground">{total} registro(s) no total</p>
           </div>
           <Link href="/operador/leituras/nova">
-            <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8">
               + Nova
             </Button>
           </Link>
@@ -66,20 +66,20 @@ export default async function LeituraListPage({
 
         {/* Filtros rápidos */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <Link href="/operador/leituras" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${!filter ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+          <Link href="/operador/leituras" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${!filter ? 'bg-brand/20 text-brand border-brand/30' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
             Todas
           </Link>
-          <Link href="/operador/leituras?filter=conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'conformant' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+          <Link href="/operador/leituras?filter=conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'conformant' ? 'bg-brand/20 text-brand border-brand/30' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
             Conforme
           </Link>
-          <Link href="/operador/leituras?filter=non-conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'non-conformant' ? 'bg-red-900/30 text-red-400 border-red-900/50' : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'}`}>
+          <Link href="/operador/leituras?filter=non-conformant" className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border ${filter === 'non-conformant' ? 'bg-red-900/30 text-red-400 border-red-900/50' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
             Não Conforme
           </Link>
         </div>
 
         {/* Lista de leituras */}
         {readings.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-border bg-card py-14 text-center text-sm text-muted-foreground">
             Nenhuma leitura registrada ainda.
           </div>
         ) : (
@@ -88,19 +88,19 @@ export default async function LeituraListPage({
               <div
                 key={r.id}
                 className={[
-                  'rounded-xl border bg-slate-900 p-4 space-y-1.5',
+                  'rounded-xl border bg-card p-4 space-y-1.5',
                   r.is_non_conformant === true
                     ? 'border-red-900/60'
-                    : 'border-slate-800',
+                    : 'border-border',
                 ].join(' ')}
               >
                 {/* Linha superior: ponto + badge */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-slate-100 leading-snug">
+                    <p className="text-sm font-medium text-foreground leading-snug">
                       {r.collection_point.name}
                     </p>
-                    <p className="text-xs text-slate-500">{formatDatetime(r.recorded_at)}</p>
+                    <p className="text-xs text-muted-foreground">{formatDatetime(r.recorded_at)}</p>
                   </div>
                   {r.is_non_conformant === true && (
                     <span className="shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-red-950/60 text-red-400 border border-red-900/50">
@@ -111,19 +111,19 @@ export default async function LeituraListPage({
 
                 {/* Valor do parâmetro ou indicação de observação visual */}
                 {r.parameter ? (
-                  <p className="text-sm text-slate-300">
+                  <p className="text-sm text-foreground">
                     <span className="font-medium">{r.parameter.name}:</span>{' '}
                     {r.value !== null
                       ? `${r.value}${r.unit ? ` ${r.unit}` : ''}`
                       : '—'}
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-500 italic">Observação visual</p>
+                  <p className="text-xs text-muted-foreground italic">Observação visual</p>
                 )}
 
                 {/* Observação livre (truncada) */}
                 {r.notes && (
-                  <p className="text-xs text-slate-500 line-clamp-2">{r.notes}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{r.notes}</p>
                 )}
               </div>
             ))}
@@ -136,20 +136,20 @@ export default async function LeituraListPage({
             {page > 1 ? (
               <Link
                 href={`/operador/leituras?page=${page - 1}`}
-                className="text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground"
               >
                 ← Anterior
               </Link>
             ) : (
               <span />
             )}
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-muted-foreground">
               Página {page} de {totalPages}
             </span>
             {page < totalPages ? (
               <Link
                 href={`/operador/leituras?page=${page + 1}`}
-                className="text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Próxima →
               </Link>
@@ -161,7 +161,7 @@ export default async function LeituraListPage({
 
         {/* Link de volta ao dashboard */}
         <div className="pt-2">
-          <Link href="/operador/dashboard" className="text-xs text-slate-600 hover:text-slate-400">
+          <Link href="/operador/dashboard" className="text-xs text-muted-foreground hover:text-muted-foreground">
             ← Voltar ao painel
           </Link>
         </div>

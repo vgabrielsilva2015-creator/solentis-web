@@ -21,15 +21,15 @@ export function ConfirmForm({ handoverId }: { handoverId: string }) {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-slate-300">
+        <label className="text-sm font-medium text-foreground">
           Suas observações
-          <span className="ml-1 text-slate-500 font-normal">(opcional)</span>
+          <span className="ml-1 text-muted-foreground font-normal">(opcional)</span>
         </label>
         <textarea
           name="incoming_observations"
           rows={3}
           placeholder="Observações sobre o recebimento do turno"
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none resize-none"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-600 focus:outline-none resize-none"
         />
       </div>
 

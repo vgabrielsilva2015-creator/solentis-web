@@ -54,7 +54,7 @@ export default async function ConfirmarPage({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h1 className="text-xl font-semibold">Confirmar recebimento</h1>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {handover.shift_instance.shift.name} · sainte: {handover.outgoing_user.name}
             </p>
           </div>
@@ -66,37 +66,37 @@ export default async function ConfirmarPage({
         </div>
 
         {/* Resumo do turno sainte */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Resumo do turno</p>
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resumo do turno</p>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
-              <p className="text-2xl font-bold text-slate-100">{checklist.readings_count ?? 0}</p>
-              <p className="text-xs text-slate-500">leitura(s)</p>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <p className="text-2xl font-bold text-foreground">{checklist.readings_count ?? 0}</p>
+              <p className="text-xs text-muted-foreground">leitura(s)</p>
             </div>
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
-              <p className={['text-2xl font-bold', (checklist.open_occurrences_count ?? 0) > 0 ? 'text-amber-400' : 'text-slate-100'].join(' ')}>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <p className={['text-2xl font-bold', (checklist.open_occurrences_count ?? 0) > 0 ? 'text-amber-400' : 'text-foreground'].join(' ')}>
                 {checklist.open_occurrences_count ?? 0}
               </p>
-              <p className="text-xs text-slate-500">ocorrência(s) em aberto</p>
+              <p className="text-xs text-muted-foreground">ocorrência(s) em aberto</p>
             </div>
           </div>
 
           {checklist.pending_items && (
             <div className="rounded-lg bg-amber-950/20 border border-amber-900/40 px-3 py-2">
               <p className="text-xs font-medium text-amber-400 mb-0.5">Itens pendentes</p>
-              <p className="text-xs text-slate-300">{checklist.pending_items}</p>
+              <p className="text-xs text-foreground">{checklist.pending_items}</p>
             </div>
           )}
 
           {handover.outgoing_observations && (
-            <div className="rounded-lg bg-slate-800/40 px-3 py-2">
-              <p className="text-xs font-medium text-slate-400 mb-0.5">Observações do sainte</p>
-              <p className="text-xs text-slate-300">{handover.outgoing_observations}</p>
+            <div className="rounded-lg bg-muted/40 px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">Observações do sainte</p>
+              <p className="text-xs text-foreground">{handover.outgoing_observations}</p>
             </div>
           )}
 
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-muted-foreground">
             Prazo de confirmação: {formatDatetime(new Date(handover.timeout_at))}
           </p>
         </div>

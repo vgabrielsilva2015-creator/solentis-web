@@ -24,9 +24,9 @@ export default async function AbrirTurnoPage() {
       </div>
 
       {shifts.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 py-12 text-center space-y-2">
-          <p className="text-sm text-slate-500">Nenhum turno configurado.</p>
-          <p className="text-xs text-slate-600">Peça ao gestor para cadastrar os turnos.</p>
+        <div className="rounded-xl border border-border bg-card py-12 text-center space-y-2">
+          <p className="text-sm text-muted-foreground">Nenhum turno configurado.</p>
+          <p className="text-xs text-muted-foreground">Peça ao gestor para cadastrar os turnos.</p>
         </div>
       ) : (
         <ShiftForm shifts={shifts} />
