@@ -10,6 +10,10 @@ import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
 import { getLogger } from '@/lib/logger'
+import { saveUpload } from '@/lib/storage'
+
+const ALLOWED_IMG = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_IMG_BYTES = 5 * 1024 * 1024
 
 
 async function requireOperator() {
@@ -128,6 +132,17 @@ export async function registrarLeitura(
     orderBy: { opened_at: 'desc' },
   })
 
+  let photoFilename: string | null = null
+  const photoFile = formData.get('photo') as File | null
+  if (photoFile && photoFile.size > 0) {
+    if (!ALLOWED_IMG.includes(photoFile.type)) return { error: 'Foto em formato inválido. Use JPG, PNG ou WEBP.' }
+    if (photoFile.size > MAX_IMG_BYTES) return { error: 'Foto muito grande. Máximo 5 MB.' }
+    const ext = photoFile.type === 'image/jpeg' ? 'jpg' : photoFile.type.split('/')[1]
+    const filename = `${crypto.randomUUID()}.${ext}`
+    const buffer = Buffer.from(await photoFile.arrayBuffer())
+    photoFilename = await saveUpload('readings', filename, buffer, photoFile.type)
+  }
+
   await prisma.$transaction(async (tx) => {
     const reading = await tx.reading.create({
       data: {
@@ -140,6 +155,7 @@ export async function registrarLeitura(
         notes:               parsed.data.notes,
         is_non_conformant:   isNonConformant,
         origin:              'MANUAL',
+        photo_filename:      photoFilename,
         recorded_by:         userId,
         recorded_at:         localInputToUTC(parsed.data.recorded_at),
       },

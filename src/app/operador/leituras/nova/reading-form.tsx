@@ -244,7 +244,7 @@ export function ReadingForm({
             {/* ── Ponto de coleta (chips) — modo livre ─────────────────── */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">Ponto de coleta</label>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                 {collectionPoints.map((cp) => {
                   const active = collectionPointId === cp.id
                   return (
@@ -272,7 +272,7 @@ export function ReadingForm({
                 Parâmetro{' '}
                 <span className="font-normal text-muted-foreground">(opcional)</span>
               </label>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                 <button
                   type="button"
                   onClick={() => { setParameterId(''); setValueStr('') }}
@@ -404,6 +404,16 @@ export function ReadingForm({
             {state.error}
           </p>
         )}
+
+        {/* ── Foto da leitura (opcional) ─────────────────────────────── */}
+        <div className="space-y-1.5">
+          <label htmlFor="photo" className="text-sm font-medium text-foreground">
+            Foto da leitura <span className="font-normal text-muted-foreground">(opcional)</span>
+          </label>
+          <input id="photo" name="photo" type="file" accept="image/*" capture="environment" disabled={isPending}
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-4 file:py-2 file:text-sm file:text-foreground hover:file:bg-muted/70" />
+          <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP. Máx. 5 MB.</p>
+        </div>
 
         {/* ── Submit ─────────────────────────────────────────────────────── */}
         <Button

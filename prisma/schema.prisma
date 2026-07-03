@@ -458,6 +458,7 @@ model Reading {
   is_non_conformant   Boolean?
   origin              String   @default("MANUAL")
   metadata_origin     String?
+  photo_filename      String?
   recorded_by         String
   recorded_at         DateTime
   created_at          DateTime @default(now())
