@@ -4,8 +4,8 @@ import { Resend } from 'resend'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'Apenas SUPER_ADMIN' }, { status: 403 })
+  if (!session || !['SUPER_ADMIN', 'MANAGER'].includes(session.user.role)) {
+    return NextResponse.json({ error: 'Apenas SUPER_ADMIN ou MANAGER' }, { status: 403 })
   }
 
   const to = new URL(req.url).searchParams.get('to')
