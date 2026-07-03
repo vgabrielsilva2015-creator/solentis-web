@@ -81,7 +81,15 @@ export default async function GestorLeiturasPage({
                 {readings.map((r) => (
                   <tr key={r.id} className="hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDatetime(r.recorded_at)}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.collection_point.name}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {r.collection_point.name}
+                      {r.photo_filename && (
+                        <>
+                          {' '}
+                          <a href={`/api/readings/${r.id}/photo`} target="_blank" rel="noopener" className="text-xs font-normal text-brand hover:underline">📷 Ver foto</a>
+                        </>
+                      )}
+                    </td>
                     <td className="px-4 py-3">{r.parameter?.name || 'Observação Visual'}</td>
                     <td className="px-4 py-3">
                       {r.value !== null ? (

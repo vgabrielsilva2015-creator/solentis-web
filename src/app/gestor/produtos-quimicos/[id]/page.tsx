@@ -9,6 +9,7 @@ import {
 } from '@/lib/stock-utils'
 import { EditForm } from './edit-form'
 import { ToggleButton } from './toggle-button'
+import { DeleteButton } from './delete-button'
 import { BackButton } from '@/components/back-button'
 import { getTenantId } from '@/lib/tenant'
 
@@ -136,6 +137,7 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
       </details>
 
       <ToggleButton id={product.id} is_active={product.is_active} />
+      <DeleteButton id={product.id} hasMovements={movements.length > 0} />
 
       {/* Histórico de movimentação */}
       <div>

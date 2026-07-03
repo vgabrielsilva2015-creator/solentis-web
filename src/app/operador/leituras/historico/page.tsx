@@ -123,6 +123,10 @@ export default async function HistoricoLeituraPage({
                 {r.notes && (
                   <p className="text-xs text-muted-foreground line-clamp-2">{r.notes}</p>
                 )}
+
+                {r.photo_filename && (
+                  <a href={`/api/readings/${r.id}/photo`} target="_blank" rel="noopener" className="text-xs text-brand hover:underline">📷 Ver foto</a>
+                )}
               </div>
             ))}
           </div>

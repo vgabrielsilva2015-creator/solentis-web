@@ -167,3 +167,23 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
   revalidatePath('/gestor/dashboard')
   return { success: true }
 }
+
+export async function excluirProduto(id: string) {
+  await requireManager()
+  const tenantId = await getTenantId()
+
+  const [entries, exits, counts] = await Promise.all([
+    prisma.chemicalStockEntry.count({ where: { tenant_id: tenantId, product_id: id } }),
+    prisma.chemicalStockExit.count({ where: { tenant_id: tenantId, product_id: id } }),
+    prisma.chemicalStockCount.count({ where: { tenant_id: tenantId, product_id: id } }),
+  ])
+
+  if (entries + exits + counts > 0) {
+    return { error: 'Este produto possui movimentações registradas e não pode ser excluído. Use "Desativar" para tirá-lo de uso preservando o histórico.' }
+  }
+
+  await prisma.chemicalProduct.deleteMany({ where: { id, tenant_id: tenantId } })
+  revalidatePath('/gestor/produtos-quimicos')
+  revalidatePath('/gestor/dashboard')
+  redirect('/gestor/produtos-quimicos')
+}
