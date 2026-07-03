@@ -40,10 +40,19 @@ export default async function ConfirmarPage({
   if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) redirect('/operador/turnos')
   if (handover.status !== 'PENDING') redirect('/operador/turnos')
 
+  // Buscar turnos disponíveis para o operador entrante abrir junto
+  const availableShifts = await prisma.shift.findMany({
+    where:   { tenant_id: (await getTenantId()), is_active: true },
+    select:  { id: true, name: true, start_time: true, end_time: true },
+    orderBy: { name: 'asc' },
+  })
+
   const checklist = JSON.parse((handover.checklist_data as string) || '{}') as {
     readings_count?: number
     open_occurrences_count?: number
     pending_items?: string
+    pending_tasks_count?: number
+    pending_tasks?: string[]
   }
 
   const vencido = new Date(handover.timeout_at) < new Date()
@@ -89,6 +98,22 @@ export default async function ConfirmarPage({
             </div>
           )}
 
+          {(checklist.pending_tasks_count ?? 0) > 0 && (
+            <div className="rounded-lg bg-amber-950/20 border border-amber-900/40 px-3 py-2">
+              <p className="text-xs font-medium text-amber-400 mb-0.5">
+                {checklist.pending_tasks_count} tarefa(s) pendente(s)
+              </p>
+              <ul className="space-y-0.5">
+                {(checklist.pending_tasks ?? []).map((title, i) => (
+                  <li key={i} className="text-xs text-slate-300">• {title}</li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-amber-600 mt-1">
+                Serão migradas automaticamente ao abrir seu turno.
+              </p>
+            </div>
+          )}
+
           {handover.outgoing_observations && (
             <div className="rounded-lg bg-slate-800/40 px-3 py-2">
               <p className="text-xs font-medium text-slate-400 mb-0.5">Observações do sainte</p>
@@ -101,7 +126,7 @@ export default async function ConfirmarPage({
           </p>
         </div>
 
-        <ConfirmForm handoverId={handoverId} />
+        <ConfirmForm handoverId={handoverId} shifts={availableShifts} />
 
     </main>
   )

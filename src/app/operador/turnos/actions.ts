@@ -52,6 +52,10 @@ const ConfirmarPassagemSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
   ),
+  shift_id: z.preprocess(
+    (v) => (v === '' || v == null ? null : String(v)),
+    z.string().nullable(),
+  ),
 })
 
 const ConcluirTarefaSchema = z.object({
@@ -255,6 +259,7 @@ export async function confirmarPassagem(
 
   const parsed = ConfirmarPassagemSchema.safeParse({
     incoming_observations: formData.get('incoming_observations'),
+    shift_id:              formData.get('shift_id'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -280,6 +285,7 @@ export async function confirmarPassagem(
   const now = new Date()
 
   await prisma.$transaction(async (tx) => {
+    // Confirma a passagem
     await tx.shiftHandover.updateMany({ where: { id: handoverId , tenant_id: (await getTenantId()) }, data: {
         status:                'CONFIRMED',
         confirmed_at:          now,
@@ -287,8 +293,71 @@ export async function confirmarPassagem(
         incoming_observations: parsed.data.incoming_observations,
       },
     })
+    // Fecha o turno anterior
     await tx.shiftInstance.updateMany({ where: { id: handover.shift_instance.id , tenant_id: (await getTenantId()) }, data:  { status: 'CLOSED', closed_at: now },
     })
+
+    // Se o operador entrante selecionou um turno, abre automaticamente
+    if (parsed.data.shift_id) {
+      const today = normalizarData(new Date())
+      const tenantId = await getTenantId()
+
+      // Verifica se já não existe turno aberto para este período
+      const existingOpen = await tx.shiftInstance.findFirst({
+        where: {
+          tenant_id: tenantId,
+          shift_id:  parsed.data.shift_id,
+          date:      today,
+          status:    { in: ['OPEN', 'HANDOVER_PENDING'] },
+        },
+      })
+
+      if (!existingOpen) {
+        // Verifica se há instância pré-agendada
+        const scheduled = await tx.shiftInstance.findFirst({
+          where: {
+            tenant_id: tenantId,
+            shift_id:  parsed.data.shift_id,
+            date:      today,
+            status:    'SCHEDULED',
+          },
+        })
+
+        let newInstanceId: string
+
+        if (scheduled) {
+          await tx.shiftInstance.updateMany({
+            where: { id: scheduled.id, tenant_id: tenantId },
+            data: { opened_by: userId, opened_at: now, status: 'OPEN' },
+          })
+          newInstanceId = scheduled.id
+        } else {
+          const newInst = await tx.shiftInstance.create({
+            data: {
+              tenant_id: tenantId,
+              shift_id:  parsed.data.shift_id,
+              date:      today,
+              opened_by: userId,
+              opened_at: now,
+              status:    'OPEN',
+            },
+          })
+          newInstanceId = newInst.id
+        }
+
+        // Migrar tarefas pendentes do turno anterior para o novo
+        await tx.shiftTask.updateMany({
+          where: {
+            tenant_id:         tenantId,
+            shift_instance_id: handover.shift_instance.id,
+            status:            'PENDING',
+          },
+          data: {
+            shift_instance_id: newInstanceId,
+          },
+        })
+      }
+    }
   })
 
   revalidatePath('/operador/turnos')
@@ -394,4 +463,141 @@ export async function pularTarefa(taskId: string): Promise<void> {
   })
   revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
   revalidatePath('/operador/turnos')
+}
+
+// ─── Assumir posto (turno anterior esquecido) ─────────────────────────────────
+
+const AssumirPostoSchema = z.object({
+  old_instance_id: z.string().min(1, 'ID do turno anterior obrigatório'),
+  new_shift_id: z.string().min(1, 'Selecione o turno a abrir'),
+})
+
+export async function assumirPosto(
+  _prev: TurnoFormState,
+  formData: FormData,
+): Promise<TurnoFormState> {
+  const session = await requireOperator()
+  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem assumir postos.' }
+
+  const parsed = AssumirPostoSchema.safeParse({
+    old_instance_id: formData.get('old_instance_id'),
+    new_shift_id:    formData.get('new_shift_id'),
+  })
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const userId = await resolveUserId(session.user.email!)
+  if (!userId) return { error: 'Sessão inválida.' }
+
+  const tenantId = await getTenantId()
+
+  const oldInstance = await prisma.shiftInstance.findFirst({
+    where: { id: parsed.data.old_instance_id, tenant_id: tenantId, status: 'OPEN' },
+    include: {
+      shift:  { select: { handover_timeout_minutes: true } },
+      opener: { select: { name: true } },
+    },
+  })
+  if (!oldInstance) return { error: 'Turno anterior não encontrado ou já fechado.' }
+  if (oldInstance.opened_by === userId) return { error: 'Você não pode assumir seu próprio turno.' }
+
+  const now = new Date()
+  const today = normalizarData(new Date())
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Cria registro de handover automático/compulsório
+    const timeoutAt = new Date(now.getTime() + 1)
+    await tx.shiftHandover.create({
+      data: {
+        tenant_id:             tenantId,
+        shift_instance_id:     oldInstance.id,
+        outgoing_user_id:      oldInstance.opened_by,
+        incoming_user_id:      userId,
+        checklist_data:        JSON.stringify({
+          readings_count: 0,
+          open_occurrences_count: 0,
+          pending_items: '',
+          pending_tasks_count: 0,
+          pending_tasks: [],
+          auto_takeover: true,
+        }),
+        outgoing_observations: `Passagem automática - Posto assumido compulsoriamente`,
+        incoming_observations: `Posto assumido pelo operador (turno anterior não foi encerrado)`,
+        handover_at:           now,
+        timeout_at:            timeoutAt,
+        confirmed_at:          now,
+        status:                'CONFIRMED',
+      },
+    })
+
+    // Fecha o turno anterior
+    await tx.shiftInstance.updateMany({
+      where: { id: oldInstance.id, tenant_id: tenantId },
+      data:  { status: 'CLOSED', closed_at: now },
+    })
+
+    // Abre o novo turno
+    const existing = await tx.shiftInstance.findFirst({
+      where: {
+        tenant_id: tenantId,
+        shift_id:  parsed.data.new_shift_id,
+        date:      today,
+        status:    { in: ['OPEN', 'HANDOVER_PENDING'] },
+      },
+    })
+    if (existing) {
+      return { error: 'Já existe um turno aberto para este período.' } as TurnoFormState
+    }
+
+    const scheduled = await tx.shiftInstance.findFirst({
+      where: {
+        tenant_id: tenantId,
+        shift_id:  parsed.data.new_shift_id,
+        date:      today,
+        status:    'SCHEDULED',
+      },
+    })
+
+    let newInstanceId: string
+
+    if (scheduled) {
+      await tx.shiftInstance.updateMany({
+        where: { id: scheduled.id, tenant_id: tenantId },
+        data:  { opened_by: userId, opened_at: now, status: 'OPEN' },
+      })
+      newInstanceId = scheduled.id
+    } else {
+      const newInst = await tx.shiftInstance.create({
+        data: {
+          tenant_id: tenantId,
+          shift_id:  parsed.data.new_shift_id,
+          date:      today,
+          opened_by: userId,
+          opened_at: now,
+          status:    'OPEN',
+        },
+      })
+      newInstanceId = newInst.id
+    }
+
+    // Migrar tarefas pendentes
+    await tx.shiftTask.updateMany({
+      where: {
+        tenant_id:         tenantId,
+        shift_instance_id: oldInstance.id,
+        status:            'PENDING',
+      },
+      data: {
+        shift_instance_id: newInstanceId,
+      },
+    })
+
+    return null
+  })
+
+  if (result?.error) return result
+  revalidatePath('/operador/turnos')
+  revalidatePath('/operador/dashboard')
+  return { success: true }
 }

@@ -15,7 +15,7 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings] =
+  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings, otherOpenShifts] =
     await Promise.all([
       userId
         ? prisma.occurrence.count({
@@ -103,7 +103,22 @@ export default async function OperadorDashboard() {
           recorded_at: { gte: today },
         },
         select: { collection_point_id: true, parameter_id: true }
-      })
+      }),
+
+      // Turnos abertos de outros operadores (para detectar atrasados)
+      userId
+        ? prisma.shiftInstance.findMany({
+            where: {
+              tenant_id: tenantId,
+              status:    'OPEN',
+              opened_by: { not: userId },
+            },
+            include: {
+              shift:  { select: { name: true, start_time: true, end_time: true } },
+              opener: { select: { name: true } },
+            },
+          })
+        : Promise.resolve([]),
     ])
 
   // Filtrar checklist do dia
@@ -116,6 +131,14 @@ export default async function OperadorDashboard() {
     return !doneReadings.some(
       r => r.collection_point_id === s.collection_point_id && r.parameter_id === s.parameter_id
     )
+  })
+
+  // Filtrar turnos atrasados (fim do turno + 30 min)
+  const nowTime = new Date()
+  const nowMinutes = nowTime.getHours() * 60 + nowTime.getMinutes()
+  const overdueShiftsList = otherOpenShifts.filter((inst) => {
+    const [endH, endM] = inst.shift.end_time.split(':').map(Number)
+    return nowMinutes > endH * 60 + endM + 30
   })
 
   const SHORTCUTS = [
@@ -144,6 +167,24 @@ export default async function OperadorDashboard() {
             </p>
             <p className="text-xs text-amber-500 mt-1">
               {pendingHandovers === 1 ? 'Passagem de turno aguardando sua confirmação' : 'Passagens de turno aguardando sua confirmação'}
+            </p>
+          </Link>
+        )}
+
+        {/* Turno atrasado — Assumir Posto */}
+        {overdueShiftsList.length > 0 && (
+          <Link
+            href="/operador/turnos"
+            className="block rounded-xl border border-red-900/60 bg-red-950/20 p-4 hover:bg-red-950/30 transition-colors"
+          >
+            <p className="flex items-center gap-2 text-sm font-medium text-red-400">
+              <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-red-400 animate-pulse" />
+              Turno não encerrado
+            </p>
+            <p className="text-xs text-red-400/80 mt-1">
+              {overdueShiftsList.length === 1
+                ? `${overdueShiftsList[0].opener.name} esqueceu de encerrar o turno ${overdueShiftsList[0].shift.name}. Toque para assumir o posto.`
+                : `${overdueShiftsList.length} turno(s) não encerrado(s). Toque para assumir o posto.`}
             </p>
           </Link>
         )}

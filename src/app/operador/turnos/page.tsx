@@ -81,6 +81,17 @@ export default async function TurnosPage() {
 
   const now = new Date()
 
+  // Detectar turnos atrasados (passaram do horário de término + 30 min)
+  function isShiftOverdue(endTime: string): boolean {
+    const [endH, endM] = endTime.split(':').map(Number)
+    const endMinutes = endH * 60 + endM
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    return nowMinutes > endMinutes + 30
+  }
+
+  const overdueShifts = otherOpenShifts.filter(inst => isShiftOverdue(inst.shift.end_time))
+  const regularOtherShifts = otherOpenShifts.filter(inst => !isShiftOverdue(inst.shift.end_time))
+
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
         <div className="flex items-center justify-between gap-2">
@@ -98,6 +109,36 @@ export default async function TurnosPage() {
             </Link>
           </div>
         </div>
+
+        {/* ─── Turnos atrasados — Assumir Posto ─── */}
+        {overdueShifts.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-sm font-medium text-red-400">Turno(s) atrasado(s)</h2>
+            {overdueShifts.map((inst) => (
+              <div key={inst.id} className="rounded-xl border border-red-900/60 bg-red-950/20 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">{inst.shift.name}</p>
+                    <p className="text-xs text-slate-500">
+                      Aberto por {inst.opener.name} às {formatTime(new Date(inst.opened_at))}
+                    </p>
+                  </div>
+                  <span className="rounded px-2 py-0.5 text-xs font-semibold bg-red-950/60 text-red-400 border border-red-900/50 animate-pulse">
+                    Atrasado
+                  </span>
+                </div>
+                <p className="text-xs text-red-400/80">
+                  O operador anterior não encerrou este turno. Assuma o posto para continuar a operação.
+                </p>
+                <Link href={`/operador/turnos/assumir?instanceId=${inst.id}`}>
+                  <Button className="h-10 w-full bg-red-900/60 text-red-300 hover:bg-red-900 border border-red-900/50 text-sm">
+                    Assumir Posto
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ─── Passagens aguardando minha confirmação ─── */}
         {pendingToConfirm.length > 0 && (
@@ -213,10 +254,10 @@ export default async function TurnosPage() {
         )}
 
         {/* ─── Outros turnos abertos (outros operadores) ─── */}
-        {otherOpenShifts.length > 0 && (
+        {regularOtherShifts.length > 0 && (
           <div className="space-y-2">
             <h2 className="text-sm font-medium text-slate-400">Outros turnos ativos</h2>
-            {otherOpenShifts.map((inst) => (
+            {regularOtherShifts.map((inst) => (
               <div key={inst.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>

@@ -112,13 +112,23 @@ export async function registrarLeitura(
     if (!collectionPoint) return { error: 'Ponto de coleta inválido ou não autorizado.' }
   }
 
+  const activeInstance = await prisma.shiftInstance.findFirst({
+    where: { tenant_id: await getTenantId(), opened_by: userId, status: 'OPEN' },
+    select: { id: true },
+    orderBy: { opened_at: 'desc' },
+  }) ?? await prisma.shiftInstance.findFirst({
+    where: { tenant_id: await getTenantId(), status: 'OPEN' },
+    select: { id: true },
+    orderBy: { opened_at: 'desc' },
+  })
+
   await prisma.$transaction(async (tx) => {
     const reading = await tx.reading.create({
       data: {
         tenant_id:           (await getTenantId()),
         collection_point_id: parsed.data.collection_point_id,
         parameter_id:        parsed.data.parameter_id,
-        shift_instance_id:   null, // associado ao turno na Fase 9
+        shift_instance_id:   activeInstance?.id ?? null,
         value:               parsed.data.value,
         unit,
         notes:               parsed.data.notes,

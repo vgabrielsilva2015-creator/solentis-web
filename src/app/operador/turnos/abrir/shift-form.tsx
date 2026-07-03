@@ -1,8 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { abrirTurno } from '../actions'
 import type { TurnoFormState } from '../actions'
@@ -14,6 +13,23 @@ const INITIAL: TurnoFormState = {}
 export function ShiftForm({ shifts }: { shifts: Shift[] }) {
   const router = useRouter()
   const [state, action, isPending] = useActionState(abrirTurno, INITIAL)
+
+  const recommendedShiftId = useMemo(() => {
+    const now = new Date()
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    return (
+      shifts.find((s) => {
+        const [sh, sm] = s.start_time.split(':').map(Number)
+        const [eh, em] = s.end_time.split(':').map(Number)
+        const start = sh * 60 + sm
+        const end = eh * 60 + em
+        if (start <= end) return nowMinutes >= start && nowMinutes < end
+        return nowMinutes >= start || nowMinutes < end
+      })?.id ?? null
+    )
+  }, [shifts])
+
+  const [selectedShift, setSelectedShift] = useState<string | null>(recommendedShiftId)
 
   useEffect(() => {
     if (state.success) router.push('/operador/dashboard')
@@ -31,10 +47,19 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
               type="radio"
               name="shift_id"
               value={shift.id}
+              checked={selectedShift === shift.id}
+              onChange={() => setSelectedShift(shift.id)}
               className="accent-emerald-500"
             />
             <div>
-              <p className="text-sm font-medium">{shift.name}</p>
+              <p className="text-sm font-medium">
+                {shift.name}
+                {shift.id === recommendedShiftId && (
+                  <span className="ml-2 inline-block rounded-full bg-emerald-700/30 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-400">
+                    Sugerido
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-slate-500">{shift.start_time} – {shift.end_time}</p>
             </div>
           </label>
