@@ -3,6 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
+import { logger } from '@/lib/logger'
 import {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_ATTEMPTS,
@@ -93,7 +94,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (error instanceof Error && error.message === 'RATE_LIMITED') {
             throw error // Propaga apenas o bloqueio
           }
-          console.error("Falha ao checar rate limit", error)
+          // ⚠️ FAIL-OPEN: se a checagem falhar, o login segue SEM proteção de brute-force.
+          // Mantido de propósito (não travar todos os logins num soluço do banco),
+          // mas registrado em WARN para ficar visível caso vire recorrente.
+          logger.warn(
+            { err: error, tenantId: tenantIdForLog, component: 'auth' },
+            'Falha ao checar rate limit — login prosseguindo sem proteção de brute-force',
+          )
         }
 
         const isValid = await verifyPassword(password, user.password_hash)
@@ -108,7 +115,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           })
         } catch (error) {
-          console.error("Falha ao registrar tentativa de login", error)
+          logger.error(
+            { err: error, tenantId: tenantIdForLog, component: 'auth' },
+            'Falha ao registrar tentativa de login',
+          )
         }
 
         if (!isValid) return null
@@ -119,7 +129,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             data: { last_login_at: new Date() },
           })
         } catch (error) {
-          console.error("Falha ao atualizar last_login_at", error)
+          logger.error(
+            { err: error, tenantId: tenantIdForLog, userId: user.id, component: 'auth' },
+            'Falha ao atualizar last_login_at',
+          )
         }
 
         return {

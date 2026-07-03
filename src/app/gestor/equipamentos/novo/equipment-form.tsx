@@ -37,10 +37,10 @@ export function EquipmentForm({
 
       {/* Nome */}
       <div className="space-y-1.5">
-        <label htmlFor="name" className="text-sm font-medium text-slate-300">Nome *</label>
+        <label htmlFor="name" className="text-sm font-medium text-foreground">Nome *</label>
         <input
           id="name" name="name" required
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           placeholder="Ex.: Bomba de recalque 1"
         />
         {state.fieldErrors?.name && (
@@ -51,10 +51,10 @@ export function EquipmentForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Categoria */}
         <div className="space-y-1.5">
-          <label htmlFor="category_id" className="text-sm font-medium text-slate-300">Categoria *</label>
+          <label htmlFor="category_id" className="text-sm font-medium text-foreground">Categoria *</label>
           <select
             id="category_id" name="category_id" required
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">Selecione…</option>
             {categories.map((c) => (
@@ -68,10 +68,10 @@ export function EquipmentForm({
 
         {/* Responsável Técnico */}
         <div className="space-y-1.5">
-          <label htmlFor="responsible_id" className="text-sm font-medium text-slate-300">Responsável Técnico</label>
+          <label htmlFor="responsible_id" className="text-sm font-medium text-foreground">Responsável Técnico</label>
           <select
             id="responsible_id" name="responsible_id"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">Nenhum responsável</option>
             {responsibles.map((r) => (
@@ -82,61 +82,61 @@ export function EquipmentForm({
 
         {/* Fabricante */}
         <div className="space-y-1.5">
-          <label htmlFor="manufacturer" className="text-sm font-medium text-slate-300">Fabricante</label>
+          <label htmlFor="manufacturer" className="text-sm font-medium text-foreground">Fabricante</label>
           <input
             id="manufacturer" name="manufacturer"
             placeholder="Ex: WEG, Schneider"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Modelo */}
         <div className="space-y-1.5">
-          <label htmlFor="model_name" className="text-sm font-medium text-slate-300">Modelo</label>
+          <label htmlFor="model_name" className="text-sm font-medium text-foreground">Modelo</label>
           <input
             id="model_name" name="model_name"
             placeholder="Ex: Trifásico 5HP"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Número de série */}
         <div className="space-y-1.5">
-          <label htmlFor="serial_number" className="text-sm font-medium text-slate-300">Número de série / Patrimônio</label>
+          <label htmlFor="serial_number" className="text-sm font-medium text-foreground">Número de série / Patrimônio</label>
           <input
             id="serial_number" name="serial_number"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="SN-XXXXX"
           />
         </div>
 
         {/* Localização */}
         <div className="space-y-1.5">
-          <label htmlFor="location" className="text-sm font-medium text-slate-300">Localização</label>
+          <label htmlFor="location" className="text-sm font-medium text-foreground">Localização</label>
           <input
             id="location" name="location"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="Ex.: Sala de bombas"
           />
         </div>
 
         {/* Data de instalação */}
         <div className="space-y-1.5">
-          <label htmlFor="installation_date" className="text-sm font-medium text-slate-300">Data de instalação</label>
+          <label htmlFor="installation_date" className="text-sm font-medium text-foreground">Data de instalação</label>
           <input
             id="installation_date" name="installation_date"
             type="date"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Frequência preventiva */}
         <div className="space-y-1.5">
-          <label htmlFor="preventive_frequency_days" className="text-sm font-medium text-slate-300">Frequência preventiva (dias) *</label>
+          <label htmlFor="preventive_frequency_days" className="text-sm font-medium text-foreground">Frequência preventiva (dias) *</label>
           <input
             id="preventive_frequency_days" name="preventive_frequency_days"
             type="number" min="1" required
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             placeholder="Ex.: 30"
           />
           {state.fieldErrors?.preventive_frequency_days && (
@@ -146,11 +146,11 @@ export function EquipmentForm({
 
         {/* Status Operacional */}
         <div className="space-y-1.5">
-          <label htmlFor="status" className="text-sm font-medium text-slate-300">Status Operacional *</label>
+          <label htmlFor="status" className="text-sm font-medium text-foreground">Status Operacional *</label>
           <select
             id="status" name="status" required
             defaultValue="OPERATING"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="OPERATING">Operando</option>
             <option value="MAINTENANCE">Em Manutenção</option>
@@ -160,24 +160,24 @@ export function EquipmentForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-800 pt-4 mt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4 mt-2">
         {/* Upload de Foto */}
         <div className="space-y-1.5">
-          <label htmlFor="photo_file" className="text-sm font-medium text-slate-300">Foto do Equipamento</label>
+          <label htmlFor="photo_file" className="text-sm font-medium text-foreground">Foto do Equipamento</label>
           <input
             id="photo_file" name="photo_file"
             type="file" accept="image/*"
-            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-750"
+            className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-muted file:text-foreground hover:file:bg-muted"
           />
         </div>
 
         {/* Upload de Manual */}
         <div className="space-y-1.5">
-          <label htmlFor="manual_file" className="text-sm font-medium text-slate-300">Manual Técnico (PDF)</label>
+          <label htmlFor="manual_file" className="text-sm font-medium text-foreground">Manual Técnico (PDF)</label>
           <input
             id="manual_file" name="manual_file"
             type="file" accept=".pdf,application/pdf"
-            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-750"
+            className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-muted file:text-foreground hover:file:bg-muted"
           />
         </div>
       </div>

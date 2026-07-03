@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
+import { getLogger } from '@/lib/logger'
 
 export type NotificationItem = {
   id: string
@@ -118,7 +119,8 @@ export async function getNotifications(): Promise<NotificationItem[]> {
 
     return notifications.slice(0, 10) // Retornar no máximo 10
   } catch (err) {
-    console.error('Failed to get notifications', err)
+    const log = await getLogger({ tenantId, action: 'getNotifications' })
+    log.error({ err, role: session.user.role }, 'Falha ao buscar notificações')
     return []
   }
 }

@@ -37,7 +37,7 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
   }
 
   const getStatusColor = (s: string) => {
-    return OCCURRENCE_STATUS_COLOR[s] || 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+    return OCCURRENCE_STATUS_COLOR[s] || 'bg-muted/10 text-muted-foreground border-border/20'
   }
 
   const getStatusText = (s: string) => {
@@ -85,7 +85,7 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
                     key={photo.id}
                     href={`/api/occurrences/${occurrence.id}/photo?index=${i}`}
                     target="_blank"
-                    className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-soft border border-slate-800 bg-slate-900 px-2 py-1 rounded"
+                    className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-soft border border-border bg-card px-2 py-1 rounded"
                   >
                     Ver foto {i + 1} anexada →
                   </Link>
@@ -96,7 +96,7 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
             {occurrence.immediate_action && (
               <div className="mt-3 p-3 rounded-lg bg-amber-955/20 border border-amber-900/30">
                 <span className="block text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">Ação Imediata Executada</span>
-                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
+                <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
               </div>
             )}
 
@@ -133,10 +133,10 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
                 <form className="space-y-4" action={resolverOcorrencia}>
                   <input type="hidden" name="id" value={occurrence.id} />
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-300">Adicionar Notas de Resolução</label>
+                    <label className="text-sm font-medium text-foreground">Adicionar Notas de Resolução</label>
                     <textarea 
                       name="notes"
-                      className="w-full p-3 rounded-lg border border-slate-800 bg-slate-900 text-slate-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-700 text-xs" 
+                      className="w-full p-3 rounded-lg border border-border bg-card text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs" 
                       rows={3} 
                       placeholder="Descreva o que foi feito para resolver o problema..."
                     ></textarea>

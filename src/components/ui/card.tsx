@@ -4,7 +4,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={`rounded-xl border border-slate-800 bg-slate-900/50 text-slate-100 shadow ${className || ""}`}
+      className={`rounded-xl border border-border bg-card/50 text-card-foreground shadow ${className || ""}`}
       {...props}
     />
   )
@@ -37,7 +37,7 @@ const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={`text-sm text-slate-400 ${className || ""}`}
+      className={`text-sm text-muted-foreground ${className || ""}`}
       {...props}
     />
   )

@@ -87,18 +87,18 @@ export default async function AuditoriaPage({
     <main className="px-6 py-8 space-y-6 max-w-6xl">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Auditoria</h1>
-        <p className="text-sm text-slate-400">Histórico de todas as mutações críticas do sistema.</p>
+        <p className="text-sm text-muted-foreground">Histórico de todas as mutações críticas do sistema.</p>
       </div>
 
       {/* ── Filtros ──────────────────────────────────────────────────────────── */}
       <form method="GET" action="/gestor/auditoria" className="flex flex-wrap gap-3 items-end">
         {/* Usuário */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400">Usuário</label>
+          <label className="text-xs text-muted-foreground">Usuário</label>
           <select
             name="userId"
             defaultValue={userId}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">Todos</option>
             {users.map((u) => (
@@ -109,11 +109,11 @@ export default async function AuditoriaPage({
 
         {/* Entidade */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400">Entidade</label>
+          <label className="text-xs text-muted-foreground">Entidade</label>
           <select
             name="tableName"
             defaultValue={tableName}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">Todas</option>
             {Object.entries(TABLE_LABELS).map(([key, label]) => (
@@ -124,29 +124,29 @@ export default async function AuditoriaPage({
 
         {/* Data início */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400">De</label>
+          <label className="text-xs text-muted-foreground">De</label>
           <input
             type="date"
             name="dataInicio"
             defaultValue={dataInicio}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Data fim */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-slate-400">Até</label>
+          <label className="text-xs text-muted-foreground">Até</label>
           <input
             type="date"
             name="dataFim"
             defaultValue={dataFim}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         <button
           type="submit"
-          className="rounded-md bg-slate-700 px-4 py-1.5 text-sm font-medium text-slate-100 hover:bg-slate-600 transition-colors"
+          className="rounded-md bg-secondary px-4 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
         >
           Filtrar
         </button>
@@ -154,7 +154,7 @@ export default async function AuditoriaPage({
         {(userId || tableName || dataInicio || dataFim) && (
           <Link
             href="/gestor/auditoria"
-            className="rounded-md border border-slate-700 px-4 py-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+            className="rounded-md border border-border px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Limpar
           </Link>
@@ -162,7 +162,7 @@ export default async function AuditoriaPage({
       </form>
 
       {/* Contagem */}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         {total === 0
           ? 'Nenhum registro encontrado.'
           : `${total} registro${total !== 1 ? 's' : ''} — página ${pageNum} de ${Math.max(1, totalPages)}`}
@@ -170,10 +170,10 @@ export default async function AuditoriaPage({
 
       {/* ── Tabela ───────────────────────────────────────────────────────────── */}
       {logs.length > 0 && (
-        <div className="rounded-xl border border-slate-700 bg-slate-900 overflow-hidden">
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700 text-left text-xs text-slate-500">
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Data/hora</th>
                 <th className="px-4 py-3 font-medium">Usuário</th>
                 <th className="px-4 py-3 font-medium">Ação</th>
@@ -182,7 +182,7 @@ export default async function AuditoriaPage({
                 <th className="px-4 py-3 font-medium">Justificativa</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {logs.map((log) => {
                 const actionCfg = ACTION_CONFIG[log.action as keyof typeof ACTION_CONFIG]
                 const tableLabel = TABLE_LABELS[log.table_name] ?? log.table_name
@@ -192,15 +192,15 @@ export default async function AuditoriaPage({
                 try { if (log.after)  after  = JSON.parse(log.after)  } catch { /* ignora */ }
 
                 return (
-                  <tr key={log.id} className="hover:bg-slate-800/40 transition-colors align-top">
+                  <tr key={log.id} className="hover:bg-muted/40 transition-colors align-top">
                     {/* Data/hora */}
-                    <td className="px-4 py-3 text-slate-400 whitespace-nowrap text-xs">
+                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
                       {formatDatetime(new Date(log.timestamp))}
                     </td>
 
                     {/* Usuário */}
-                    <td className="px-4 py-3 text-slate-200 whitespace-nowrap">
-                      {log.user?.name ?? <span className="text-slate-600">Sistema</span>}
+                    <td className="px-4 py-3 text-foreground whitespace-nowrap">
+                      {log.user?.name ?? <span className="text-muted-foreground">Sistema</span>}
                     </td>
 
                     {/* Ação */}
@@ -210,37 +210,37 @@ export default async function AuditoriaPage({
                           {actionCfg.label}
                         </span>
                       ) : (
-                        <span className="text-slate-500 text-xs">{log.action}</span>
+                        <span className="text-muted-foreground text-xs">{log.action}</span>
                       )}
                     </td>
 
                     {/* Entidade */}
-                    <td className="px-4 py-3 text-slate-300 whitespace-nowrap text-xs">
+                    <td className="px-4 py-3 text-foreground whitespace-nowrap text-xs">
                       {tableLabel}
                       <br />
-                      <span className="text-slate-600 font-mono">{log.record_id.slice(0, 8)}…</span>
+                      <span className="text-muted-foreground font-mono">{log.record_id.slice(0, 8)}…</span>
                     </td>
 
                     {/* Alterações — expansível via <details> (sem JS) */}
                     <td className="px-4 py-3 max-w-xs">
                       {(before || after) ? (
                         <details className="cursor-pointer">
-                          <summary className="text-xs text-slate-500 hover:text-slate-300 select-none">
+                          <summary className="text-xs text-muted-foreground hover:text-foreground select-none">
                             Ver alterações
                           </summary>
                           <div className="mt-2 space-y-1.5 text-xs font-mono">
                             {before && (
                               <div>
-                                <p className="text-slate-600 mb-0.5">Antes:</p>
-                                <pre className="whitespace-pre-wrap text-slate-400 bg-slate-800 rounded p-1.5">
+                                <p className="text-muted-foreground mb-0.5">Antes:</p>
+                                <pre className="whitespace-pre-wrap text-muted-foreground bg-muted rounded p-1.5">
                                   {JSON.stringify(before, null, 2)}
                                 </pre>
                               </div>
                             )}
                             {after && (
                               <div>
-                                <p className="text-slate-600 mb-0.5">Depois:</p>
-                                <pre className="whitespace-pre-wrap text-emerald-400 bg-slate-800 rounded p-1.5">
+                                <p className="text-muted-foreground mb-0.5">Depois:</p>
+                                <pre className="whitespace-pre-wrap text-emerald-400 bg-muted rounded p-1.5">
                                   {JSON.stringify(after, null, 2)}
                                 </pre>
                               </div>
@@ -248,13 +248,13 @@ export default async function AuditoriaPage({
                           </div>
                         </details>
                       ) : (
-                        <span className="text-slate-700 text-xs">—</span>
+                        <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </td>
 
                     {/* Justificativa */}
-                    <td className="px-4 py-3 text-slate-400 text-xs max-w-[180px]">
-                      {log.justification ?? <span className="text-slate-700">—</span>}
+                    <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px]">
+                      {log.justification ?? <span className="text-muted-foreground">—</span>}
                     </td>
                   </tr>
                 )
@@ -270,29 +270,29 @@ export default async function AuditoriaPage({
           {pageNum > 1 ? (
             <Link
               href={buildUrl(activeFilters, { page: pageNum - 1 })}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 transition-colors"
+              className="rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
             >
               ← Anterior
             </Link>
           ) : (
-            <span className="rounded-md border border-slate-800 px-3 py-1.5 text-slate-700 cursor-not-allowed">
+            <span className="rounded-md border border-border px-3 py-1.5 text-muted-foreground cursor-not-allowed">
               ← Anterior
             </span>
           )}
 
-          <span className="text-slate-500">
+          <span className="text-muted-foreground">
             {pageNum} / {totalPages}
           </span>
 
           {pageNum < totalPages ? (
             <Link
               href={buildUrl(activeFilters, { page: pageNum + 1 })}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-800 transition-colors"
+              className="rounded-md border border-border px-3 py-1.5 text-foreground hover:bg-muted transition-colors"
             >
               Próximo →
             </Link>
           ) : (
-            <span className="rounded-md border border-slate-800 px-3 py-1.5 text-slate-700 cursor-not-allowed">
+            <span className="rounded-md border border-border px-3 py-1.5 text-muted-foreground cursor-not-allowed">
               Próximo →
             </span>
           )}

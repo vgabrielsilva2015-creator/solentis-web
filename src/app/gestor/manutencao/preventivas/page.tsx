@@ -34,7 +34,7 @@ export default async function PreventiveMaintenancePage() {
       )
     }
 
-    const colorClass = MAINTENANCE_STATUS_COLOR[status] || 'bg-slate-800 text-slate-400 border-slate-700'
+    const colorClass = MAINTENANCE_STATUS_COLOR[status] || 'bg-muted text-muted-foreground border-border'
     const label = MAINTENANCE_STATUS_LABEL[status] || status
 
     return (

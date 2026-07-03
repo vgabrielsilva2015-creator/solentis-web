@@ -71,9 +71,9 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
         <div>
           <BackButton href="/gestor/produtos-quimicos" label="Produtos Químicos" />
           <div className="flex items-center gap-3 mt-2 flex-wrap">
-            <h1 className="text-xl font-semibold text-slate-100">{product.name}</h1>
+            <h1 className="text-xl font-semibold text-foreground">{product.name}</h1>
             {!product.is_active && (
-              <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded">Inativo</span>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">Inativo</span>
             )}
             {alerta && product.is_active && (
               <span className="text-xs font-medium text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">
@@ -96,38 +96,38 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
           {
             label: 'Estoque calculado',
             value: `${formatarQuantidade(calculado)} ${product.unit}`,
-            color: calculado < product.min_stock ? 'text-red-400' : 'text-slate-100',
+            color: calculado < product.min_stock ? 'text-red-400' : 'text-foreground',
           },
           {
             label: 'Estoque físico',
             value: fisico !== null ? `${formatarQuantidade(fisico)} ${product.unit}` : '—',
-            color: fisico !== null && fisico < product.min_stock ? 'text-red-400' : 'text-slate-100',
+            color: fisico !== null && fisico < product.min_stock ? 'text-red-400' : 'text-foreground',
           },
           {
             label: 'Mínimo',
             value: `${formatarQuantidade(product.min_stock)} ${product.unit}`,
-            color: 'text-slate-400',
+            color: 'text-muted-foreground',
           },
           {
             label: 'Divergência',
             value: divergencia !== null
               ? `${divergencia >= 0 ? '+' : ''}${formatarQuantidade(divergencia)} ${product.unit}`
               : '—',
-            color: divergencia === null ? 'text-slate-500'
+            color: divergencia === null ? 'text-muted-foreground'
               : divergencia < 0 ? 'text-amber-400'
               : 'text-green-400',
           },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-lg border border-slate-700 bg-slate-900 p-3">
-            <p className="text-xs text-slate-500">{stat.label}</p>
+          <div key={stat.label} className="rounded-lg border border-border bg-card p-3">
+            <p className="text-xs text-muted-foreground">{stat.label}</p>
             <p className={`text-sm font-semibold mt-0.5 ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Editar produto */}
-      <details className="rounded-lg border border-slate-700 bg-slate-900">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-300 hover:text-slate-100 select-none">
+      <details className="rounded-lg border border-border bg-card">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground hover:text-foreground select-none">
           Editar dados do produto
         </summary>
         <div className="px-4 pb-4">
@@ -139,15 +139,15 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
 
       {/* Histórico de movimentação */}
       <div>
-        <h2 className="text-sm font-medium text-slate-400 mb-3">
+        <h2 className="text-sm font-medium text-muted-foreground mb-3">
           Histórico de movimentação ({movements.length})
         </h2>
         {movements.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma movimentação registrada.</p>
+          <p className="text-sm text-muted-foreground">Nenhuma movimentação registrada.</p>
         ) : (
           <div className="space-y-2">
             {movements.map((m, i) => (
-              <div key={i} className="rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-3 flex items-start gap-3">
+              <div key={i} className="rounded-lg border border-border bg-card/60 px-4 py-3 flex items-start gap-3">
                 <span className={`shrink-0 mt-0.5 text-xs font-medium px-2 py-0.5 rounded ${
                   m.tipo === 'entrada'  ? 'bg-green-900/40 text-green-400' :
                   m.tipo === 'saida'   ? 'bg-red-900/40 text-red-400' :
@@ -157,18 +157,18 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-slate-200">
+                    <span className="text-sm font-medium text-foreground">
                       {m.tipo === 'contagem' ? '=' : m.tipo === 'entrada' ? '+' : '−'}{formatarQuantidade(m.qty)} {product.unit}
                     </span>
                     {m.tipo === 'entrada' && m.supplier && (
-                      <span className="text-xs text-slate-400">· {m.supplier}</span>
+                      <span className="text-xs text-muted-foreground">· {m.supplier}</span>
                     )}
                     {m.tipo === 'entrada' && m.invoice && (
-                      <span className="text-xs text-slate-500">NF {m.invoice}</span>
+                      <span className="text-xs text-muted-foreground">NF {m.invoice}</span>
                     )}
                   </div>
-                  {m.notes && <p className="text-xs text-slate-500 mt-0.5">{m.notes}</p>}
-                  <p className="text-xs text-slate-600 mt-0.5">
+                  {m.notes && <p className="text-xs text-muted-foreground mt-0.5">{m.notes}</p>}
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {m.date.toLocaleString('pt-BR')} · {m.recorder}
                   </p>
                 </div>

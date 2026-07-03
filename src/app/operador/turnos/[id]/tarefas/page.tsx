@@ -25,6 +25,14 @@ export default async function TarefasDoTurnoPage({
           creator:   { select: { name: true } },
           completer: { select: { name: true } },
           photos:    { select: { id: true, original_name: true } },
+          repeated_from: {
+            select: {
+              title:            true,
+              status:           true,
+              completion_notes: true,
+              photos:           { select: { id: true, original_name: true } },
+            },
+          },
         },
         orderBy: { created_at: 'asc' },
       },
@@ -43,7 +51,7 @@ export default async function TarefasDoTurnoPage({
         <BackButton href="/operador/turnos" label="Turnos" />
         <div>
           <h1 className="text-xl font-semibold">Tarefas do turno</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {instance.shift.name} · {instance.shift.start_time} – {instance.shift.end_time}
           </p>
         </div>
@@ -52,12 +60,12 @@ export default async function TarefasDoTurnoPage({
         {total > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">{done} de {total} concluída(s)</span>
+              <span className="text-muted-foreground">{done} de {total} concluída(s)</span>
               {pending > 0 && (
                 <span className="text-amber-400">{pending} pendente(s)</span>
               )}
             </div>
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-emerald-600 transition-all"
                 style={{ width: `${total > 0 ? Math.round((done / total) * 100) : 0}%` }}
@@ -68,8 +76,8 @@ export default async function TarefasDoTurnoPage({
 
         {/* Lista de tarefas */}
         {total === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center">
-            <p className="text-sm text-slate-500">Nenhuma tarefa atribuída a este turno.</p>
+          <div className="rounded-xl border border-border bg-card py-14 text-center">
+            <p className="text-sm text-muted-foreground">Nenhuma tarefa atribuída a este turno.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -88,6 +96,10 @@ export default async function TarefasDoTurnoPage({
                   completed_at:     task.completed_at,
                   completion_notes: task.completion_notes,
                   photos:           task.photos,
+                  requires_photo:   task.requires_photo,
+                  repeated_from_id: task.repeated_from_id,
+                  repeat_reason:    task.repeat_reason,
+                  repeatedFrom:     task.repeated_from,
                 }}
                 isShiftOpen={isOpen}
               />

@@ -39,7 +39,7 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
       )}
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Quantidade contada ({unit}) *</label>
+        <label className="text-sm text-foreground">Quantidade contada ({unit}) *</label>
         <input
           name="counted_quantity"
           type="number"
@@ -49,7 +49,7 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
           required
           value={qty}
           onChange={(e) => setQty(e.target.value)}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="0"
         />
         {divergencia !== null && (
@@ -67,22 +67,22 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Data e hora da contagem *</label>
+        <label className="text-sm text-foreground">Data e hora da contagem *</label>
         <input
           name="counted_at"
           type="datetime-local"
           required
           defaultValue={defaultDate}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Observações</label>
+        <label className="text-sm text-foreground">Observações</label>
         <textarea
           name="notes"
           rows={2}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Condições da contagem, responsável, local..."
         />
       </div>
@@ -98,7 +98,7 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
         <button
           type="button"
           onClick={() => router.push(estoquePath)}
-          className="rounded-lg border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
+          className="rounded-lg border border-border px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
         >
           Cancelar
         </button>

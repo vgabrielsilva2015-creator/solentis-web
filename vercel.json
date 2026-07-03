@@ -1,8 +1,9 @@
 {
+  "regions": ["gru1"],
   "crons": [
     {
       "path": "/api/cron/shifts",
-      "schedule": "0 0 * * *"
+      "schedule": "5 3 * * *"
     }
   ]
 }

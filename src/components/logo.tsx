@@ -23,7 +23,7 @@ export function Logo({ className = "", size = "sm" }: { className?: string; size
         <span className="sol-b sol-b4"></span>
       </div>
       <span 
-        className={`font-heading font-bold text-slate-100 ${size === "lg" ? "text-2xl" : "text-lg"}`}
+        className={`font-heading font-bold text-foreground ${size === "lg" ? "text-2xl" : "text-lg"}`}
         style={{ letterSpacing: "-0.03em" }}
       >
         solentis

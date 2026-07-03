@@ -19,8 +19,8 @@ export default async function EntradaPage({ params }: { params: Promise<{ id: st
     <div className="p-6 max-w-lg mx-auto space-y-6">
       <div>
         <BackButton href={`/gestor/produtos-quimicos/${id}`} label={product.name} />
-        <h1 className="text-xl font-semibold text-slate-100 mt-2">Registrar Entrada</h1>
-        <p className="text-sm text-slate-400 mt-0.5">Compra ou recebimento de estoque</p>
+        <h1 className="text-xl font-semibold text-foreground mt-2">Registrar Entrada</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Compra ou recebimento de estoque</p>
       </div>
       <EntryForm productId={product.id} productName={product.name} unit={product.unit} />
     </div>

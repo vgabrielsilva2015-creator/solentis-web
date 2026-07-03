@@ -31,7 +31,7 @@ export function UserSearch({ defaultValue }: { defaultValue: string }) {
       value={searchTerm}
       onChange={(e) => setSearchTerm(e.target.value)}
       placeholder="Buscar por nome ou e-mail…"
-      className="h-10 flex-1 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
+      className="h-10 flex-1 rounded-md border border-border bg-muted px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
     />
   )
 }

@@ -8,6 +8,7 @@ import { atribuirTarefa, removerTarefa, type TaskFormState } from './task-action
 const INITIAL: TaskFormState = {}
 
 type Operator = { id: string; name: string }
+type Photo = { id: string; original_name: string }
 type Task = {
   id: string
   title: string
@@ -15,6 +16,7 @@ type Task = {
   status: string
   assignee: { name: string } | null
   creator: { name: string }
+  photos: Photo[]
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -23,9 +25,9 @@ const STATUS_LABEL: Record<string, string> = {
   SKIPPED: 'Pulada',
 }
 const STATUS_COLOR: Record<string, string> = {
-  PENDING: 'border-slate-700 bg-slate-800/60 text-slate-400',
+  PENDING: 'border-border bg-muted/60 text-muted-foreground',
   DONE:    'border-green-900/50 bg-green-950/60 text-green-400',
-  SKIPPED: 'border-slate-700/50 bg-slate-800/30 text-slate-500',
+  SKIPPED: 'border-border/50 bg-muted/30 text-muted-foreground',
 }
 
 export function TaskForm({
@@ -50,22 +52,37 @@ export function TaskForm({
   return (
     <div className="space-y-4">
       {tasks.length === 0 ? (
-        <p className="py-3 text-center text-xs text-slate-500">Nenhuma tarefa atribuída ainda.</p>
+        <p className="py-3 text-center text-xs text-muted-foreground">Nenhuma tarefa atribuída ainda.</p>
       ) : (
         <ul className="space-y-2">
           {tasks.map((task) => (
             <li
               key={task.id}
-              className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-800/30 px-3 py-2.5"
+              className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-100">{task.title}</p>
+                <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
                 {task.description && (
-                  <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{task.description}</p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
                 )}
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {task.assignee ? `→ ${task.assignee.name}` : 'Qualquer operador'} · por {task.creator.name}
                 </p>
+                {task.status === 'DONE' && task.photos.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {task.photos.map((photo) => (
+                      <a
+                        key={photo.id}
+                        href={`/api/shift-task-photos/${photo.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-md border border-green-900/40 bg-green-950/40 px-2 py-0.5 text-xs text-green-400 hover:bg-green-950/70 transition-colors"
+                      >
+                        ↗ {photo.original_name}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <span className={`rounded border px-1.5 py-0.5 text-xs font-medium ${STATUS_COLOR[task.status] ?? ''}`}>
@@ -85,8 +102,8 @@ export function TaskForm({
       )}
 
       {canAdd && (
-        <form ref={formRef} action={formAction} className="space-y-3 border-t border-slate-800 pt-3">
-          <p className="text-xs font-medium text-slate-400">Nova tarefa</p>
+        <form ref={formRef} action={formAction} className="space-y-3 border-t border-border pt-3">
+          <p className="text-xs font-medium text-muted-foreground">Nova tarefa</p>
 
           <div>
             <input
@@ -94,7 +111,7 @@ export function TaskForm({
               required
               maxLength={120}
               placeholder="Título da tarefa *"
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none"
+              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-600 focus:outline-none"
             />
             {state.fieldErrors?.title && (
               <p className="mt-1 text-xs text-red-400">{state.fieldErrors.title[0]}</p>
@@ -106,12 +123,12 @@ export function TaskForm({
             rows={2}
             maxLength={500}
             placeholder="Descrição opcional"
-            className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-600 focus:outline-none"
+            className="w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-emerald-600 focus:outline-none"
           />
 
           <select
             name="assigned_to_id"
-            className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:border-emerald-600 focus:outline-none"
+            className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground focus:border-emerald-600 focus:outline-none"
           >
             <option value="">Qualquer operador</option>
             {operators.map((op) => (
@@ -126,7 +143,7 @@ export function TaskForm({
           <Button
             type="submit"
             disabled={isPending}
-            className="h-9 w-full bg-slate-100 text-sm text-slate-900 hover:bg-white"
+            className="h-9 w-full bg-primary text-sm text-primary-foreground hover:bg-primary/90"
           >
             {isPending ? 'Salvando…' : '+ Atribuir tarefa'}
           </Button>

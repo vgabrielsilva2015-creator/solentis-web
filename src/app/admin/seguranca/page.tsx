@@ -14,16 +14,16 @@ export default async function AdminSegurancaPage() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Segurança
           </h1>
-          <p className="text-sm text-slate-400 leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Este módulo permitirá gerenciar políticas de senha, sessões ativas, 
             logs de tentativas de login suspeitas e configurações de segurança do sistema.
           </p>
         </div>
 
-        <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
+        <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5" />
             Políticas de Senha

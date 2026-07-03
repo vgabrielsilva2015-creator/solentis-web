@@ -15,7 +15,7 @@ const STATUS_COLOR: Record<string, string> = {
   SCHEDULED:        'bg-blue-950/60 text-blue-400 border-blue-900/50',
   OPEN:             'bg-green-950/60 text-green-400 border-green-900/50',
   HANDOVER_PENDING: 'bg-amber-950/60 text-amber-400 border-amber-900/50',
-  CLOSED:           'bg-slate-800/60 text-slate-400 border-slate-700/50',
+  CLOSED:           'bg-muted/60 text-muted-foreground border-border/50',
 }
 
 function formatDate(d: Date): string {
@@ -81,7 +81,7 @@ export default async function InstanciasTurnosPage({
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Tarefas do Turno</h1>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">{total} registro(s)</span>
+          <span className="text-xs text-muted-foreground">{total} registro(s)</span>
           <Link href="/gestor/turnos/tarefas/pre-agendar">
             <Button className="bg-blue-700 text-white hover:bg-blue-600 text-xs h-8">
               + Pré-agendar
@@ -101,8 +101,8 @@ export default async function InstanciasTurnosPage({
               href={`/gestor/turnos/tarefas${params}`}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 isActive
-                  ? 'bg-slate-700 text-slate-100'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                  ? 'bg-secondary text-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-secondary hover:text-foreground'
               }`}
             >
               {f.label}
@@ -113,8 +113,8 @@ export default async function InstanciasTurnosPage({
 
       {/* Lista */}
       {instances.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 py-12 text-center">
-          <p className="text-sm text-slate-500">Nenhuma instância encontrada.</p>
+        <div className="rounded-xl border border-border bg-card py-12 text-center">
+          <p className="text-sm text-muted-foreground">Nenhuma instância encontrada.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -122,12 +122,12 @@ export default async function InstanciasTurnosPage({
             <Link
               key={inst.id}
               href={`/gestor/turnos/tarefas/${inst.id}`}
-              className="block rounded-xl border border-slate-800 bg-slate-900 p-4 hover:bg-slate-800/60 transition-colors"
+              className="block rounded-xl border border-border bg-card p-4 hover:bg-muted/60 transition-colors"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-0.5 min-w-0">
                   <p className="text-sm font-medium">{inst.shift.name}</p>
-                  <p className="text-xs text-slate-500 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {formatDate(inst.date)}
                     {inst.status === 'SCHEDULED'
                       ? ` · Agendado por ${inst.opener.name}`
@@ -135,13 +135,13 @@ export default async function InstanciasTurnosPage({
                     }
                   </p>
                   {inst.handover && (
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-muted-foreground">
                       Sainte: {inst.handover.outgoing_user.name}
                       {inst.handover.incoming_user && ` → Entrante: ${inst.handover.incoming_user.name}`}
                     </p>
                   )}
                 </div>
-                <span className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[inst.status] ?? 'bg-slate-800 text-slate-400'}`}>
+                <span className={`shrink-0 rounded border px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[inst.status] ?? 'bg-muted text-muted-foreground'}`}>
                   {STATUS_LABEL[inst.status] ?? inst.status}
                 </span>
               </div>
@@ -155,16 +155,16 @@ export default async function InstanciasTurnosPage({
         <div className="flex items-center justify-between gap-2 pt-1">
           <Link
             href={`/gestor/turnos/tarefas?${status ? `status=${status}&` : ''}page=${page - 1}`}
-            className={`text-xs px-3 py-1.5 rounded-md border border-slate-700 text-slate-400 hover:bg-slate-800 ${page <= 1 ? 'pointer-events-none opacity-40' : ''}`}
+            className={`text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted ${page <= 1 ? 'pointer-events-none opacity-40' : ''}`}
           >
             ← Anterior
           </Link>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {page} / {totalPages}
           </span>
           <Link
             href={`/gestor/turnos/tarefas?${status ? `status=${status}&` : ''}page=${page + 1}`}
-            className={`text-xs px-3 py-1.5 rounded-md border border-slate-700 text-slate-400 hover:bg-slate-800 ${page >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
+            className={`text-xs px-3 py-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted ${page >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
           >
             Próximo →
           </Link>

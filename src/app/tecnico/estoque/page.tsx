@@ -23,12 +23,12 @@ export default async function TecnicoEstoquePage() {
   return (
     <main className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-xl font-semibold">Estoque de Produtos Químicos</h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           Registre entradas, saídas e contagens físicas de produtos.
         </p>
 
         {products.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum produto ativo cadastrado.</p>
+          <p className="text-sm text-muted-foreground">Nenhum produto ativo cadastrado.</p>
         ) : (
           <div className="space-y-2">
             {products.map((p) => {
@@ -43,19 +43,19 @@ export default async function TecnicoEstoquePage() {
                 <div
                   key={p.id}
                   className={`rounded-lg border p-4 flex items-center justify-between gap-4 ${
-                    alerta ? 'border-red-800/60 bg-slate-900' : 'border-slate-700 bg-slate-900'
+                    alerta ? 'border-red-800/60 bg-card' : 'border-border bg-card'
                   }`}
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-slate-100">{p.name}</span>
+                      <span className="font-medium text-foreground">{p.name}</span>
                       {alerta && (
                         <span className="text-xs font-medium text-red-400 bg-red-900/30 px-2 py-0.5 rounded animate-pulse">
                           ESTOQUE BAIXO
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Calculado: {formatarQuantidade(calculado)} {p.unit}
                       {fisico !== null && ` · Físico: ${formatarQuantidade(fisico)} ${p.unit}`}
                       {` · Mínimo: ${formatarQuantidade(p.min_stock)} ${p.unit}`}

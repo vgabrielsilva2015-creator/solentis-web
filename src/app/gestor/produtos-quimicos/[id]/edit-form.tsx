@@ -33,23 +33,23 @@ export function EditForm({ product }: { product: Product }) {
       )}
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Nome *</label>
+        <label className="text-sm text-foreground">Nome *</label>
         <input
           name="name"
           required
           defaultValue={product.name}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Unidade *</label>
+        <label className="text-sm text-foreground">Unidade *</label>
         <select
           name="unit_select"
           required
           value={unitSelect}
           onChange={(e) => setUnitSelect(e.target.value)}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           {CHEMICAL_UNIT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -59,19 +59,19 @@ export function EditForm({ product }: { product: Product }) {
 
       {unitSelect === 'outro' && (
         <div className="space-y-1">
-          <label className="text-sm text-slate-300">Unidade personalizada *</label>
+          <label className="text-sm text-foreground">Unidade personalizada *</label>
           <input
             name="unit_custom"
             required
             maxLength={20}
             defaultValue={!isPreset ? product.unit : ''}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       )}
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Estoque mínimo *</label>
+        <label className="text-sm text-foreground">Estoque mínimo *</label>
         <input
           name="min_stock"
           type="number"
@@ -79,17 +79,17 @@ export function EditForm({ product }: { product: Product }) {
           step="0.01"
           required
           defaultValue={product.min_stock}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm text-slate-300">Descrição</label>
+        <label className="text-sm text-foreground">Descrição</label>
         <textarea
           name="description"
           rows={2}
           defaultValue={product.description ?? ''}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 

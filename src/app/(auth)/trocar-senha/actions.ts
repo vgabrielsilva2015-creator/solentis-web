@@ -3,6 +3,7 @@
 import { auth, signIn } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, passwordSchema } from '@/lib/password'
+import { getLogger } from '@/lib/logger'
 import { z } from 'zod'
 import { AuthError } from 'next-auth'
 
@@ -83,7 +84,8 @@ export async function trocarSenhaAction(
 
   } catch (err) {
     if (err instanceof AuthError) {
-      console.error("AuthError na action de trocar senha:", err)
+      const log = await getLogger({ action: 'trocarSenha' })
+      log.error({ err }, 'AuthError na action de trocar senha')
       return { error: 'Ocorreu um erro de autenticação ao trocar a senha.' }
     }
     throw err // Deixa NEXT_REDIRECT e outros erros subirem

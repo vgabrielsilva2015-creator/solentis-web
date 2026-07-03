@@ -156,7 +156,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Descrição */}
       <div className="space-y-1.5">
-        <label htmlFor="description" className="text-sm font-semibold text-slate-350">
+        <label htmlFor="description" className="text-sm font-semibold text-foreground">
           Descrição da ocorrência *
         </label>
         <textarea
@@ -166,7 +166,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
           autoComplete="off"
           value={draft.description}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
           placeholder="Descreva o que aconteceu de forma clara e objetiva…"
           required
         />
@@ -177,7 +177,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Tipo de Ocorrência */}
       <div className="space-y-1.5">
-        <label htmlFor="type" className="text-sm font-semibold text-slate-355">
+        <label htmlFor="type" className="text-sm font-semibold text-foreground">
           Tipo de Ocorrência *
         </label>
         <select
@@ -185,7 +185,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
           name="type"
           value={draft.type}
           onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           required
         >
           <option value="">Selecione o tipo…</option>
@@ -202,7 +202,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Categoria */}
       <div className="space-y-1.5">
-        <label htmlFor="category" className="text-sm font-semibold text-slate-350">
+        <label htmlFor="category" className="text-sm font-semibold text-foreground">
           Categoria *
         </label>
         <select
@@ -210,7 +210,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
           name="category"
           value={draft.category}
           onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           required
         >
           <option value="">Selecione a categoria…</option>
@@ -227,15 +227,15 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Ponto de Coleta (Opcional) */}
       <div className="space-y-1.5">
-        <label htmlFor="collection_point_id" className="text-sm font-semibold text-slate-350">
-          Ponto de Coleta <span className="text-slate-500 font-normal">(opcional)</span>
+        <label htmlFor="collection_point_id" className="text-sm font-semibold text-foreground">
+          Ponto de Coleta <span className="text-muted-foreground font-normal">(opcional)</span>
         </label>
         <select
           id="collection_point_id"
           name="collection_point_id"
           value={draft.collection_point_id}
           onChange={(e) => setDraft((d) => ({ ...d, collection_point_id: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="">Nenhum específico</option>
           {collectionPoints.map(p => (
@@ -251,7 +251,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Severidade */}
       <div className="space-y-1.5">
-        <label htmlFor="severity" className="text-sm font-semibold text-slate-350">
+        <label htmlFor="severity" className="text-sm font-semibold text-foreground">
           Severidade *
         </label>
         <select
@@ -259,7 +259,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
           name="severity"
           value={draft.severity}
           onChange={(e) => setDraft((d) => ({ ...d, severity: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           required
         >
           <option value="">Selecione a severidade…</option>
@@ -275,15 +275,15 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Prazo sugerido */}
       {draft.severity && (
-        <div className="rounded-md border border-slate-700 bg-slate-800/50 px-3 py-2.5 text-sm">
-          <span className="text-slate-500">Prazo para resolução: </span>
-          <span className="text-slate-300 font-medium">{DEADLINE_LABEL[draft.severity]}</span>
+        <div className="rounded-md border border-border bg-muted/50 px-3 py-2.5 text-sm">
+          <span className="text-muted-foreground">Prazo para resolução: </span>
+          <span className="text-foreground font-medium">{DEADLINE_LABEL[draft.severity]}</span>
         </div>
       )}
 
       {/* Ação Imediata */}
       <div className="space-y-1.5">
-        <label htmlFor="immediate_action" className="text-sm font-semibold text-slate-300 flex items-center justify-between">
+        <label htmlFor="immediate_action" className="text-sm font-semibold text-foreground flex items-center justify-between">
           <span>Ação imediata executada {isImmediateActionRequired && '*'}</span>
           {isImmediateActionRequired && (
             <span className="text-[10px] text-red-400 font-bold bg-red-955/20 px-2 py-0.5 rounded border border-red-900/30">Obrigatório</span>
@@ -295,7 +295,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
           rows={3}
           value={draft.immediate_action}
           onChange={(e) => setDraft((d) => ({ ...d, immediate_action: e.target.value }))}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
           placeholder="Descreva a ação imediata de contenção..."
           required={isImmediateActionRequired}
         />
@@ -306,20 +306,20 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
 
       {/* Fotos */}
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-slate-300">
-          Fotos da ocorrência <span className="text-slate-500 font-normal">(opcional, até 3 fotos)</span>
+        <label className="text-sm font-semibold text-foreground">
+          Fotos da ocorrência <span className="text-muted-foreground font-normal">(opcional, até 3 fotos)</span>
         </label>
 
         {photoPreviews.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 p-3 rounded-lg border border-slate-800 bg-slate-950/20">
+          <div className="grid grid-cols-3 gap-3 p-3 rounded-lg border border-border bg-background/20">
             {photoPreviews.map((url, idx) => (
-              <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-800 bg-slate-900 group">
+              <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-card group">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt={`Preview ${idx + 1}`} className="object-cover w-full h-full" />
                 <button
                   type="button"
                   onClick={() => removePhoto(idx)}
-                  className="absolute top-1 right-1 h-6 w-6 rounded-full bg-slate-955/80 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-150"
+                  className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -329,11 +329,11 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
         )}
 
         {photoPreviews.length < 3 && (
-          <label className="flex flex-col items-center justify-center gap-2 cursor-pointer rounded-xl border border-dashed border-slate-700 bg-slate-800/20 py-6 hover:bg-slate-800/40 hover:border-slate-550 transition-all text-center">
-            <ImageIcon className="w-6 h-6 text-slate-500" />
+          <label className="flex flex-col items-center justify-center gap-2 cursor-pointer rounded-xl border border-dashed border-border bg-muted/20 py-6 hover:bg-muted/40 hover:border-border transition-all text-center">
+            <ImageIcon className="w-6 h-6 text-muted-foreground" />
             <div>
-              <p className="text-xs font-semibold text-slate-300">Selecionar Fotos ({selectedPhotos.length}/3)</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">JPG, PNG ou WEBP (máx. 5MB)</p>
+              <p className="text-xs font-semibold text-foreground">Selecionar Fotos ({selectedPhotos.length}/3)</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG ou WEBP (máx. 5MB)</p>
             </div>
             <input
               type="file"
@@ -353,7 +353,7 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
       <Button
         type="submit"
         disabled={isPending || isMutating}
-        className="h-12 w-full bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50 text-sm font-semibold transition-all mt-4"
+        className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-semibold transition-all mt-4"
       >
         {isPending || isMutating ? 'Registrando ocorrência...' : 'Registrar Ocorrência'}
       </Button>

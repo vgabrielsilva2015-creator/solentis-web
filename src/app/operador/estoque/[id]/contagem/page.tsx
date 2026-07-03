@@ -37,17 +37,17 @@ export default async function ContagemPage({ params }: { params: Promise<{ id: s
         <BackButton href="/operador/estoque" label="Estoque" />
         <h1 className="text-base font-semibold mt-1">Contagem Física — {product.name}</h1>
       </div>
-        <div className="rounded-lg bg-slate-800/50 px-4 py-3 space-y-2 text-sm">
+        <div className="rounded-lg bg-muted/50 px-4 py-3 space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-400">Estoque calculado</span>
-            <span className="font-medium text-slate-100">{formatarQuantidade(calculado)} {product.unit}</span>
+            <span className="text-muted-foreground">Estoque calculado</span>
+            <span className="font-medium text-foreground">{formatarQuantidade(calculado)} {product.unit}</span>
           </div>
           {ultimaContagem && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Última contagem</span>
-              <span className="font-medium text-slate-100">
+              <span className="text-muted-foreground">Última contagem</span>
+              <span className="font-medium text-foreground">
                 {formatarQuantidade(ultimaContagem.counted_quantity)} {product.unit}
-                <span className="text-slate-500 text-xs ml-2">
+                <span className="text-muted-foreground text-xs ml-2">
                   ({ultimaContagem.counted_at.toLocaleDateString('pt-BR')})
                 </span>
               </span>
@@ -55,7 +55,7 @@ export default async function ContagemPage({ params }: { params: Promise<{ id: s
           )}
         </div>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Conte o estoque fisicamente e registre a quantidade real. A divergência em relação ao
           calculado será exibida para o Gestor.
         </p>

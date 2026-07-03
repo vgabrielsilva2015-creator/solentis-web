@@ -52,24 +52,24 @@ export default async function AnalisesPage({
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-xl font-semibold">Análises</h1>
-            <p className="text-xs text-slate-400">{total} registro(s) no total</p>
+            <p className="text-xs text-muted-foreground">{total} registro(s) no total</p>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/tecnico/analises/historico">
-              <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs h-8">
+              <Button variant="outline" className="border-border text-foreground hover:bg-muted text-xs h-8">
                 Histórico
               </Button>
             </Link>
             {session.user.role === 'MANAGER' && (
               <Link href="/gestor/parametros">
-                <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs h-8">
+                <Button variant="outline" className="border-border text-foreground hover:bg-muted text-xs h-8">
                   Config. Analíticas
                 </Button>
               </Link>
             )}
             {session.user.role === 'TECHNICIAN' && (
               <Link href="/tecnico/analises/nova">
-                <Button className="bg-slate-100 text-slate-900 hover:bg-white text-xs h-8">
+                <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8">
                   + Nova
                 </Button>
               </Link>
@@ -79,7 +79,7 @@ export default async function AnalisesPage({
 
         {/* Lista */}
         {analyses.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 py-14 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-border bg-card py-14 text-center text-sm text-muted-foreground">
             Nenhuma análise registrada ainda.
           </div>
         ) : (
@@ -88,19 +88,19 @@ export default async function AnalisesPage({
               <div
                 key={a.id}
                 className={[
-                  'rounded-xl border bg-slate-900 p-4 space-y-2',
+                  'rounded-xl border bg-card p-4 space-y-2',
                   a.is_non_conformant
                     ? 'border-red-900/60'
-                    : 'border-slate-800',
+                    : 'border-border',
                 ].join(' ')}
               >
                 {/* Linha superior: ponto + badges */}
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-slate-100 leading-snug">
+                    <p className="text-sm font-medium text-foreground leading-snug">
                       {a.collection_point.name}
                     </p>
-                    <p className="text-xs text-slate-500">{formatDatetime(a.collected_at)}</p>
+                    <p className="text-xs text-muted-foreground">{formatDatetime(a.collected_at)}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     {a.is_non_conformant && (
@@ -121,15 +121,15 @@ export default async function AnalisesPage({
                 </div>
 
                 {/* Parâmetro + valor */}
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-foreground">
                   <span className="font-medium">{a.parameter.name}:</span>{' '}
                   {a.value} {a.unit}
-                  <span className="text-slate-600"> · {a.method?.name ?? 'N/A'}</span>
+                  <span className="text-muted-foreground"> · {a.method?.name ?? 'N/A'}</span>
                 </p>
 
                 {/* Limites aplicados (snapshot) */}
                 {(a.min_limit_applied !== null || a.max_limit_applied !== null) && (
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted-foreground">
                     Limite vigente na coleta: {a.min_limit_applied ?? '—'} – {a.max_limit_applied ?? '—'} {a.unit}
                   </p>
                 )}
@@ -137,7 +137,7 @@ export default async function AnalisesPage({
                 {/* Aprovador ou botão de aprovação */}
                 <div className="flex items-center justify-between pt-0.5">
                   {a.approved_by ? (
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-muted-foreground">
                       Aprovado por {a.approver?.name ?? '—'}
                     </p>
                   ) : (
@@ -156,13 +156,13 @@ export default async function AnalisesPage({
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-1 text-sm">
             {page > 1 ? (
-              <Link href={`/tecnico/analises?page=${page - 1}`} className="text-slate-400 hover:text-slate-200">
+              <Link href={`/tecnico/analises?page=${page - 1}`} className="text-muted-foreground hover:text-foreground">
                 ← Anterior
               </Link>
             ) : <span />}
-            <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+            <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
             {page < totalPages ? (
-              <Link href={`/tecnico/analises?page=${page + 1}`} className="text-slate-400 hover:text-slate-200">
+              <Link href={`/tecnico/analises?page=${page + 1}`} className="text-muted-foreground hover:text-foreground">
                 Próxima →
               </Link>
             ) : <span />}

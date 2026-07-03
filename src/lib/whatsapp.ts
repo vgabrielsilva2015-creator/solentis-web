@@ -1,9 +1,11 @@
+import { logger } from '@/lib/logger'
+
 export async function sendWhatsAppAlert(phone: string, message: string) {
   const token = process.env.WHATSAPP_TOKEN
   const phoneId = process.env.WHATSAPP_PHONE_ID
 
   if (!token || !phoneId) {
-    console.warn('⚠️ WhatsApp credentials (WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID) não configuradas no .env')
+    logger.warn({ component: 'whatsapp' }, 'Credenciais do WhatsApp (WHATSAPP_TOKEN/WHATSAPP_PHONE_ID) não configuradas')
     return
   }
 
@@ -32,9 +34,9 @@ export async function sendWhatsAppAlert(phone: string, message: string) {
 
     if (!response.ok) {
       const err = await response.json()
-      console.error('❌ Falha ao enviar WhatsApp:', err)
+      logger.error({ err, status: response.status, component: 'whatsapp' }, 'Falha ao enviar mensagem WhatsApp')
     }
   } catch (error) {
-    console.error('❌ Erro de conexão com WhatsApp API:', error)
+    logger.error({ err: error, component: 'whatsapp' }, 'Erro de conexão com a WhatsApp API')
   }
 }

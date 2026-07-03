@@ -3,7 +3,6 @@ import { Sora, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { CommandMenu } from "@/components/ui/command-menu";
 import { Analytics } from "@vercel/analytics/next";
-import { ThemeScript } from "@/components/theme-provider";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { SyncManager } from "@/components/sync-manager";
 import { ToastProvider } from "@/components/ui/toast";
@@ -59,9 +58,6 @@ export default function RootLayout({
       className={`${sora.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <ThemeScript />
-      </head>
       <body className="min-h-full flex flex-col">
         <OfflineIndicator />
         <SyncManager />

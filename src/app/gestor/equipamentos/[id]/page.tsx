@@ -30,7 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
-  LOW:      'text-slate-400',
+  LOW:      'text-muted-foreground',
   MEDIUM:   'text-amber-400',
   HIGH:     'text-orange-400',
   CRITICAL: 'text-red-400',
@@ -106,17 +106,17 @@ export default async function EquipamentoDetailPage({
 
         {/* Cabeçalho do equipamento */}
         <div className={[
-          'rounded-xl border bg-slate-900 p-4 space-y-3',
-          isOverdue ? 'border-red-900/60' : 'border-slate-800',
+          'rounded-xl border bg-card p-4 space-y-3',
+          isOverdue ? 'border-red-900/60' : 'border-border',
         ].join(' ')}>
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-base font-semibold">{equipment.name}</p>
-              <p className="text-sm text-slate-400">{equipment.category.name}</p>
+              <p className="text-sm text-muted-foreground">{equipment.category.name}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {!equipment.is_active && (
-                <span className="rounded px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-500 border border-slate-700">
+                <span className="rounded px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border">
                   Inativo
                 </span>
               )}
@@ -130,40 +130,40 @@ export default async function EquipamentoDetailPage({
 
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
             <div>
-              <dt className="text-slate-500">Fabricante</dt>
-              <dd className="text-slate-300">{equipment.manufacturer ?? '—'}</dd>
+              <dt className="text-muted-foreground">Fabricante</dt>
+              <dd className="text-foreground">{equipment.manufacturer ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Modelo</dt>
-              <dd className="text-slate-300">{equipment.model_name ?? '—'}</dd>
+              <dt className="text-muted-foreground">Modelo</dt>
+              <dd className="text-foreground">{equipment.model_name ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Nº série / Patrimônio</dt>
-              <dd className="text-slate-300">{equipment.serial_number ?? '—'}</dd>
+              <dt className="text-muted-foreground">Nº série / Patrimônio</dt>
+              <dd className="text-foreground">{equipment.serial_number ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Localização</dt>
-              <dd className="text-slate-300">{equipment.location ?? '—'}</dd>
+              <dt className="text-muted-foreground">Localização</dt>
+              <dd className="text-foreground">{equipment.location ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Status Operacional</dt>
-              <dd className="text-slate-300">{STATUS_LABEL[equipment.status] ?? equipment.status}</dd>
+              <dt className="text-muted-foreground">Status Operacional</dt>
+              <dd className="text-foreground">{STATUS_LABEL[equipment.status] ?? equipment.status}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Responsável Técnico</dt>
-              <dd className="text-slate-300">{equipment.responsible?.name ?? '—'}</dd>
+              <dt className="text-muted-foreground">Responsável Técnico</dt>
+              <dd className="text-foreground">{equipment.responsible?.name ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Instalação</dt>
-              <dd className="text-slate-300">{formatDate(equipment.installation_date)}</dd>
+              <dt className="text-muted-foreground">Instalação</dt>
+              <dd className="text-foreground">{formatDate(equipment.installation_date)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Freq. preventiva</dt>
-              <dd className="text-slate-300">{equipment.preventive_frequency_days} dias</dd>
+              <dt className="text-muted-foreground">Freq. preventiva</dt>
+              <dd className="text-foreground">{equipment.preventive_frequency_days} dias</dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-slate-500">Próxima preventiva</dt>
-              <dd className={isOverdue ? 'text-red-400 font-semibold mt-0.5' : 'text-slate-300 mt-0.5'}>
+              <dt className="text-muted-foreground">Próxima preventiva</dt>
+              <dd className={isOverdue ? 'text-red-400 font-semibold mt-0.5' : 'text-foreground mt-0.5'}>
                 {nextScheduled ? formatDate(new Date(nextScheduled.scheduled_date)) : '—'}
                 {isOverdue && ' (ATRASADA)'}
               </dd>
@@ -172,11 +172,11 @@ export default async function EquipamentoDetailPage({
 
           {/* Foto e Manual */}
           {(equipment.photo_url || equipment.manual_url) && (
-            <div className="flex flex-col sm:flex-row gap-4 border-t border-slate-800 pt-3">
+            <div className="flex flex-col sm:flex-row gap-4 border-t border-border pt-3">
               {equipment.photo_url && (
                 <div className="w-full sm:w-1/2">
-                  <span className="text-[10px] text-slate-500 block font-bold mb-1 uppercase tracking-wider">Foto do Equipamento</span>
-                  <div className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950/40">
+                  <span className="text-[10px] text-muted-foreground block font-bold mb-1 uppercase tracking-wider">Foto do Equipamento</span>
+                  <div className="relative rounded-lg overflow-hidden border border-border bg-background/40">
                     <img 
                       src={`/api/equipments/${equipment.id}/files?type=photo`} 
                       alt={equipment.name} 
@@ -187,11 +187,11 @@ export default async function EquipamentoDetailPage({
               )}
               {equipment.manual_url && (
                 <div className="w-full sm:w-1/2 flex flex-col justify-end">
-                  <span className="text-[10px] text-slate-500 block font-bold mb-1 uppercase tracking-wider">Documento Técnico</span>
+                  <span className="text-[10px] text-muted-foreground block font-bold mb-1 uppercase tracking-wider">Documento Técnico</span>
                   <a 
                     href={`/api/equipments/${equipment.id}/files?type=manual`}
                     target="_blank"
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-800 bg-slate-900/60 p-3 hover:bg-slate-850 hover:border-slate-700 transition-colors text-xs font-semibold text-sky-400 gap-1.5 w-full text-center"
+                    className="inline-flex items-center justify-center rounded-lg border border-border bg-card/60 p-3 hover:bg-card hover:border-border transition-colors text-xs font-semibold text-sky-400 gap-1.5 w-full text-center"
                   >
                     📄 Visualizar Manual (PDF)
                   </a>
@@ -209,7 +209,7 @@ export default async function EquipamentoDetailPage({
         <section className="space-y-3">
           <h2 className="text-base font-semibold">Preventivas</h2>
           {equipment.preventive_maintenances.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhuma preventiva registrada.</p>
+            <p className="text-sm text-muted-foreground">Nenhuma preventiva registrada.</p>
           ) : (
             <div className="space-y-2">
               {equipment.preventive_maintenances.map((p) => {
@@ -219,17 +219,17 @@ export default async function EquipamentoDetailPage({
                   <div
                     key={p.id}
                     className={[
-                      'rounded-lg border bg-slate-900 px-4 py-3 flex items-center justify-between gap-2',
-                      overdue ? 'border-red-900/60' : 'border-slate-800',
+                      'rounded-lg border bg-card px-4 py-3 flex items-center justify-between gap-2',
+                      overdue ? 'border-red-900/60' : 'border-border',
                     ].join(' ')}
                   >
                     <div>
-                      <p className={['text-sm font-medium', overdue ? 'text-red-400' : 'text-slate-200'].join(' ')}>
+                      <p className={['text-sm font-medium', overdue ? 'text-red-400' : 'text-foreground'].join(' ')}>
                         {formatDate(new Date(p.scheduled_date))}
                         {overdue && ' — vencida'}
                       </p>
                       {p.status === 'COMPLETED' && p.completed_date && (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           Concluída em {formatDate(new Date(p.completed_date))}
                         </p>
                       )}
@@ -259,23 +259,23 @@ export default async function EquipamentoDetailPage({
               {equipment.corrective_maintenances.map((c) => (
                 <div
                   key={c.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900 px-4 py-3 space-y-2"
+                  className="rounded-lg border border-border bg-card px-4 py-3 space-y-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-200 leading-snug">{c.description}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-sm font-medium text-foreground leading-snug">{c.description}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {formatDate(c.start_date)} · {c.responsible.name}
                       </p>
                     </div>
-                    <span className={['text-xs font-medium shrink-0', c.priority ? (PRIORITY_COLOR[c.priority] ?? 'text-slate-400') : 'text-slate-400'].join(' ')}>
+                    <span className={['text-xs font-medium shrink-0', c.priority ? (PRIORITY_COLOR[c.priority] ?? 'text-muted-foreground') : 'text-muted-foreground'].join(' ')}>
                       {c.priority ? (PRIORITY_LABEL[c.priority] ?? c.priority) : '—'}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
                     {c.status === 'OPEN' ? (
-                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground border border-border">
                         Aberta
                       </span>
                     ) : c.status === 'IN_PROGRESS' ? (
@@ -306,7 +306,7 @@ export default async function EquipamentoDetailPage({
                   </div>
 
                   {c.notes && (
-                    <p className="text-xs text-slate-500 border-t border-slate-800 pt-2">{c.notes}</p>
+                    <p className="text-xs text-muted-foreground border-t border-border pt-2">{c.notes}</p>
                   )}
                 </div>
               ))}
@@ -323,31 +323,31 @@ export default async function EquipamentoDetailPage({
         <section className="space-y-3">
           <h2 className="text-base font-semibold">Histórico de Manutenções (Logs)</h2>
           {equipment.maintenance_logs.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhum log de manutenção registrado.</p>
+            <p className="text-sm text-muted-foreground">Nenhum log de manutenção registrado.</p>
           ) : (
             <div className="space-y-2">
               {equipment.maintenance_logs.map((log) => (
                 <div
                   key={log.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/50 px-4 py-3 space-y-1 text-xs"
+                  className="rounded-lg border border-border bg-card/50 px-4 py-3 space-y-1 text-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-200 uppercase tracking-wide">
+                    <span className="font-semibold text-foreground uppercase tracking-wide">
                       {log.type === 'PREVENTIVE' ? 'Preventiva' : log.type === 'CORRECTIVE' ? 'Corretiva' : log.type}
                     </span>
-                    <span className="text-slate-500">
+                    <span className="text-muted-foreground">
                       {formatDate(log.logged_at)}
                     </span>
                   </div>
-                  <p className="text-slate-300 text-sm mt-1">{log.description}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-400 pt-1">
+                  <p className="text-foreground text-sm mt-1">{log.description}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground pt-1">
                     {log.cost && (
                       <p>
-                        <span className="text-slate-500">Custo:</span> R$ {Number(log.cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <span className="text-muted-foreground">Custo:</span> R$ {Number(log.cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     )}
                     <p>
-                      <span className="text-slate-500">Executado por:</span> {log.performed_by}
+                      <span className="text-muted-foreground">Executado por:</span> {log.performed_by}
                     </p>
                   </div>
                 </div>
@@ -359,7 +359,7 @@ export default async function EquipamentoDetailPage({
         {/* Editar equipamento */}
         <section className="space-y-3">
           <h2 className="text-base font-semibold">Editar dados</h2>
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
             <EditForm
               equipment={{
                 id:                        equipment.id,

@@ -52,7 +52,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors flex items-center justify-center"
+      className="p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
       title="Alternar tema"
     >
       {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}

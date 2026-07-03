@@ -10,7 +10,7 @@ type DataPoint = { paramName: string; count: number }
 export function NonConformChart({ data }: { data: DataPoint[] }) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48 text-sm text-slate-500">
+      <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
         Nenhuma não-conformidade no período.
       </div>
     )

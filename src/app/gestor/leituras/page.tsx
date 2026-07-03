@@ -49,10 +49,10 @@ export default async function GestorLeiturasPage({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">Todas as Leituras</h1>
-            <p className="text-sm text-slate-400">Histórico completo de registros manuais e inteligência artificial. ({total} registros)</p>
+            <p className="text-sm text-muted-foreground">Histórico completo de registros manuais e inteligência artificial. ({total} registros)</p>
           </div>
           <Link href={`/api/export?type=readings`} target="_blank">
-            <Button variant="outline" className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs h-8">
+            <Button variant="outline" className="border-border bg-muted text-foreground hover:bg-secondary text-xs h-8">
               <Download className="w-4 h-4 mr-1.5" />
               Exportar CSV
             </Button>
@@ -61,13 +61,13 @@ export default async function GestorLeiturasPage({
 
         {/* Tabela de leituras */}
         {readings.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-800 p-14 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-dashed border-border p-14 text-center text-sm text-muted-foreground">
             Nenhuma leitura registrada ainda.
           </div>
         ) : (
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-400">
-              <thead className="bg-slate-950/50 text-xs uppercase font-medium text-slate-500 border-b border-slate-800">
+          <div className="bg-card border border-border rounded-xl overflow-x-auto">
+            <table className="w-full text-left text-sm text-muted-foreground">
+              <thead className="bg-background/50 text-xs uppercase font-medium text-muted-foreground border-b border-border">
                 <tr>
                   <th className="px-4 py-3">Data</th>
                   <th className="px-4 py-3">Ponto de Coleta</th>
@@ -77,22 +77,22 @@ export default async function GestorLeiturasPage({
                   <th className="px-4 py-3 text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/50">
+              <tbody className="divide-y divide-border/50">
                 {readings.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-800/20 transition-colors">
+                  <tr key={r.id} className="hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDatetime(r.recorded_at)}</td>
-                    <td className="px-4 py-3 font-medium text-slate-300">{r.collection_point.name}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{r.collection_point.name}</td>
                     <td className="px-4 py-3">{r.parameter?.name || 'Observação Visual'}</td>
                     <td className="px-4 py-3">
                       {r.value !== null ? (
-                        <span className="font-mono text-slate-200">
+                        <span className="font-mono text-foreground">
                           {r.value} {r.unit}
                         </span>
                       ) : (
                         '—'
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{r.recorder?.name || 'Sistema'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.recorder?.name || 'Sistema'}</td>
                     <td className="px-4 py-3 text-right">
                       {r.is_non_conformant === true ? (
                         <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20">
@@ -103,7 +103,7 @@ export default async function GestorLeiturasPage({
                           CONFORME
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-600">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
                   </tr>
@@ -119,20 +119,20 @@ export default async function GestorLeiturasPage({
             {page > 1 ? (
               <Link
                 href={`/gestor/leituras?page=${page - 1}`}
-                className="px-4 py-2 border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
               >
                 ← Anterior
               </Link>
             ) : (
               <span />
             )}
-            <span className="text-xs text-slate-500 font-medium">
+            <span className="text-xs text-muted-foreground font-medium">
               Página {page} de {totalPages}
             </span>
             {page < totalPages ? (
               <Link
                 href={`/gestor/leituras?page=${page + 1}`}
-                className="px-4 py-2 border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
               >
                 Próxima →
               </Link>

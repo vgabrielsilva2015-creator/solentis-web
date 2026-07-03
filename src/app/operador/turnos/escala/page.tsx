@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
+import { BackButton } from '@/components/back-button'
 import { EscalaClient } from './escala-client'
 
 interface PageProps {
@@ -152,6 +153,7 @@ export default async function OperadorEscalaPage({ searchParams }: PageProps) {
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
+      <BackButton href="/operador/turnos" label="Turnos" />
       <EscalaClient
         currentYear={currentYear}
         currentMonth={currentMonth}

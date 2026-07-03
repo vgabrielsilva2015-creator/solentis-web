@@ -35,13 +35,13 @@ export function PreAgendarForm({ shifts }: { shifts: Shift[] }) {
       )}
 
       <div className="space-y-1.5">
-        <label htmlFor="shift_id" className="text-sm font-medium text-slate-300">
+        <label htmlFor="shift_id" className="text-sm font-medium text-foreground">
           Turno *
         </label>
         <select
           id="shift_id" name="shift_id"
           required
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         >
           <option value="">Selecione…</option>
           {shifts.map((s) => (
@@ -56,7 +56,7 @@ export function PreAgendarForm({ shifts }: { shifts: Shift[] }) {
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="date" className="text-sm font-medium text-slate-300">
+        <label htmlFor="date" className="text-sm font-medium text-foreground">
           Data *
         </label>
         <input
@@ -65,21 +65,21 @@ export function PreAgendarForm({ shifts }: { shifts: Shift[] }) {
           required
           value={dateVal}
           onChange={(e) => setDateVal(e.target.value)}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         />
         {state.fieldErrors?.date && (
           <p className="text-xs text-red-400">{state.fieldErrors.date[0]}</p>
         )}
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted-foreground">
         Após criar, você poderá atribuir tarefas antecipadamente. Quando o operador abrir o turno nessa data, as tarefas já estarão prontas.
       </p>
 
       <Button
         type="submit"
         disabled={isPending}
-        className="h-10 w-full bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50"
+        className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
         {isPending ? 'Criando…' : 'Pré-agendar turno'}
       </Button>

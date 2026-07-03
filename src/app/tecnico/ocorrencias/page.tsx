@@ -13,7 +13,7 @@ const SEVERITY_LABEL: Record<string, string> = {
   LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta', CRITICAL: 'Crítica',
 }
 const SEVERITY_COLOR: Record<string, string> = {
-  LOW:      'bg-slate-800 text-slate-400 border-slate-700',
+  LOW:      'bg-muted text-muted-foreground border-border',
   MEDIUM:   'bg-amber-950/60 text-amber-400 border-amber-900/50',
   HIGH:     'bg-orange-950/60 text-orange-400 border-orange-900/50',
   CRITICAL: 'bg-red-950/60 text-red-400 border-red-900/50',
@@ -69,21 +69,21 @@ export default async function OcorrenciasTecnicoPage({
   return (
     <main className="mx-auto max-w-2xl px-4 py-6 space-y-5">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+      <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
         <div>
           <h1 className="text-xl font-semibold">Ocorrências</h1>
-          <p className="text-xs text-slate-400">{total} registro(s)</p>
+          <p className="text-xs text-muted-foreground">{total} registro(s)</p>
         </div>
         <div className="flex items-center gap-2">
           {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-1 mr-2">
+          <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 mr-2">
             <Link href={`/tecnico/ocorrencias?view=kanban${statusFilter ? `&status=${statusFilter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'kanban' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} title="Kanban">
+              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </Link>
             <Link href={`/tecnico/ocorrencias?view=list${statusFilter ? `&status=${statusFilter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'list' ? 'bg-slate-800 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`} title="Lista">
+              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
                 <Table className="w-4 h-4" />
               </Button>
             </Link>
@@ -101,7 +101,7 @@ export default async function OcorrenciasTecnicoPage({
               'rounded-md border px-3 py-1.5 text-xs font-semibold h-8 flex items-center',
               !showAll
                 ? 'border-sky-700 bg-sky-900/40 text-sky-400'
-                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+                : 'border-border bg-muted text-muted-foreground hover:bg-secondary',
             ].join(' ')}
           >
             Em aberto
@@ -112,7 +112,7 @@ export default async function OcorrenciasTecnicoPage({
               'rounded-md border px-3 py-1.5 text-xs font-semibold h-8 flex items-center',
               showAll
                 ? 'border-sky-700 bg-sky-900/40 text-sky-400'
-                : 'border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700',
+                : 'border-border bg-muted text-muted-foreground hover:bg-secondary',
             ].join(' ')}
           >
             Todas
@@ -133,7 +133,7 @@ export default async function OcorrenciasTecnicoPage({
       {view === 'list' && (
         <>
           {ocorrencias.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/50 py-14 text-center text-sm text-slate-500">
+            <div className="rounded-xl border border-dashed border-border bg-card/50 py-14 text-center text-sm text-muted-foreground">
               Nenhuma ocorrência encontrada.
             </div>
           ) : (
@@ -147,13 +147,13 @@ export default async function OcorrenciasTecnicoPage({
                     key={oc.id}
                     href={`/tecnico/ocorrencias/${oc.id}`}
                     className={[
-                      'block rounded-xl border bg-slate-900 p-4 space-y-2 hover:bg-slate-800 transition-colors',
-                      prazoVencido ? 'border-red-900/60' : 'border-slate-800',
+                      'block rounded-xl border bg-card p-4 space-y-2 hover:bg-muted transition-colors',
+                      prazoVencido ? 'border-red-900/60' : 'border-border',
                     ].join(' ')}
                   >
                     {/* Badges */}
                     <div className="flex flex-wrap gap-1.5">
-                      <span className={`rounded border px-2 py-0.5 text-xs font-medium ${SEVERITY_COLOR[oc.severity] ?? 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                      <span className={`rounded border px-2 py-0.5 text-xs font-medium ${SEVERITY_COLOR[oc.severity] ?? 'bg-muted text-muted-foreground border-border'}`}>
                         {SEVERITY_LABEL[oc.severity] ?? oc.severity}
                       </span>
                       {prazoVencido && (
@@ -167,17 +167,17 @@ export default async function OcorrenciasTecnicoPage({
                         </span>
                       )}
                       {hasPhoto && (
-                        <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-500">
+                        <span className="rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                           Com foto ({oc.photos.length})
                         </span>
                       )}
                     </div>
 
                     {/* Descrição */}
-                    <p className="text-sm text-slate-200 line-clamp-2">{oc.description}</p>
+                    <p className="text-sm text-foreground line-clamp-2">{oc.description}</p>
 
                     {/* Rodapé */}
-                    <div className="flex items-center justify-between text-xs text-slate-600">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{oc.reporter.name} · {formatDatetime(oc.created_at)}</span>
                       <span className={prazoVencido ? 'text-red-400 font-medium' : ''}>
                         {formatDatetime(oc.deadline)}
@@ -195,16 +195,16 @@ export default async function OcorrenciasTecnicoPage({
               {page > 1 ? (
                 <Link
                   href={`/tecnico/ocorrencias?page=${page - 1}${statusFilter ? `&status=${statusFilter}` : ''}&view=list`}
-                  className="text-slate-400 hover:text-slate-200"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   ← Anterior
                 </Link>
               ) : <span />}
-              <span className="text-xs text-slate-600">Página {page} de {totalPages}</span>
+              <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
               {page < totalPages ? (
                 <Link
                   href={`/tecnico/ocorrencias?page=${page + 1}${statusFilter ? `&status=${statusFilter}` : ''}&view=list`}
-                  className="text-slate-400 hover:text-slate-200"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   Próxima →
                 </Link>

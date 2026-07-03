@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
+import { getLogger } from '@/lib/logger'
 
 export async function GET(request: Request) {
   try {
@@ -75,7 +76,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ results })
   } catch (error) {
-    console.error('Search API Error:', error)
+    const log = await getLogger({ action: 'search' })
+    log.error({ err: error }, 'Erro na busca global')
     return NextResponse.json({ error: 'Failed to search' }, { status: 500 })
   }
 }

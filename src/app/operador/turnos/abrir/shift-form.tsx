@@ -41,7 +41,7 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
         {shifts.map((shift) => (
           <label
             key={shift.id}
-            className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 cursor-pointer hover:bg-slate-800/60 transition-colors has-[:checked]:border-emerald-700 has-[:checked]:bg-emerald-950/20"
+            className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 cursor-pointer hover:bg-muted/60 transition-colors has-[:checked]:border-emerald-700 has-[:checked]:bg-emerald-950/20"
           >
             <input
               type="radio"
@@ -52,6 +52,7 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
               className="accent-emerald-500"
             />
             <div>
+<<<<<<< HEAD
               <p className="text-sm font-medium">
                 {shift.name}
                 {shift.id === recommendedShiftId && (
@@ -60,7 +61,7 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
                   </span>
                 )}
               </p>
-              <p className="text-xs text-slate-500">{shift.start_time} – {shift.end_time}</p>
+              <p className="text-xs text-muted-foreground">{shift.start_time} – {shift.end_time}</p>
             </div>
           </label>
         ))}

@@ -47,30 +47,30 @@ export default async function PassagemPage({
         <BackButton href="/operador/turnos" label="Turnos" />
         <div>
           <h1 className="text-xl font-semibold">Passagem de turno</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {instance.shift.name} · {instance.shift.start_time} – {instance.shift.end_time}
           </p>
         </div>
 
         {/* Resumo automático */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-2">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Resumo do turno</p>
+        <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resumo do turno</p>
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
-              <p className="text-2xl font-bold text-slate-100">{instance._count.readings}</p>
-              <p className="text-xs text-slate-500">leitura(s)</p>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <p className="text-2xl font-bold text-foreground">{instance._count.readings}</p>
+              <p className="text-xs text-muted-foreground">leitura(s)</p>
             </div>
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
-              <p className={['text-2xl font-bold', openOccurrencesCount > 0 ? 'text-amber-400' : 'text-slate-100'].join(' ')}>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <p className={['text-2xl font-bold', openOccurrencesCount > 0 ? 'text-amber-400' : 'text-foreground'].join(' ')}>
                 {openOccurrencesCount}
               </p>
-              <p className="text-xs text-slate-500">ocorrência(s)</p>
+              <p className="text-xs text-muted-foreground">ocorrência(s)</p>
             </div>
-            <div className="rounded-lg bg-slate-800/60 px-3 py-2 text-center">
-              <p className={['text-2xl font-bold', pendingTasksCount > 0 ? 'text-red-400' : 'text-slate-100'].join(' ')}>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <p className={['text-2xl font-bold', pendingTasksCount > 0 ? 'text-red-400' : 'text-foreground'].join(' ')}>
                 {pendingTasksCount}
               </p>
-              <p className="text-xs text-slate-500">tarefa(s) pend.</p>
+              <p className="text-xs text-muted-foreground">tarefa(s) pend.</p>
             </div>
           </div>
           {pendingTasksCount > 0 && (

@@ -71,7 +71,7 @@ export function PushManager() {
   return (
     <button
       onClick={isSubscribed ? unsubscribe : subscribe}
-      className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+      className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
       title={isSubscribed ? "Desativar Notificações" : "Ativar Notificações"}
     >
       {isSubscribed ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}

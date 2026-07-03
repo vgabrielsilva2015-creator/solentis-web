@@ -30,8 +30,8 @@ interface TrendChartProps {
 export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-slate-800">
-        <p className="text-sm text-slate-500">Sem histórico para exibir no período.</p>
+      <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border">
+        <p className="text-sm text-muted-foreground">Sem histórico para exibir no período.</p>
       </div>
     )
   }
@@ -63,8 +63,8 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
 
   return (
     <div className="h-72 w-full flex flex-col">
-      <div className="flex justify-end gap-3 px-2 text-[10px] text-slate-400 mb-1">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-slate-300 bg-slate-900 inline-block" /> Análise Interna</span>
+      <div className="flex justify-end gap-3 px-2 text-[10px] text-muted-foreground mb-1">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full border border-border bg-card inline-block" /> Análise Interna</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full border border-blue-400 bg-blue-500 inline-block" /> Laudo Externo</span>
       </div>
       <ResponsiveContainer width="100%" height="100%">

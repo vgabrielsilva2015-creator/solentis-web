@@ -60,8 +60,8 @@ export default async function GestorEquipamentosPage({
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">Equipamentos</h1>
-            <p className="text-sm text-slate-400 mt-1">Gerencie o parque de equipamentos da unidade ({total} cadastrados).</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Equipamentos</h1>
+            <p className="text-sm text-muted-foreground mt-1">Gerencie o parque de equipamentos da unidade ({total} cadastrados).</p>
           </div>
           <Link href="/gestor/equipamentos/novo">
             <Button className="bg-emerald-600 text-white hover:bg-emerald-500 w-full sm:w-auto shadow-sm">
@@ -76,21 +76,21 @@ export default async function GestorEquipamentosPage({
             name="q"
             defaultValue={search}
             placeholder="Buscar por nome do equipamento..."
-            className="flex-1 min-w-[200px] h-10 rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 shadow-sm"
+            className="flex-1 min-w-[200px] h-10 rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
           />
-          <label className="flex items-center gap-2 h-10 px-3 rounded-md border border-slate-700 bg-slate-800 text-sm text-slate-300 cursor-pointer select-none hover:bg-slate-700 transition-colors">
+          <label className="flex items-center gap-2 h-10 px-3 rounded-md border border-border bg-muted text-sm text-foreground cursor-pointer select-none hover:bg-secondary transition-colors">
             <input
               type="checkbox"
               name="inactive"
               value="1"
               defaultChecked={showAll}
-              className="accent-slate-400 w-4 h-4"
+              className="accent-muted-foreground w-4 h-4"
             />
             Ver inativos
           </label>
           <button
             type="submit"
-            className="h-10 rounded-md border border-slate-700 bg-slate-800 px-6 text-sm font-medium text-slate-200 hover:bg-slate-700 shadow-sm transition-colors"
+            className="h-10 rounded-md border border-border bg-muted px-6 text-sm font-medium text-foreground hover:bg-secondary shadow-sm transition-colors"
           >
             Filtrar
           </button>
@@ -98,14 +98,14 @@ export default async function GestorEquipamentosPage({
 
         {/* Lista */}
         {equipamentos.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 border-dashed bg-slate-900/50 py-16 text-center text-sm text-slate-500">
+          <div className="rounded-xl border border-border border-dashed bg-card/50 py-16 text-center text-sm text-muted-foreground">
             Nenhum equipamento foi encontrado na base.
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden shadow-sm">
+          <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-slate-800/50 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
                   <tr>
                     <th className="px-6 py-4">Nome / Modelo</th>
                     <th className="px-6 py-4">Categoria</th>
@@ -114,7 +114,7 @@ export default async function GestorEquipamentosPage({
                     <th className="px-6 py-4 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-border">
                   {equipamentos.map((eq) => {
                     const nextPreventive = eq.preventive_maintenances[0] ?? null
                     const isOverdue = nextPreventive
@@ -122,14 +122,14 @@ export default async function GestorEquipamentosPage({
                       : false
 
                     return (
-                      <tr key={eq.id} className="hover:bg-slate-800/30 transition-colors">
+                      <tr key={eq.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-medium text-slate-100">{eq.name}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">
+                          <div className="font-medium text-foreground">{eq.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
                             {eq.serial_number ? `SN: ${eq.serial_number}` : 'S/N'} {eq.location ? `· ${eq.location}` : ''}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-slate-300">
+                        <td className="px-6 py-4 text-foreground">
                           {eq.category.name}
                         </td>
                         <td className="px-6 py-4">
@@ -138,19 +138,19 @@ export default async function GestorEquipamentosPage({
                               Ativo
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium bg-muted/10 text-muted-foreground border border-border/20">
                               Inativo
                             </span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           {nextPreventive ? (
-                            <span className={isOverdue ? 'text-red-400 font-semibold' : 'text-slate-300'}>
+                            <span className={isOverdue ? 'text-red-400 font-semibold' : 'text-foreground'}>
                               {formatDate(new Date(nextPreventive.scheduled_date))}
                               {isOverdue && ' (Atrasada)'}
                             </span>
                           ) : (
-                            <span className="text-slate-500">Nenhuma agendada</span>
+                            <span className="text-muted-foreground">Nenhuma agendada</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -176,16 +176,16 @@ export default async function GestorEquipamentosPage({
             {page > 1 ? (
               <Link
                 href={`/gestor/equipamentos?page=${page - 1}${search ? `&q=${encodeURIComponent(search)}` : ''}${showAll ? '&inactive=1' : ''}`}
-                className="text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground"
               >
                 ← Anterior
               </Link>
             ) : <span />}
-            <span className="text-xs text-slate-500">Página {page} de {totalPages}</span>
+            <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
             {page < totalPages ? (
               <Link
                 href={`/gestor/equipamentos?page=${page + 1}${search ? `&q=${encodeURIComponent(search)}` : ''}${showAll ? '&inactive=1' : ''}`}
-                className="text-slate-400 hover:text-slate-200"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Próxima →
               </Link>

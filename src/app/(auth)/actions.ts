@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, passwordSchema } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
+import { getLogger } from '@/lib/logger'
 
 const TOKEN_TTL_MS = 60 * 60 * 1000 // 60 minutos
 
@@ -76,7 +77,8 @@ export async function sendPasswordResetLink(email: string) {
       html,
     })
   } catch (err) {
-    console.error('[reset] Falha ao gerar/enviar link de redefinição:', err)
+    const log = await getLogger({ action: 'requestPasswordReset' })
+    log.error({ err }, 'Falha ao gerar/enviar link de redefinição')
     // Mesmo em erro interno, não revelamos detalhes ao cliente.
   }
 
@@ -126,7 +128,8 @@ export async function resetPassword(token: string, newPassword: string) {
 
     return { success: true }
   } catch (err) {
-    console.error('[reset] Erro ao redefinir senha:', err)
+    const log = await getLogger({ action: 'resetPassword' })
+    log.error({ err }, 'Erro ao redefinir senha')
     return { error: 'Ocorreu um erro ao processar a requisição.' }
   }
 }

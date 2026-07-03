@@ -17,8 +17,8 @@ export function ResolveForm({ ocorrenciaId }: { ocorrenciaId: string }) {
   }, [state.success, router])
 
   return (
-    <form action={action} className="space-y-3 pt-4 border-t border-slate-800">
-      <h3 className="text-sm font-semibold text-slate-300">Fechar ocorrência</h3>
+    <form action={action} className="space-y-3 pt-4 border-t border-border">
+      <h3 className="text-sm font-semibold text-foreground">Fechar ocorrência</h3>
 
       {state.error && (
         <p className="rounded-md border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-400">
@@ -27,13 +27,13 @@ export function ResolveForm({ ocorrenciaId }: { ocorrenciaId: string }) {
       )}
 
       <div className="space-y-1.5">
-        <label htmlFor="resolution_notes" className="text-xs font-medium text-slate-400">
+        <label htmlFor="resolution_notes" className="text-xs font-medium text-muted-foreground">
           Resolução adotada *
         </label>
         <textarea
           id="resolution_notes" name="resolution_notes"
           rows={4}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 resize-none"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
           placeholder="Descreva como a ocorrência foi resolvida…"
         />
         {state.fieldErrors?.resolution_notes && (

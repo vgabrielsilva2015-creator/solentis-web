@@ -28,6 +28,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Ciclo 3 — Notificações, Filtros, Exportação para CSV, Ponto de Coleta e Categoria na Ocorrência CONCLUÍDA
 ✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
 ✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
+✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`.
 
 ## 🔧 Sessão de Hardening — 2026-06-26
 
@@ -53,11 +54,59 @@ Análise crítica + correção dos problemas que impediam virar produto. Todos o
 - Gráfico de tendência do dashboard: função `alpha()` gerava CSS inválido (`var(--x / 0.3)`) deixando o fundo preto → corrigida com `color-mix`; fontes dos eixos aumentadas.
 
 ### ⚠️ Ações pendentes na Vercel (Environment Variables)
-`RESEND_API_KEY` + `EMAIL_FROM` (e-mails de reset/convite) · `BLOB_READ_WRITE_TOKEN` via Blob Store (uploads) · `CRON_SECRET` (cron) · conferir `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push).
+`RESEND_API_KEY` + `EMAIL_FROM` (e-mails de reset/convite) · `BLOB_READ_WRITE_TOKEN` via Blob Store (uploads) · conferir `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (push).
+
+### ✅ Cron de turnos — OPERACIONAL (2026-07-01)
+O cron `/api/cron/shifts` gera as instâncias `SCHEDULED` do dia. Estava quebrado por 3 motivos, todos corrigidos:
+- **FK:** `opened_by` recebia a string `'CRON'` (viola FK User) → agora usa fallback escala→gestor, com `create` item-a-item e `console.warn` em quem for pulado.
+- **Middleware:** `proxy.ts` redirecionava `/api/cron/*` ao `/login` → excluído do matcher (o handler já faz auth fail-closed via `CRON_SECRET`).
+- **Horário:** `vercel.json` estava `0 0 * * *` (21h BRT) → agora `5 3 * * *` (03:05 UTC = 00:05 BRT).
+Config viva: `CRON_SECRET` **setada na Vercel**; Cron Job registrado no painel (plano Hobby = janela flexível de 1h, ok); `ShiftSchedule` de Manhã/Tarde/Noite (todos os dias) criados no tenant Solentis. Depende da escala (`ShiftScale`) para o `opened_by` cair no operador certo; sem escala, cai no gestor.
 
 ### Próximos itens de robustez (não-bloqueantes)
 - Reduzir os ~77 `any` aos poucos (não fazer sweep cego).
 - Endurecer o service worker se o cache do PWA voltar a atrapalhar navegação de auth.
+
+## 📊 Observabilidade — Logger estruturado (2026-07-01)
+
+Camada de log profissional adicionada (PR #14, branch `feat/observabilidade-logger`). Antes: só `console.*` solto (38 ocorrências), sem estrutura, contexto ou masking, e alguns catches engolindo o erro sem rastro.
+
+### `src/lib/logger.ts` (Pino)
+- **Saída JSON** no stdout → cai no painel **Logs** da Vercel, filtrável por campo.
+- **Data masking** via `redact`: `password`, `senha`, `password_hash`, `token`, `tempPassword`, `authorization`, `cookie`, `secret` (inclusive aninhados `*.token`) → `[REDACTED]`. **Regra: nunca logar segredo/PII.**
+- **Níveis**: `trace<debug<info<warn<error<fatal`. `fatal`=dependência crítica fora · `error`=exceção que quebrou a operação · `warn`=degradação tolerada (retry, fail-open, notificação não enviada) · `info`=evento de negócio.
+- **`getLogger({ userId, tenantId, action })`** → logger-filho com `requestId` (usa `x-vercel-id` p/ correlação). Nunca lança. Use em Server Actions/rotas.
+- **`logger`** (base) → para código module-level ou fire-and-forget (fora do escopo de request).
+- **Nível configurável** via env `LOG_LEVEL` na Vercel (sem deploy).
+
+### ⚠️ Regras de uso
+- **NUNCA importar o logger em código Edge** (`src/proxy.ts`) — Pino é Node-only. Server Actions e rotas rodam em Node (Prisma), lá é seguro.
+- **Componentes client** (`push-manager`, `sync-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
+- Complementa (não substitui) o `logAudit()` (`src/lib/audit.ts`), que é auditoria **de negócio** (CONAMA), não observabilidade operacional.
+
+### Estado
+Zero `console.*` em código server-side (migração completa nas Fases 1–4). Falhas antes silenciosas agora deixam rastro (ex.: reset de senha, toggle de usuário, `getNotifications` que retornava `[]` mudo).
+
+### ✅ Decisão — fail-open do rate-limit (2026-07-01)
+Em `src/lib/auth.ts`, se a checagem de rate-limit no banco falhar, o login **prossegue sem proteção de brute-force** (*fail-open*), registrado em `WARN`. **Decidido manter fail-open** (prioriza disponibilidade — não trava operadores em campo por um soluço do banco; o risco de brute-force é estreito, pois um banco instável já derrubaria os outros passos do login). Se um dia quiser fail-closed, é ~1 linha + ajuste de teste.
+
+## 🎨 Padrão de tabela de listagem do admin (2026-07-01)
+
+Tabelas de listagem do Gestor usam um padrão único (PRs #23/#24). Ao criar uma nova listagem admin, **siga este padrão** em vez de coluna "Editar" navegando para página.
+
+### Primitivas reutilizáveis (`src/components/ui/`)
+- `sheet.tsx` — drawer lateral (Radix Dialog ancorado à direita) para edição in-place.
+- `dropdown-menu.tsx` — menu de ações secundárias (kebab).
+- `tooltip.tsx` — `<Tooltip label="…">{trigger}</Tooltip>`.
+- `data-table-row.tsx` — `<DataTableRow onEdit={} actions={RowAction[]}>{...tds}</DataTableRow>`: linha clicável + **Pencil** (tooltip "Editar") + kebab **MoreVertical**; `hover:bg-muted/50`; **área de toque 44px** no kebab (PWA mobile). A célula de ações é anexada automática à direita.
+
+### Como aplicar numa tela (ver Categorias como referência)
+1. A `page.tsx` (Server Component) continua buscando os dados **e mantém a query intacta** (tenant-safe).
+2. Criar um `<x>-table.tsx` (Client) que recebe `items`, renderiza `<DataTableRow>` por item e um `<Sheet>` com o form.
+3. Criar um `<x>-sheet-form.tsx` (Client) que **reusa a MESMA server action** de edição (`editar…`), fecha o Sheet no sucesso (`onSaved` + `router.refresh()`).
+4. Ativar/Desativar (soft-delete) e navegações extras vão como itens do **kebab**.
+5. **Formulário pesado** (ex.: Parâmetros precisa de `method`/`collection_points` que a lista não carrega): **NÃO inchar a query da lista** — criar uma action de leitura tenant-safe (`carregar…`, guard de role) que o Sheet busca sob demanda ao abrir (com skeleton).
+6. **Preservar as rotas `[id]` antigas** (deep-links e páginas que hospedam seções extras, ex.: schedule de Turnos, continuam funcionando).
 
 ## ⚠️ CORREÇÕES ao restante deste documento (estado REAL em 2026-06-26)
 As seções antigas abaixo contêm afirmações **desatualizadas**. O estado real é:
@@ -69,7 +118,7 @@ Trate o texto histórico abaixo como registro de fases, não como verdade atual 
 
 ## Decisões-chave (resumo)
 - Nome: Solentis
-- Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui
+- Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui, Pino (logs estruturados)
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
 - Modo offline e PWA: IMPLEMENTADO com Serwist (sincronização automática de leituras ao voltar online)
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
@@ -565,15 +614,15 @@ Próxima sessão: usuário dirá "vamos continuar". Você deve:
 - **Fase 12 — Logo/imagem Solentis:** Adicionar logo nas telas de autenticação (/login, /trocar-senha) e nos headers dos dashboards. Atualmente exibe apenas o texto "Solentis".
 - **Pós-MVP — OCR/IA para laudos laboratoriais:** Leitura automática de laudos em PDF/imagem via OCR ou IA (Caminho B). Fora do escopo do MVP; avaliar na v1.0.
 - **Migração de middleware para proxy:** Next.js 16 deprecou o arquivo `middleware.ts`; migrar para a convenção de proxy quando houver documentação estável.
-- **Pós-MVP — Notificação Nível 3 (push/email de não-conformidade):** Envio automático de push notification ou e-mail quando uma leitura não-conforme é registrada. Requer integração com serviço externo (ex: Resend, FCM). Avaliar na v1.0.
-- **Pós-MVP — Abertura automática de turno no login:** Quando Operador faz login, perguntar ou abrir automaticamente um turno; avaliar UX com operadores reais.
+- ~~**Pós-MVP — Notificação Nível 3 (push/email de não-conformidade)**~~ ✅ CONCLUÍDO (2026-07-01): leitura fora do limite dispara push aos gestores (`sendPushToRole`) além da ocorrência automática; push de análises também corrigido/reforçado. Ver `operador/leituras/actions.ts` e `tecnico/analises/actions.ts`.
+- ~~**Pós-MVP — Abertura automática de turno no login**~~ ✅ CONCLUÍDO (2026-07-01): abertura assistida de 1 clique no dashboard do operador — o turno da faixa horária atual (via `encontrarTurnoAtual` em `shift-utils.ts`) vem pré-selecionado. Não cria instância silenciosamente (evita turno errado/duplicado).
 - **Pós-MVP — Repensar fluxo de turno e passagem:** Revisar o fluxo de abertura/fechamento de turno e checklist de passagem com base no feedback dos operadores em campo.
-- **Pós-MVP — Resumo do turno anterior para o entrante:** Ao abrir um turno, Operador vê resumo do que o turno anterior registrou (leituras, ocorrências, tarefas concluídas).
+- ~~**Pós-MVP — Resumo do turno anterior para o entrante**~~ ✅ CONCLUÍDO (2026-07-01): card "Resumo do turno anterior" no dashboard do operador quando não há turno ativo (leituras, ocorrências em aberto, tarefas não concluídas e observações do último turno encerrado).
 
 
 # SOLENTIS — Relatório de Handoff Técnico
 ### Documento de transferência de contexto para colaboração entre IAs
-**Última atualização:** sessão de correção de bugs (Onda 1 concluída)
+**Última atualização:** 2026-07-01 — Ondas 1–4 concluídas (itens acionáveis); falta QA de campo com usuários reais
 **Destino:** Antigravity / IA colaboradora
 **Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
 
@@ -756,25 +805,28 @@ Etapas A–F foram concluídas:
 - **E** — botão voltar nas telas internas do gestor
 - **F** — auditar botão "Sair" presente em todas as telas
 
-### 7.2 PRÓXIMA — Onda 3 (mudanças de fluxo / regras de negócio)
-- Técnico também registrar **saída** de produtos químicos (hoje só operador) — facilita ajustes de estoque
-- Técnico **e** Gestor também registrarem ocorrências (hoje só operador)
-- Atribuir tarefa a um turno **sem precisar abrir o turno** (pré-agendamento / pré-datado) → tornar o fluxo de tarefas contínuo e confiável
-- Repensar o uso de "ocorrências" (definir melhor o propósito)
-- Estoque: mostrar **quem registrou** cada movimento (rastreabilidade visual)
+### 7.2 CONCLUÍDA — Onda 3 (mudanças de fluxo / regras de negócio)
+Verificada no código em 2026-07-01 (os 5 itens já estavam implementados em commits posteriores à última atualização destes docs):
+- ✅ Técnico também registra **saída** de produtos químicos — rota `/tecnico/estoque/[id]/saida` (page + `exit-form`); o action `registrarSaida` (em `operador/estoque/actions.ts`) libera `OPERATOR` e `TECHNICIAN` e revalida `/tecnico/estoque`
+- ✅ Técnico **e** Gestor também registram ocorrências — rotas `/tecnico/ocorrencias/nova` e `/gestor/ocorrencias/nova` importam `registrarOcorrencia`; o guard `requireAuthenticated` aceita `OPERATOR/TECHNICIAN/MANAGER`
+- ✅ Atribuir tarefa **sem abrir o turno** (pré-agendamento) — rota `/gestor/turnos/tarefas/pre-agendar` (page + `pre-agendar-form`) chama o action `preAgendarTurno`, criando uma instância de turno com data futura para atribuir tarefas antecipadamente
+- ✅ Repensar o uso de "ocorrências" — reformuladas com kanban (`updateOccurrenceStatus`), comentários (`addOccurrenceComment`), tipos (`OPERATIONAL/LABORATORY/EQUIPMENT/ENVIRONMENTAL/SAFETY`), categoria, ação imediata obrigatória em severidade Alta/Crítica e alerta WhatsApp para gestores
+- ✅ Estoque: mostra **quem registrou** cada movimento — detalhe do produto (`gestor/produtos-quimicos/[id]/page.tsx`) lista cada movimentação com `{data} · {recorder.name}` em entradas, saídas e contagens
 
-### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
-- **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
-- Abertura automática de turno no login do operador
-- Resumo do turno anterior para o operador entrante
-- Notificações push/email para não-conformidade (severidade alta)
-- PWA (instalação no dispositivo, offline parcial)
-- DBO5 tratado como "último resultado com data" (não tempo real)
-- Deploy (Vercel/Railway, ~R$50-80/mês + domínio) → migração SQLite → PostgreSQL
-- **Sensores online** (DBO, OD, pH) — pesquisa de prazo LONGO; DBO exige 5 dias de incubação, é desafio técnico, não implementação imediata
+### 7.3 CONCLUÍDA — Onda 4 (pós-MVP, features grandes)
+Itens acionáveis concluídos e verificados no código/QA em 2026-07-01:
+- ✅ **Leitura de laudos com IA** — implementado com Gemini (`gemini-2.5-flash` + fallbacks, retries) em `/gestor/laudos/importar`
+- ✅ **Abertura automática de turno no login** — abertura *assistida* de 1 clique no dashboard do operador (turno da faixa horária atual via `encontrarTurnoAtual`); decisão deliberada de NÃO criar instância silenciosamente (evita turno errado/duplicado). Ver `operador/dashboard/abrir-turno-rapido.tsx`
+- ✅ **Resumo do turno anterior para o entrante** — card no dashboard do operador (leituras, ocorrências em aberto, tarefas não concluídas, observações do último turno encerrado)
+- ✅ **Notificações push para não-conformidade** — leitura fora do limite CONAMA dispara push aos gestores (`sendPushToRole`, tenant-safe via relação `user`); análises também notificam. Infra: `web-push.ts` / `push-actions.ts` (VAPID)
+- ✅ **PWA (instalação + offline parcial)** — Serwist
+- ✅ **Deploy + migração para PostgreSQL** — rodando na Vercel com Supabase (Postgres)
+- ⏸️ **DBO5 como "último resultado com data"** — pendente (refinamento de UX; avaliar com uso real)
+- ⏸️ **Sensores online** (DBO, OD, pH) — FORA de escopo por decisão do briefing (prazo LONGO; DBO exige 5 dias de incubação)
+- ⏸️ **Repensar fluxo de turno/passagem** — pendente; precisa de feedback de operadores em campo (não é tarefa de código)
 
 ### 7.4 Validação obrigatória antes de "produção"
-O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. NÃO está pronto para produção até Ondas 1-3 + QA completo.
+O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. As Ondas 1–4 (itens acionáveis) estão concluídas; falta o QA de campo com usuários reais.
 
 ---
 
@@ -812,7 +864,7 @@ Antes de propor qualquer mudança, confirme:
 
 # SOLENTIS — Relatório de Handoff Técnico
 ### Documento de transferência de contexto para colaboração entre IAs
-**Última atualização:** sessão de correção de bugs (Onda 1 concluída)
+**Última atualização:** 2026-07-01 — Ondas 1–4 concluídas (itens acionáveis); falta QA de campo com usuários reais
 **Destino:** Antigravity / IA colaboradora
 **Autor do projeto:** Vitor — Engenheiro Ambiental, desenvolvedor iniciante
 
@@ -995,25 +1047,28 @@ Etapas A–F foram concluídas:
 - **E** — botão voltar nas telas internas do gestor
 - **F** — auditar botão "Sair" presente em todas as telas
 
-### 7.2 PRÓXIMA — Onda 3 (mudanças de fluxo / regras de negócio)
-- Técnico também registrar **saída** de produtos químicos (hoje só operador) — facilita ajustes de estoque
-- Técnico **e** Gestor também registrarem ocorrências (hoje só operador)
-- Atribuir tarefa a um turno **sem precisar abrir o turno** (pré-agendamento / pré-datado) → tornar o fluxo de tarefas contínuo e confiável
-- Repensar o uso de "ocorrências" (definir melhor o propósito)
-- Estoque: mostrar **quem registrou** cada movimento (rastreabilidade visual)
+### 7.2 CONCLUÍDA — Onda 3 (mudanças de fluxo / regras de negócio)
+Verificada no código em 2026-07-01 (os 5 itens já estavam implementados em commits posteriores à última atualização destes docs):
+- ✅ Técnico também registra **saída** de produtos químicos — rota `/tecnico/estoque/[id]/saida` (page + `exit-form`); o action `registrarSaida` (em `operador/estoque/actions.ts`) libera `OPERATOR` e `TECHNICIAN` e revalida `/tecnico/estoque`
+- ✅ Técnico **e** Gestor também registram ocorrências — rotas `/tecnico/ocorrencias/nova` e `/gestor/ocorrencias/nova` importam `registrarOcorrencia`; o guard `requireAuthenticated` aceita `OPERATOR/TECHNICIAN/MANAGER`
+- ✅ Atribuir tarefa **sem abrir o turno** (pré-agendamento) — rota `/gestor/turnos/tarefas/pre-agendar` (page + `pre-agendar-form`) chama o action `preAgendarTurno`, criando uma instância de turno com data futura para atribuir tarefas antecipadamente
+- ✅ Repensar o uso de "ocorrências" — reformuladas com kanban (`updateOccurrenceStatus`), comentários (`addOccurrenceComment`), tipos (`OPERATIONAL/LABORATORY/EQUIPMENT/ENVIRONMENTAL/SAFETY`), categoria, ação imediata obrigatória em severidade Alta/Crítica e alerta WhatsApp para gestores
+- ✅ Estoque: mostra **quem registrou** cada movimento — detalhe do produto (`gestor/produtos-quimicos/[id]/page.tsx`) lista cada movimentação com `{data} · {recorder.name}` em entradas, saídas e contagens
 
-### 7.3 DEPOIS — Onda 4 (pós-MVP, features grandes)
-- **Leitura de laudos com IA** (PROTÓTIPO JÁ FEITO — ver seção 8): anexa PDF do laboratório → IA extrai parâmetros → tabela de conformidade + gráfico → registro "Análise Efluentes DD/MM/AAAA". Estimativa caiu de 15-25h para 8-12h graças ao protótipo.
-- Abertura automática de turno no login do operador
-- Resumo do turno anterior para o operador entrante
-- Notificações push/email para não-conformidade (severidade alta)
-- PWA (instalação no dispositivo, offline parcial)
-- DBO5 tratado como "último resultado com data" (não tempo real)
-- Deploy (Vercel/Railway, ~R$50-80/mês + domínio) → migração SQLite → PostgreSQL
-- **Sensores online** (DBO, OD, pH) — pesquisa de prazo LONGO; DBO exige 5 dias de incubação, é desafio técnico, não implementação imediata
+### 7.3 CONCLUÍDA — Onda 4 (pós-MVP, features grandes)
+Itens acionáveis concluídos e verificados no código/QA em 2026-07-01:
+- ✅ **Leitura de laudos com IA** — implementado com Gemini (`gemini-2.5-flash` + fallbacks, retries) em `/gestor/laudos/importar`
+- ✅ **Abertura automática de turno no login** — abertura *assistida* de 1 clique no dashboard do operador (turno da faixa horária atual via `encontrarTurnoAtual`); decisão deliberada de NÃO criar instância silenciosamente (evita turno errado/duplicado). Ver `operador/dashboard/abrir-turno-rapido.tsx`
+- ✅ **Resumo do turno anterior para o entrante** — card no dashboard do operador (leituras, ocorrências em aberto, tarefas não concluídas, observações do último turno encerrado)
+- ✅ **Notificações push para não-conformidade** — leitura fora do limite CONAMA dispara push aos gestores (`sendPushToRole`, tenant-safe via relação `user`); análises também notificam. Infra: `web-push.ts` / `push-actions.ts` (VAPID)
+- ✅ **PWA (instalação + offline parcial)** — Serwist
+- ✅ **Deploy + migração para PostgreSQL** — rodando na Vercel com Supabase (Postgres)
+- ⏸️ **DBO5 como "último resultado com data"** — pendente (refinamento de UX; avaliar com uso real)
+- ⏸️ **Sensores online** (DBO, OD, pH) — FORA de escopo por decisão do briefing (prazo LONGO; DBO exige 5 dias de incubação)
+- ⏸️ **Repensar fluxo de turno/passagem** — pendente; precisa de feedback de operadores em campo (não é tarefa de código)
 
 ### 7.4 Validação obrigatória antes de "produção"
-O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. NÃO está pronto para produção até Ondas 1-3 + QA completo.
+O sistema é um **protótipo funcional**. Antes de uso real: validação em campo numa ETE parceira por pelo menos 3 meses, com feedback dos 3 perfis. As Ondas 1–4 (itens acionáveis) estão concluídas; falta o QA de campo com usuários reais.
 
 ---
 

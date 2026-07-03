@@ -28,7 +28,7 @@ const overlayCls =
 
 const contentCls =
   'fixed left-1/2 top-1/2 z-[300] w-[440px] max-w-[92vw] -translate-x-1/2 -translate-y-1/2 ' +
-  'overflow-hidden rounded-2xl border border-white/10 bg-[var(--surface)] p-6 shadow-2xl ' +
+  'overflow-hidden rounded-2xl border border-primary/10 bg-[var(--surface)] p-6 shadow-2xl ' +
   'ease-[cubic-bezier(.16,1,.3,1)] focus:outline-none ' +
   'data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2 ' +
   'data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95 duration-200'
@@ -50,7 +50,7 @@ export function Modal({ open, onOpenChange, title, description, icon, intent = '
       <Dialog.Portal>
         <Dialog.Overlay className={overlayCls} />
         <Dialog.Content className={contentCls}>
-          <Dialog.Close className="absolute right-4 top-4 flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground">
+          <Dialog.Close className="absolute right-4 top-4 flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/90/10 hover:text-foreground">
             <X className="size-[15px]" strokeWidth={2.2} />
           </Dialog.Close>
 
@@ -87,7 +87,7 @@ export function ModalButton({
     <button
       className={cn(
         'h-10 rounded-[10px] px-[18px] text-sm transition-all active:scale-[0.98]',
-        variant === 'ghost'   && 'border border-white/10 font-medium text-foreground hover:bg-white/5',
+        variant === 'ghost'   && 'border border-primary/10 font-medium text-foreground hover:bg-primary/90/5',
         variant === 'primary' && 'bg-primary font-semibold text-primary-foreground hover:brightness-105',
         variant === 'danger'  && 'bg-[var(--alarm)] font-semibold text-white hover:brightness-110',
         className,

@@ -102,7 +102,7 @@ export default async function TecnicoDashboard() {
     <main className="mx-auto max-w-2xl px-4 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Painel do Técnico</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Painel do Técnico</p>
         </div>
 
         {/* Widgets de atenção — 2×2 */}
@@ -110,62 +110,62 @@ export default async function TecnicoDashboard() {
           <Link
             href="/tecnico/equipamentos"
             className={[
-              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
-              overdueCount > 0 ? 'border-red-900/60 bg-red-950/20' : 'border-slate-800 bg-slate-900',
+              'rounded-xl border p-4 hover:bg-muted/60 transition-colors',
+              overdueCount > 0 ? 'border-red-900/60 bg-red-950/20' : 'border-border bg-card',
             ].join(' ')}
           >
-            <p className={['text-2xl font-bold', overdueCount > 0 ? 'text-red-400' : 'text-slate-200'].join(' ')}>
+            <p className={['text-2xl font-bold', overdueCount > 0 ? 'text-red-400' : 'text-foreground'].join(' ')}>
               {overdueCount}
             </p>
-            <p className="text-xs text-slate-500 leading-snug mt-1">Preventiva(s) vencida(s)</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-1">Preventiva(s) vencida(s)</p>
           </Link>
 
           <Link
             href="/tecnico/analises"
             className={[
-              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
-              nonConformCount > 0 ? 'border-red-900/60 bg-red-950/20' : 'border-slate-800 bg-slate-900',
+              'rounded-xl border p-4 hover:bg-muted/60 transition-colors',
+              nonConformCount > 0 ? 'border-red-900/60 bg-red-950/20' : 'border-border bg-card',
             ].join(' ')}
           >
-            <p className={['text-2xl font-bold', nonConformCount > 0 ? 'text-red-400' : 'text-slate-200'].join(' ')}>
+            <p className={['text-2xl font-bold', nonConformCount > 0 ? 'text-red-400' : 'text-foreground'].join(' ')}>
               {nonConformCount}
             </p>
-            <p className="text-xs text-slate-500 leading-snug mt-1">Não-conform. em aberto</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-1">Não-conform. em aberto</p>
           </Link>
 
           <Link
             href="/tecnico/analises"
             className={[
-              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
-              pendingAnalysesCount > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-slate-800 bg-slate-900',
+              'rounded-xl border p-4 hover:bg-muted/60 transition-colors',
+              pendingAnalysesCount > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-border bg-card',
             ].join(' ')}
           >
-            <p className={['text-2xl font-bold', pendingAnalysesCount > 0 ? 'text-amber-400' : 'text-slate-200'].join(' ')}>
+            <p className={['text-2xl font-bold', pendingAnalysesCount > 0 ? 'text-amber-400' : 'text-foreground'].join(' ')}>
               {pendingAnalysesCount}
             </p>
-            <p className="text-xs text-slate-500 leading-snug mt-1">Análise(s) p/ aprovar</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-1">Análise(s) p/ aprovar</p>
           </Link>
 
           <Link
             href="/tecnico/equipamentos"
             className={[
-              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
-              openCorrectivesCount > 0 ? 'border-orange-900/60 bg-orange-950/20' : 'border-slate-800 bg-slate-900',
+              'rounded-xl border p-4 hover:bg-muted/60 transition-colors',
+              openCorrectivesCount > 0 ? 'border-orange-900/60 bg-orange-950/20' : 'border-border bg-card',
             ].join(' ')}
           >
-            <p className={['text-2xl font-bold', openCorrectivesCount > 0 ? 'text-orange-400' : 'text-slate-200'].join(' ')}>
+            <p className={['text-2xl font-bold', openCorrectivesCount > 0 ? 'text-orange-400' : 'text-foreground'].join(' ')}>
               {openCorrectivesCount}
             </p>
-            <p className="text-xs text-slate-500 leading-snug mt-1">Corretiva(s) em andamento</p>
+            <p className="text-xs text-muted-foreground leading-snug mt-1">Corretiva(s) em andamento</p>
           </Link>
         </div>
 
         {/* Checklist de Análises do Dia */}
         <div className="space-y-2 pt-2">
-          <h2 className="text-sm font-medium text-slate-400">Checklist do Laboratório (Hoje)</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Checklist do Laboratório (Hoje)</h2>
           {todaySchedules.length === 0 ? (
-             <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-               <p className="text-sm text-slate-500">Nenhuma análise agendada para hoje.</p>
+             <div className="rounded-xl border border-border bg-card/50 p-4">
+               <p className="text-sm text-muted-foreground">Nenhuma análise agendada para hoje.</p>
              </div>
           ) : pendingChecklist.length === 0 ? (
              <div className="rounded-xl border border-green-900/40 bg-green-950/20 p-4 flex items-center justify-between">
@@ -198,7 +198,7 @@ export default async function TecnicoDashboard() {
                
                {todaySchedules.length - pendingChecklist.length > 0 && (
                  <div className="text-center pt-2">
-                   <p className="text-xs text-slate-500">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} análises concluídas.</p>
+                   <p className="text-xs text-muted-foreground">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} análises concluídas.</p>
                  </div>
                )}
              </div>
@@ -207,16 +207,16 @@ export default async function TecnicoDashboard() {
 
         {/* Atalhos */}
         <div className="space-y-2">
-          <h2 className="text-sm font-medium text-slate-400">Atalhos</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Atalhos</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {SHORTCUTS.map((s) => (
               <Link
                 key={s.href}
                 href={s.href}
-                className="rounded-xl border border-slate-800 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+                className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
               >
-                <p className="text-sm font-medium text-slate-200">{s.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+                <p className="text-sm font-medium text-foreground">{s.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
               </Link>
             ))}
           </div>

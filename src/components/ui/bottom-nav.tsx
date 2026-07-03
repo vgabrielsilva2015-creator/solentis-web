@@ -45,7 +45,7 @@ export function BottomNav({ items, accent = '#3ad0d6' }: BottomNavProps) {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/60 pb-safe lg:hidden"
+      className="fixed bottom-0 inset-x-0 z-40 bg-background/80 backdrop-blur-xl border-t border-border/60 pb-safe lg:hidden"
       aria-label="Navegação principal"
     >
       <ul className="flex h-16">
@@ -60,7 +60,7 @@ export function BottomNav({ items, accent = '#3ad0d6' }: BottomNavProps) {
                 style={isActive ? { color: accent, borderTopColor: accent } : undefined}
                 className={cn(
                   'relative flex flex-1 flex-col items-center justify-center gap-0.5 border-t-2 transition-transform active:scale-95',
-                  isActive ? '' : 'border-transparent text-slate-500 hover:text-slate-300',
+                  isActive ? '' : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
                 {/* Barra-pílula do item ativo */}
@@ -74,7 +74,7 @@ export function BottomNav({ items, accent = '#3ad0d6' }: BottomNavProps) {
                 <span
                   className={cn(
                     'text-[11px] leading-none font-medium tracking-wide',
-                    !isActive && 'text-slate-600',
+                    !isActive && 'text-muted-foreground',
                   )}
                 >
                   {label}

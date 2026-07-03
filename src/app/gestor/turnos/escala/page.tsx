@@ -147,7 +147,7 @@ export default async function GestorEscalaPage({ searchParams }: PageProps) {
     <main className="px-6 py-8 space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold">Gestão de Escalas</h1>
-        <p className="text-sm text-slate-400">Configure escalas de operadores, checklists de tarefas e dias de manutenção da ETE.</p>
+        <p className="text-sm text-muted-foreground">Configure escalas de operadores, checklists de tarefas e dias de manutenção da ETE.</p>
       </div>
 
       <EscalaGestorClient

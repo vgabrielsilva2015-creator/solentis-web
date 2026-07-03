@@ -38,13 +38,13 @@ export function ShiftScheduleSection({ shiftId, schedule }: { shiftId: string, s
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-6 space-y-4">
       <div className="flex items-center gap-2">
-        <CalendarDays className="w-5 h-5 text-slate-400" />
-        <h2 className="text-base font-medium text-slate-200">Recorrência Automática (Agendamento)</h2>
+        <CalendarDays className="w-5 h-5 text-muted-foreground" />
+        <h2 className="text-base font-medium text-foreground">Recorrência Automática (Agendamento)</h2>
       </div>
       
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted-foreground">
         Selecione os dias da semana em que este turno deve ser gerado automaticamente pelo sistema à meia-noite.
       </p>
 
@@ -59,7 +59,7 @@ export function ShiftScheduleSection({ shiftId, schedule }: { shiftId: string, s
               className={`flex-1 flex flex-col items-center justify-center py-2 rounded-md border transition-all ${
                 isActive
                   ? 'bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-900/20'
-                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
+                  : 'bg-muted border-border text-muted-foreground hover:bg-secondary hover:text-foreground'
               } disabled:opacity-50`}
             >
               <span className="text-[10px] uppercase font-semibold">{day.label}</span>

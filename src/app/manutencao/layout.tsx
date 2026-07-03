@@ -27,9 +27,9 @@ export default async function ManutencaoLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="dark min-h-screen bg-background text-foreground flex flex-col">
       {/* Barra superior */}
-      <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-900">
+      <header className="sticky top-0 z-10 border-b border-border bg-card">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/manutencao/dashboard" className="transition-opacity hover:opacity-80"><Logo /></Link>
@@ -38,7 +38,7 @@ export default async function ManutencaoLayout({
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-sm text-slate-400">
+            <span className="hidden sm:block text-sm text-muted-foreground">
               {session.user.name ?? session.user.email}
             </span>
             <PushManager />
@@ -49,7 +49,7 @@ export default async function ManutencaoLayout({
 
       <div className="flex flex-1">
         {/* Sidebar (visível apenas em telas lg+) */}
-        <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-900/50">
+        <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-border bg-card/50">
           <ManutencaoSidebar />
         </aside>
 

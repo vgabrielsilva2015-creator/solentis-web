@@ -41,6 +41,12 @@ jobs:
         # O postinstall do projeto roda "prisma generate". Em CI sem DATABASE_URL isso
         # ainda funciona para gerar o client (não precisa de conexão), mas garantimos abaixo.
 
+      - name: 🛡️ Gate de segurança — vulnerabilidades HIGH em produção
+        # Falha o build se houver vuln HIGH/CRITICAL nas dependências de PRODUÇÃO.
+        # --omit=dev de propósito: vulns de tooling de dev (vite/jsdom) não devem
+        # bloquear deploys; o que importa é o que roda em runtime na Vercel.
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Gerar Prisma Client
         run: npx prisma generate
 

@@ -64,11 +64,11 @@ export function EditForm({
 
       {/* Nome */}
       <div className="space-y-1.5">
-        <label htmlFor="edit-name" className="text-sm font-medium text-slate-300">Nome *</label>
+        <label htmlFor="edit-name" className="text-sm font-medium text-foreground">Nome *</label>
         <input
           id="edit-name" name="name"
           defaultValue={equipment.name}
-          className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+          className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
         />
         {state.fieldErrors?.name && (
           <p className="text-xs text-red-400">{state.fieldErrors.name[0]}</p>
@@ -78,11 +78,11 @@ export function EditForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Categoria */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-category_id" className="text-sm font-medium text-slate-300">Categoria *</label>
+          <label htmlFor="edit-category_id" className="text-sm font-medium text-foreground">Categoria *</label>
           <select
             id="edit-category_id" name="category_id"
             defaultValue={equipment.category_id}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -95,11 +95,11 @@ export function EditForm({
 
         {/* Responsável Técnico */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-responsible_id" className="text-sm font-medium text-slate-300">Responsável Técnico</label>
+          <label htmlFor="edit-responsible_id" className="text-sm font-medium text-foreground">Responsável Técnico</label>
           <select
             id="edit-responsible_id" name="responsible_id"
             defaultValue={equipment.responsible_id ?? ''}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="">Nenhum responsável</option>
             {responsibles.map((r) => (
@@ -110,65 +110,65 @@ export function EditForm({
 
         {/* Fabricante */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-manufacturer" className="text-sm font-medium text-slate-300">Fabricante</label>
+          <label htmlFor="edit-manufacturer" className="text-sm font-medium text-foreground">Fabricante</label>
           <input
             id="edit-manufacturer" name="manufacturer"
             defaultValue={equipment.manufacturer ?? ''}
             placeholder="Ex: WEG, Schneider"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Modelo */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-model_name" className="text-sm font-medium text-slate-300">Modelo</label>
+          <label htmlFor="edit-model_name" className="text-sm font-medium text-foreground">Modelo</label>
           <input
             id="edit-model_name" name="model_name"
             defaultValue={equipment.model_name ?? ''}
             placeholder="Ex: Trifásico 5HP"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Número de série */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-serial_number" className="text-sm font-medium text-slate-300">Número de série / Patrimônio</label>
+          <label htmlFor="edit-serial_number" className="text-sm font-medium text-foreground">Número de série / Patrimônio</label>
           <input
             id="edit-serial_number" name="serial_number"
             defaultValue={equipment.serial_number ?? ''}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Localização */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-location" className="text-sm font-medium text-slate-300">Localização</label>
+          <label htmlFor="edit-location" className="text-sm font-medium text-foreground">Localização</label>
           <input
             id="edit-location" name="location"
             defaultValue={equipment.location ?? ''}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Data de instalação */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-installation_date" className="text-sm font-medium text-slate-300">Data de instalação</label>
+          <label htmlFor="edit-installation_date" className="text-sm font-medium text-foreground">Data de instalação</label>
           <input
             id="edit-installation_date" name="installation_date"
             type="date"
             defaultValue={installDate}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         {/* Frequência preventiva */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-freq" className="text-sm font-medium text-slate-300">Frequência preventiva (dias) *</label>
+          <label htmlFor="edit-freq" className="text-sm font-medium text-foreground">Frequência preventiva (dias) *</label>
           <input
             id="edit-freq" name="preventive_frequency_days"
             type="number" min="1"
             defaultValue={equipment.preventive_frequency_days}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {state.fieldErrors?.preventive_frequency_days && (
             <p className="text-xs text-red-400">{state.fieldErrors.preventive_frequency_days[0]}</p>
@@ -177,11 +177,11 @@ export function EditForm({
 
         {/* Status Operacional */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-status" className="text-sm font-medium text-slate-300">Status Operacional *</label>
+          <label htmlFor="edit-status" className="text-sm font-medium text-foreground">Status Operacional *</label>
           <select
             id="edit-status" name="status"
             defaultValue={equipment.status}
-            className="w-full rounded-md border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-500"
+            className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="OPERATING">Operando</option>
             <option value="MAINTENANCE">Em Manutenção</option>
@@ -191,24 +191,24 @@ export function EditForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-800 pt-4 mt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4 mt-2">
         {/* Upload de Foto */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-photo_file" className="text-sm font-medium text-slate-300">Atualizar Foto (imagem)</label>
+          <label htmlFor="edit-photo_file" className="text-sm font-medium text-foreground">Atualizar Foto (imagem)</label>
           <input
             id="edit-photo_file" name="photo_file"
             type="file" accept="image/*"
-            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-750"
+            className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-muted file:text-foreground hover:file:bg-muted"
           />
         </div>
 
         {/* Upload de Manual */}
         <div className="space-y-1.5">
-          <label htmlFor="edit-manual_file" className="text-sm font-medium text-slate-300">Atualizar Manual (PDF)</label>
+          <label htmlFor="edit-manual_file" className="text-sm font-medium text-foreground">Atualizar Manual (PDF)</label>
           <input
             id="edit-manual_file" name="manual_file"
             type="file" accept=".pdf,application/pdf"
-            className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-750"
+            className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-muted file:text-foreground hover:file:bg-muted"
           />
         </div>
       </div>
@@ -217,7 +217,7 @@ export function EditForm({
         <Button
           type="submit"
           disabled={isPending}
-          className="h-11 w-full bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50 font-semibold"
+          className="h-11 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 font-semibold"
         >
           {isPending ? 'Salvando…' : 'Salvar alterações'}
         </Button>

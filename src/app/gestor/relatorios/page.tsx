@@ -111,50 +111,50 @@ export default async function RelatoriosPage({
   return (
     <main className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-100">Relatórios e Auditoria</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Relatórios e Auditoria</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Gere laudos e relatórios consolidados em formato PDF.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Card do RDO */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 flex flex-col justify-between">
+        <div className="rounded-xl border border-border bg-card/50 p-6 flex flex-col justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">Relatório Diário de Operação (RDO)</h2>
-            <p className="text-sm text-slate-400 mt-2">
+            <h2 className="text-lg font-semibold text-foreground">Relatório Diário de Operação (RDO)</h2>
+            <p className="text-sm text-muted-foreground mt-2">
               Consolida todas as medições analíticas, consumo de produtos químicos e ocorrências lançadas no período de 24h. Arquivo oficial de Uso Interno.
             </p>
             
-            <div className="mt-4 p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+            <div className="mt-4 p-3 rounded-lg bg-background border border-border space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Data Base:</span>
-                <span className="font-medium text-slate-300">{dateFormatter.format(targetDate)}</span>
+                <span className="text-muted-foreground">Data Base:</span>
+                <span className="font-medium text-foreground">{dateFormatter.format(targetDate)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Leituras:</span>
-                <span className="font-medium text-slate-300">{leituras.length}</span>
+                <span className="text-muted-foreground">Leituras:</span>
+                <span className="font-medium text-foreground">{leituras.length}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Consumo Químico:</span>
-                <span className="font-medium text-slate-300">{consumos.length} produtos</span>
+                <span className="text-muted-foreground">Consumo Químico:</span>
+                <span className="font-medium text-foreground">{consumos.length} produtos</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Ocorrências:</span>
-                <span className="font-medium text-slate-300">{ocorrencias.length}</span>
+                <span className="text-muted-foreground">Ocorrências:</span>
+                <span className="font-medium text-foreground">{ocorrencias.length}</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+          <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
              <RdoDownloadBtn data={pdfData} />
           </div>
         </div>
 
         {/* Placeholder futuro */}
-        <div className="rounded-xl border border-slate-800 border-dashed bg-slate-900/20 p-6 flex flex-col items-center justify-center text-center">
-          <p className="text-sm font-medium text-slate-500">Mais relatórios em breve</p>
-          <p className="text-xs text-slate-600 mt-1">Laudos do CONAMA e Relatórios Mensais estarão disponíveis aqui.</p>
+        <div className="rounded-xl border border-border border-dashed bg-card/20 p-6 flex flex-col items-center justify-center text-center">
+          <p className="text-sm font-medium text-muted-foreground">Mais relatórios em breve</p>
+          <p className="text-xs text-muted-foreground mt-1">Laudos do CONAMA e Relatórios Mensais estarão disponíveis aqui.</p>
         </div>
       </div>
     </main>

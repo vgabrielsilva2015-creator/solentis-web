@@ -47,7 +47,7 @@ export default async function TecnicoInstanciaDetalhePage({
         <BackButton href="/tecnico/turnos/tarefas" label="Tarefas" />
         <div>
           <h1 className="text-xl font-semibold">{instance.shift.name}</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {instance.shift.start_time} – {instance.shift.end_time} · aberto por {instance.opener.name}
           </p>
         </div>
@@ -55,20 +55,20 @@ export default async function TecnicoInstanciaDetalhePage({
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total',     value: instance.shift_tasks.length,  color: 'text-slate-100' },
-            { label: 'Pendentes', value: pending,                        color: pending > 0 ? 'text-amber-400' : 'text-slate-100' },
-            { label: 'Concluídas',value: done,                           color: done > 0 ? 'text-green-400' : 'text-slate-100' },
+            { label: 'Total',     value: instance.shift_tasks.length,  color: 'text-foreground' },
+            { label: 'Pendentes', value: pending,                        color: pending > 0 ? 'text-amber-400' : 'text-foreground' },
+            { label: 'Concluídas',value: done,                           color: done > 0 ? 'text-green-400' : 'text-foreground' },
           ].map((s) => (
-            <div key={s.label} className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-center">
+            <div key={s.label} className="rounded-lg border border-border bg-card px-3 py-2 text-center">
               <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-slate-500">{s.label}</p>
+              <p className="text-xs text-muted-foreground">{s.label}</p>
             </div>
           ))}
         </div>
 
         {/* Tarefas */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tarefas</p>
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tarefas</p>
           <TecnicoTaskForm
             instanceId={id}
             operators={operators}

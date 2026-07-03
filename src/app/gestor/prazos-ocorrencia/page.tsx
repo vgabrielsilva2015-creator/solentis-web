@@ -6,7 +6,7 @@ const SEVERITY_LABELS: Record<string, { label: string; color: string }> = {
   CRITICAL: { label: 'Crítica',  color: 'text-red-400' },
   HIGH:     { label: 'Alta',     color: 'text-orange-400' },
   MEDIUM:   { label: 'Média',    color: 'text-amber-400' },
-  LOW:      { label: 'Baixa',    color: 'text-slate-400' },
+  LOW:      { label: 'Baixa',    color: 'text-muted-foreground' },
 }
 
 export default async function PrazosOcorrenciaPage() {
@@ -23,13 +23,13 @@ export default async function PrazosOcorrenciaPage() {
     <main className="px-6 py-8 space-y-6 max-w-2xl">
       <div>
         <h1 className="text-xl font-semibold">Prazos de Ocorrência</h1>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           Prazo máximo (em horas) para resolução de ocorrências por severidade.
         </p>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-6">
-        <p className="text-xs text-slate-500">
+      <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+        <p className="text-xs text-muted-foreground">
           Os prazos são sugeridos automaticamente ao registrar uma ocorrência e podem ser editados pelo Técnico ou Gestor.
         </p>
 

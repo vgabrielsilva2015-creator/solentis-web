@@ -26,27 +26,27 @@ export function EditHandoverForm({ handoverId, currentOutgoing, currentIncoming 
   return (
     <form action={formAction} className="space-y-3">
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-400">Observações do sainte</label>
+        <label className="text-xs font-medium text-muted-foreground">Observações do sainte</label>
         <textarea
           name="outgoing_observations"
           rows={2}
           defaultValue={currentOutgoing}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-600 focus:outline-none resize-none"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-sky-600 focus:outline-none resize-none"
         />
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-400">Observações do entrante</label>
+        <label className="text-xs font-medium text-muted-foreground">Observações do entrante</label>
         <textarea
           name="incoming_observations"
           rows={2}
           defaultValue={currentIncoming}
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-600 focus:outline-none resize-none"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-sky-600 focus:outline-none resize-none"
         />
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-400">
+        <label className="text-xs font-medium text-muted-foreground">
           Justificativa da edição <span className="text-red-400">*</span>
         </label>
         <textarea
@@ -54,7 +54,7 @@ export function EditHandoverForm({ handoverId, currentOutgoing, currentIncoming 
           rows={2}
           required
           placeholder="Descreva o motivo da edição (mín. 10 caracteres)"
-          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-600 focus:outline-none resize-none"
+          className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-sky-600 focus:outline-none resize-none"
         />
         {state.fieldErrors?.justification && (
           <p className="text-xs text-red-400">{state.fieldErrors.justification[0]}</p>
@@ -68,7 +68,7 @@ export function EditHandoverForm({ handoverId, currentOutgoing, currentIncoming 
       <Button
         type="submit"
         disabled={isPending}
-        className="h-9 w-full border border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs"
+        className="h-9 w-full border border-border bg-muted text-foreground hover:bg-secondary text-xs"
       >
         {isPending ? 'Salvando…' : 'Salvar alterações'}
       </Button>

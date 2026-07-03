@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { encontrarTurnoAtual } from '@/lib/shift-utils'
+import { AbrirTurnoRapido } from './abrir-turno-rapido'
 
 
 export default async function OperadorDashboard() {
@@ -15,7 +17,7 @@ export default async function OperadorDashboard() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings, otherOpenShifts] =
+  const [openOcorrencias, pendingHandovers, lowStockCount, leiturasDoDia, turnoAtivo, pendingTasksCount, schedules, doneReadings, activeShifts, activeInstances, lastClosedInstance, otherOpenShifts] =
     await Promise.all([
       userId
         ? prisma.occurrence.count({
@@ -105,6 +107,35 @@ export default async function OperadorDashboard() {
         select: { collection_point_id: true, parameter_id: true }
       }),
 
+      // Turnos configurados ativos — para detectar o turno da faixa horária atual
+      prisma.shift.findMany({
+        where:  { tenant_id: tenantId, is_active: true },
+        select: { id: true, name: true, start_time: true, end_time: true, crosses_midnight: true },
+      }),
+
+      // Instâncias ativas (qualquer operador) — para saber se o turno da vez já está aberto
+      prisma.shiftInstance.findMany({
+        where:  { tenant_id: tenantId, status: { in: ['OPEN', 'HANDOVER_PENDING'] } },
+        select: { shift_id: true },
+      }),
+
+      // Último turno encerrado — resumo para o operador entrante
+      prisma.shiftInstance.findFirst({
+        where:   { tenant_id: tenantId, status: 'CLOSED' },
+        orderBy: { closed_at: 'desc' },
+        include: {
+          shift:    { select: { name: true } },
+          opener:   { select: { name: true } },
+          handover: {
+            select: {
+              checklist_data:        true,
+              outgoing_observations: true,
+              outgoing_user:         { select: { name: true } },
+            },
+          },
+        },
+      }),
+
       // Turnos abertos de outros operadores (para detectar atrasados)
       userId
         ? prisma.shiftInstance.findMany({
@@ -118,7 +149,7 @@ export default async function OperadorDashboard() {
               opener: { select: { name: true } },
             },
           })
-        : Promise.resolve([]),
+        : Promise.resolve([])
     ])
 
   // Filtrar checklist do dia
@@ -133,9 +164,36 @@ export default async function OperadorDashboard() {
     )
   })
 
+  // Abertura assistida: turno da faixa horária atual + se já está aberto por alguém
+  const now = new Date()
+  const currentShift = encontrarTurnoAtual(activeShifts, now)
+  const currentShiftOpen = currentShift
+    ? activeInstances.some((i) => i.shift_id === currentShift.id)
+    : false
+  const podeAbrirTurno = session.user.role === 'OPERATOR'
+
+  // Resumo do turno anterior (último encerrado) para o operador entrante
+  let resumoAnterior:
+    | { shiftName: string; who: string; readings: number; occurrences: number; pendingTasks: string[]; observations: string | null }
+    | null = null
+  if (lastClosedInstance) {
+    const cl = JSON.parse((lastClosedInstance.handover?.checklist_data as string) || '{}') as {
+      readings_count?: number
+      open_occurrences_count?: number
+      pending_tasks?: string[]
+    }
+    resumoAnterior = {
+      shiftName:    lastClosedInstance.shift.name,
+      who:          lastClosedInstance.handover?.outgoing_user?.name ?? lastClosedInstance.opener.name,
+      readings:     cl.readings_count ?? 0,
+      occurrences:  cl.open_occurrences_count ?? 0,
+      pendingTasks: cl.pending_tasks ?? [],
+      observations: lastClosedInstance.handover?.outgoing_observations ?? null,
+    }
+  }
+
   // Filtrar turnos atrasados (fim do turno + 30 min)
-  const nowTime = new Date()
-  const nowMinutes = nowTime.getHours() * 60 + nowTime.getMinutes()
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
   const overdueShiftsList = otherOpenShifts.filter((inst) => {
     const [endH, endM] = inst.shift.end_time.split(':').map(Number)
     return nowMinutes > endH * 60 + endM + 30
@@ -152,7 +210,7 @@ export default async function OperadorDashboard() {
     <main className="mx-auto max-w-lg px-4 py-8 space-y-4">
         <div>
           <h1 className="text-2xl font-semibold">Olá, {session.user.name?.split(' ')[0]}</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Painel do Operador</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Painel do Operador</p>
         </div>
 
         {/* Passagens urgentes */}
@@ -219,14 +277,61 @@ export default async function OperadorDashboard() {
               <span className="text-green-500 text-xl">→</span>
             </div>
           </Link>
+        ) : currentShift && !currentShiftOpen && podeAbrirTurno ? (
+          <AbrirTurnoRapido
+            shiftId={currentShift.id}
+            shiftName={currentShift.name}
+            janela={`${currentShift.start_time} – ${currentShift.end_time}`}
+          />
+        ) : currentShift && currentShiftOpen ? (
+          <Link
+            href="/operador/turnos"
+            className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
+          >
+            <p className="text-sm text-muted-foreground">Turno {currentShift.name} já está aberto</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toque para acompanhar ou assumir a passagem →</p>
+          </Link>
         ) : (
           <Link
             href="/operador/turnos"
-            className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+            className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
           >
-            <p className="text-sm text-slate-500">Nenhum turno ativo</p>
-            <p className="text-xs text-slate-600 mt-0.5">Toque para abrir um turno →</p>
+            <p className="text-sm text-muted-foreground">Nenhum turno ativo</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toque para abrir um turno →</p>
           </Link>
+        )}
+
+        {/* Resumo do turno anterior — para o operador entrante */}
+        {!turnoAtivo && resumoAnterior && (
+          <div className="rounded-xl border border-border bg-card/60 p-4 space-y-2">
+            <div>
+              <p className="text-sm font-medium text-foreground">Resumo do turno anterior</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {resumoAnterior.shiftName} · {resumoAnterior.who}
+              </p>
+            </div>
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span>{resumoAnterior.readings} leitura(s)</span>
+              <span>{resumoAnterior.occurrences} ocorrência(s) em aberto</span>
+            </div>
+            {resumoAnterior.pendingTasks.length > 0 && (
+              <div className="text-xs">
+                <p className="text-amber-400 font-medium">
+                  {resumoAnterior.pendingTasks.length} tarefa(s) não concluída(s):
+                </p>
+                <ul className="mt-0.5 space-y-0.5">
+                  {resumoAnterior.pendingTasks.map((t, i) => (
+                    <li key={i} className="text-foreground">• {t}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {resumoAnterior.observations && (
+              <p className="text-xs text-muted-foreground">
+                Observações: <span className="text-foreground">{resumoAnterior.observations}</span>
+              </p>
+            )}
+          </div>
         )}
 
         {/* Tarefas do turno */}
@@ -244,25 +349,25 @@ export default async function OperadorDashboard() {
           ) : (
             <Link
               href={`/operador/turnos/${turnoAtivo.id}/tarefas`}
-              className="block rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+              className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
             >
-              <p className="text-sm text-slate-400">Nenhuma tarefa atribuída</p>
-              <p className="text-xs text-slate-600 mt-0.5">Toque para ver tarefas do turno →</p>
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa atribuída</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Toque para ver tarefas do turno →</p>
             </Link>
           )
         ) : (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <p className="text-sm text-slate-600">Tarefas do turno</p>
-            <p className="text-xs text-slate-700 mt-0.5">Abra um turno primeiro</p>
+          <div className="rounded-xl border border-border bg-card/50 p-4">
+            <p className="text-sm text-muted-foreground">Tarefas do turno</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Abra um turno primeiro</p>
           </div>
         )}
 
         {/* Checklist de Coletas Diárias */}
         <div className="space-y-2 pt-2">
-          <h2 className="text-sm font-medium text-slate-400">Checklist de Coletas (Hoje)</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Checklist de Coletas (Hoje)</h2>
           {todaySchedules.length === 0 ? (
-             <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-               <p className="text-sm text-slate-500">Nenhuma coleta agendada para hoje.</p>
+             <div className="rounded-xl border border-border bg-card/50 p-4">
+               <p className="text-sm text-muted-foreground">Nenhuma coleta agendada para hoje.</p>
              </div>
           ) : pendingChecklist.length === 0 ? (
              <div className="rounded-xl border border-green-900/40 bg-green-950/20 p-4 flex items-center justify-between">
@@ -293,7 +398,7 @@ export default async function OperadorDashboard() {
                
                {todaySchedules.length - pendingChecklist.length > 0 && (
                  <div className="text-center pt-2">
-                   <p className="text-xs text-slate-500">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} coletas realizadas.</p>
+                   <p className="text-xs text-muted-foreground">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} coletas realizadas.</p>
                  </div>
                )}
              </div>
@@ -304,10 +409,10 @@ export default async function OperadorDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/operador/leituras"
-            className="rounded-xl border border-slate-700 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+            className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
           >
-            <p className="text-2xl font-bold text-slate-100">{leiturasDoDia}</p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-2xl font-bold text-foreground">{leiturasDoDia}</p>
+            <p className="text-xs text-muted-foreground mt-1">
               {leiturasDoDia === 1 ? 'Leitura hoje' : 'Leituras hoje'}
             </p>
           </Link>
@@ -315,14 +420,14 @@ export default async function OperadorDashboard() {
           <Link
             href="/operador/ocorrencias"
             className={[
-              'rounded-xl border p-4 hover:bg-slate-800/60 transition-colors',
-              openOcorrencias > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-slate-700 bg-slate-900',
+              'rounded-xl border p-4 hover:bg-muted/60 transition-colors',
+              openOcorrencias > 0 ? 'border-amber-900/60 bg-amber-950/20' : 'border-border bg-card',
             ].join(' ')}
           >
-            <p className={['text-2xl font-bold', openOcorrencias > 0 ? 'text-amber-400' : 'text-slate-100'].join(' ')}>
+            <p className={['text-2xl font-bold', openOcorrencias > 0 ? 'text-amber-400' : 'text-foreground'].join(' ')}>
               {openOcorrencias}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               {openOcorrencias === 1 ? 'Ocorrência em aberto' : 'Ocorrências em aberto'}
             </p>
           </Link>
@@ -330,16 +435,16 @@ export default async function OperadorDashboard() {
 
         {/* Atalhos */}
         <div className="space-y-2 pt-2">
-          <h2 className="text-sm font-medium text-slate-400">Atalhos</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Atalhos</h2>
           <div className="grid grid-cols-2 gap-3">
             {SHORTCUTS.map((s) => (
               <Link
                 key={s.href}
                 href={s.href}
-                className="rounded-xl border border-slate-800 bg-slate-900 p-4 hover:bg-slate-800 transition-colors"
+                className="rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors"
               >
-                <p className="text-sm font-medium text-slate-200">{s.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+                <p className="text-sm font-medium text-foreground">{s.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
               </Link>
             ))}
           </div>

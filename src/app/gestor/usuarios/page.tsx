@@ -74,9 +74,9 @@ export default async function UsuariosPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Usuários</h1>
-          <p className="text-sm text-slate-400">Gerencie contas de acesso ao sistema.</p>
+          <p className="text-sm text-muted-foreground">Gerencie contas de acesso ao sistema.</p>
         </div>
-        <Button asChild className="w-full bg-slate-100 text-slate-900 hover:bg-white sm:w-auto">
+        <Button asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto">
           <Link href="/gestor/usuarios/novo">
             + Novo usuário
           </Link>
@@ -87,7 +87,7 @@ export default async function UsuariosPage({
       <div className="flex gap-2">
         <UserSearch defaultValue={search} />
         {search && (
-          <Button asChild variant="ghost" className="text-slate-400 hover:text-slate-200">
+          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
             <Link href="/gestor/usuarios">
               Limpar
             </Link>
@@ -96,15 +96,15 @@ export default async function UsuariosPage({
       </div>
 
       {/* Tabela */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
         {users.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500">
+          <div className="py-12 text-center text-sm text-muted-foreground">
             {search ? `Nenhum usuário encontrado para "${search}".` : 'Nenhum usuário cadastrado.'}
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-3">Usuário</th>
                 <th className="px-4 py-3">Perfil</th>
                 <th className="px-4 py-3">Status</th>
@@ -112,18 +112,18 @@ export default async function UsuariosPage({
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-border">
               {users.map((u) => (
-                <tr key={u.id} className="transition-colors hover:bg-slate-800/50">
+                <tr key={u.id} className="transition-colors hover:bg-muted/50">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-100">{u.name}</div>
-                    <div className="text-xs text-slate-500">{u.email}</div>
+                    <div className="font-medium text-foreground">{u.name}</div>
+                    <div className="text-xs text-muted-foreground">{u.email}</div>
                     {u.must_change_password && (
                       <span className="text-xs text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded ml-2">Senha provisória</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role] ?? 'bg-slate-800 text-slate-400'}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[u.role] ?? 'bg-muted text-muted-foreground'}`}>
                       {ROLE_LABELS[u.role] ?? u.role}
                     </span>
                   </td>
@@ -138,11 +138,11 @@ export default async function UsuariosPage({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
                     {formatDate(u.last_login_at)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button asChild variant="ghost" size="sm" className="text-slate-400 hover:text-slate-100">
+                    <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                       <Link href={`/gestor/usuarios/${u.id}`}>
                         Editar
                       </Link>
@@ -157,7 +157,7 @@ export default async function UsuariosPage({
 
       {/* Paginação */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Mostrando {users.length} de {totalCount} usuário(s) encontrado(s)
         </p>
 
@@ -167,12 +167,12 @@ export default async function UsuariosPage({
               href={`/gestor/usuarios?page=${currentPage - 1}${search ? `&q=${search}` : ''}`}
               className={currentPage <= 1 ? 'pointer-events-none opacity-40' : ''}
             >
-              <Button variant="outline" size="sm" disabled={currentPage <= 1} className="border-slate-700 text-slate-300">
+              <Button variant="outline" size="sm" disabled={currentPage <= 1} className="border-border text-foreground">
                 Anterior
               </Button>
             </Link>
 
-            <span className="text-xs text-slate-400 px-2">
+            <span className="text-xs text-muted-foreground px-2">
               Página {currentPage} de {totalPages}
             </span>
 
@@ -180,7 +180,7 @@ export default async function UsuariosPage({
               href={`/gestor/usuarios?page=${currentPage + 1}${search ? `&q=${search}` : ''}`}
               className={currentPage >= totalPages ? 'pointer-events-none opacity-40' : ''}
             >
-              <Button variant="outline" size="sm" disabled={currentPage >= totalPages} className="border-slate-700 text-slate-300">
+              <Button variant="outline" size="sm" disabled={currentPage >= totalPages} className="border-border text-foreground">
                 Próximo
               </Button>
             </Link>

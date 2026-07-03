@@ -26,23 +26,23 @@ export default function NovaPlantaPage() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-900/40">
             <Check className="h-6 w-6 text-green-400" />
           </div>
-          <h2 className="text-xl font-bold text-slate-100">Planta criada com sucesso!</h2>
-          <p className="text-sm text-slate-400">
+          <h2 className="text-xl font-bold text-foreground">Planta criada com sucesso!</h2>
+          <p className="text-sm text-muted-foreground">
             A planta e o primeiro Gestor foram cadastrados. Copie a senha temporária abaixo e envie para o Gestor.
           </p>
           
-          <div className="mt-4 rounded-lg bg-slate-900 p-4 border border-slate-800">
-            <p className="text-xs text-slate-500 mb-1">E-mail do Gestor</p>
-            <p className="font-medium text-slate-200">{state.gestorEmail}</p>
+          <div className="mt-4 rounded-lg bg-card p-4 border border-border">
+            <p className="text-xs text-muted-foreground mb-1">E-mail do Gestor</p>
+            <p className="font-medium text-foreground">{state.gestorEmail}</p>
             
-            <p className="text-xs text-slate-500 mt-3 mb-1">Senha temporária</p>
-            <div className="flex items-center justify-between gap-3 bg-slate-950 p-2 rounded border border-slate-800">
+            <p className="text-xs text-muted-foreground mt-3 mb-1">Senha temporária</p>
+            <div className="flex items-center justify-between gap-3 bg-background p-2 rounded border border-border">
               <code className="font-mono text-lg text-green-400 ml-2">{state.tempPassword}</code>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => copyToClipboard(state.tempPassword!)}
-                className="h-8 border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="h-8 border-border bg-muted text-foreground hover:bg-secondary"
               >
                 {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
                 Copiar
@@ -52,7 +52,7 @@ export default function NovaPlantaPage() {
           
           <div className="pt-4">
             <Link href="/admin/plantas">
-              <Button className="w-full bg-slate-100 text-slate-900 hover:bg-white">
+              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                 Voltar para Plantas
               </Button>
             </Link>
@@ -65,21 +65,21 @@ export default function NovaPlantaPage() {
   return (
     <main className="mx-auto max-w-lg px-4 py-8 space-y-6">
       <div className="space-y-1">
-        <Link href="/admin/plantas" className="inline-block text-sm text-slate-400 hover:text-slate-200 mb-2">
+        <Link href="/admin/plantas" className="inline-block text-sm text-muted-foreground hover:text-foreground mb-2">
           ← Voltar para Plantas
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-100">Nova Planta</h1>
-        <p className="text-sm text-slate-400">Cadastre um novo Tenant e seu primeiro Gestor.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Nova Planta</h1>
+        <p className="text-sm text-muted-foreground">Cadastre um novo Tenant e seu primeiro Gestor.</p>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
+      <div className="rounded-xl border border-border bg-card p-6 shadow-lg">
         <form action={formAction} className="space-y-5">
           
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-slate-100 border-b border-slate-800 pb-2">Dados da Planta</h2>
+            <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Dados da Planta</h2>
             
             <div className="space-y-1.5">
-              <label htmlFor="tenantName" className="text-sm font-medium text-slate-300">
+              <label htmlFor="tenantName" className="text-sm font-medium text-foreground">
                 Nome da Planta (Tenant)
               </label>
               <Input
@@ -88,7 +88,7 @@ export default function NovaPlantaPage() {
                 placeholder="Ex: ETE Norte"
                 required
                 disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 focus-visible:ring-slate-500"
+                className="bg-muted border-border text-foreground focus-visible:ring-ring"
               />
               {state.fieldErrors?.tenantName && (
                 <p className="text-xs text-red-400">{state.fieldErrors.tenantName[0]}</p>
@@ -96,7 +96,7 @@ export default function NovaPlantaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="slug" className="text-sm font-medium text-slate-300">
+              <label htmlFor="slug" className="text-sm font-medium text-foreground">
                 Slug (URL única)
               </label>
               <Input
@@ -105,7 +105,7 @@ export default function NovaPlantaPage() {
                 placeholder="Ex: ete-norte"
                 required
                 disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 focus-visible:ring-slate-500"
+                className="bg-muted border-border text-foreground focus-visible:ring-ring"
               />
               {state.fieldErrors?.slug && (
                 <p className="text-xs text-red-400">{state.fieldErrors.slug[0]}</p>
@@ -114,10 +114,10 @@ export default function NovaPlantaPage() {
           </div>
 
           <div className="space-y-4 pt-2">
-            <h2 className="text-sm font-semibold text-slate-100 border-b border-slate-800 pb-2">Primeiro Gestor</h2>
+            <h2 className="text-sm font-semibold text-foreground border-b border-border pb-2">Primeiro Gestor</h2>
             
             <div className="space-y-1.5">
-              <label htmlFor="gestorName" className="text-sm font-medium text-slate-300">
+              <label htmlFor="gestorName" className="text-sm font-medium text-foreground">
                 Nome do Gestor
               </label>
               <Input
@@ -126,7 +126,7 @@ export default function NovaPlantaPage() {
                 placeholder="Ex: João Silva"
                 required
                 disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 focus-visible:ring-slate-500"
+                className="bg-muted border-border text-foreground focus-visible:ring-ring"
               />
               {state.fieldErrors?.gestorName && (
                 <p className="text-xs text-red-400">{state.fieldErrors.gestorName[0]}</p>
@@ -134,7 +134,7 @@ export default function NovaPlantaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="gestorEmail" className="text-sm font-medium text-slate-300">
+              <label htmlFor="gestorEmail" className="text-sm font-medium text-foreground">
                 E-mail do Gestor
               </label>
               <Input
@@ -144,7 +144,7 @@ export default function NovaPlantaPage() {
                 placeholder="joao@etenorte.com.br"
                 required
                 disabled={isPending}
-                className="bg-slate-800 border-slate-700 text-slate-100 focus-visible:ring-slate-500"
+                className="bg-muted border-border text-foreground focus-visible:ring-ring"
               />
               {state.fieldErrors?.gestorEmail && (
                 <p className="text-xs text-red-400">{state.fieldErrors.gestorEmail[0]}</p>
@@ -161,7 +161,7 @@ export default function NovaPlantaPage() {
           <Button
             type="submit"
             disabled={isPending}
-            className="w-full bg-slate-100 text-slate-900 hover:bg-white disabled:opacity-50"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {isPending ? 'Criando…' : 'Criar Planta e Gestor'}
           </Button>
