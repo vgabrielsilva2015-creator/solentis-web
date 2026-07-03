@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { registrarLeitura, type LeituraFormState } from '../actions'
 import { cn } from '@/lib/utils'
+import { MapPin, Beaker } from 'lucide-react'
 
 const DRAFT_KEY = 'reading_draft'
 
@@ -24,6 +25,13 @@ type Props = {
   parameters:       Parameter[]
   // ponto de coleta → ids de parâmetros configurados pelo gestor (cronograma)
   allowedParams:    Record<string, string[]>
+  // Modo locked — ponto e parâmetro pré-definidos pelo checklist
+  lockedMode:       boolean
+  presetPointId:    string | null
+  presetPointName:  string | null
+  presetParamId:    string | null
+  presetParamName:  string | null
+  presetParamUnit:  string | null
 }
 
 type Draft = {
@@ -48,21 +56,37 @@ const chipActive = (active: boolean) =>
     ? 'bg-[#3ad0d6]/15 border-[#3ad0d6] text-[#3ad0d6]'
     : 'bg-muted border-border text-foreground'
 
-export function ReadingForm({ collectionPoints, parameters, allowedParams }: Props) {
+export function ReadingForm({
+  collectionPoints,
+  parameters,
+  allowedParams,
+  lockedMode,
+  presetPointId,
+  presetPointName,
+  presetParamId,
+  presetParamName,
+  presetParamUnit,
+}: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(registrarLeitura, initialState)
 
   // Controle de hidratação: impede salvar rascunho com estado vazio antes de carregar o draft
   const [mounted, setMounted]     = useState(false)
 
-  const [collectionPointId, setCollectionPointId] = useState('')
-  const [parameterId, setParameterId]             = useState('')
+  const [collectionPointId, setCollectionPointId] = useState(presetPointId ?? '')
+  const [parameterId, setParameterId]             = useState(presetParamId ?? '')
   const [valueStr, setValueStr]                   = useState('')
   const [notes, setNotes]                         = useState('')
   const [recordedAt, setRecordedAt]               = useState('')
 
   // ── Carregar rascunho do localStorage na montagem ──────────────────────────
   useEffect(() => {
+    // Em modo locked, não restaurar rascunho (ponto e param já vêm definidos)
+    if (lockedMode) {
+      setRecordedAt(formatDatetimeLocal(new Date()))
+      setMounted(true)
+      return
+    }
     const raw = localStorage.getItem(DRAFT_KEY)
     if (raw) {
       try {
@@ -79,11 +103,11 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
       setRecordedAt(formatDatetimeLocal(new Date()))
     }
     setMounted(true)
-  }, [])
+  }, [lockedMode])
 
-  // ── Salvar rascunho a cada alteração (só após montar) ──────────────────────
+  // ── Salvar rascunho a cada alteração (só após montar, e apenas em modo livre) ──
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || lockedMode) return
     const draft: Draft = {
       collection_point_id: collectionPointId,
       parameter_id:        parameterId,
@@ -92,7 +116,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
       recorded_at:         recordedAt,
     }
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-  }, [mounted, collectionPointId, parameterId, valueStr, notes, recordedAt])
+  }, [mounted, lockedMode, collectionPointId, parameterId, valueStr, notes, recordedAt])
 
   // ── Ao submeter com sucesso: limpar rascunho e redirecionar ────────────────
   useEffect(() => {
@@ -113,6 +137,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
 
   // Ao trocar de ponto, limpa o parâmetro se ele não for permitido no novo ponto
   useEffect(() => {
+    if (lockedMode) return
     if (parameterId && !visibleParams.some((p) => p.id === parameterId)) {
       setParameterId('')
       setValueStr('')
@@ -148,8 +173,14 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
       </Link>
 
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Nova leitura</h1>
-        <p className="text-xs text-muted-foreground">Registre a leitura de campo do turno atual.</p>
+        <h1 className="text-xl font-semibold">
+          {lockedMode ? 'Registrar Leitura' : 'Nova leitura'}
+        </h1>
+        <p className="text-xs text-muted-foreground">
+          {lockedMode
+            ? 'Ponto e parâmetro definidos pelo gestor. Registre o valor medido.'
+            : 'Registre a leitura de campo do turno atual.'}
+        </p>
       </div>
 
       <form
@@ -179,68 +210,101 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
         className="space-y-5"
       >
 
-        {/* ── Ponto de coleta (chips) ───────────────────────────────────── */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Ponto de coleta</label>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {collectionPoints.map((cp) => {
-              const active = collectionPointId === cp.id
-              return (
-                <button
-                  type="button"
-                  key={cp.id}
-                  onClick={() => setCollectionPointId(cp.id)}
-                  disabled={isPending}
-                  className={cn(CHIP_CLS, chipActive(active))}
-                >
-                  {cp.name}
-                </button>
-              )
-            })}
+        {/* ── Modo Locked: info card com ponto e parâmetro ─────────────── */}
+        {lockedMode && presetPointName && presetParamName ? (
+          <div className="rounded-xl border border-brand/30 bg-brand/5 p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/15">
+                <MapPin className="h-4.5 w-4.5 text-brand" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Ponto de coleta</p>
+                <p className="text-sm font-semibold text-foreground">{presetPointName}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/15">
+                <Beaker className="h-4.5 w-4.5 text-brand" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Parâmetro</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {presetParamName}
+                  {presetParamUnit && (
+                    <span className="font-normal text-muted-foreground ml-1">({presetParamUnit})</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            <input type="hidden" name="collection_point_id" value={presetPointId ?? ''} />
+            <input type="hidden" name="parameter_id" value={presetParamId ?? ''} />
           </div>
-          <input type="hidden" name="collection_point_id" value={collectionPointId} />
-          {state.fieldErrors?.collection_point_id && (
-            <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
-          )}
-        </div>
+        ) : (
+          <>
+            {/* ── Ponto de coleta (chips) — modo livre ─────────────────── */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Ponto de coleta</label>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {collectionPoints.map((cp) => {
+                  const active = collectionPointId === cp.id
+                  return (
+                    <button
+                      type="button"
+                      key={cp.id}
+                      onClick={() => setCollectionPointId(cp.id)}
+                      disabled={isPending}
+                      className={cn(CHIP_CLS, chipActive(active))}
+                    >
+                      {cp.name}
+                    </button>
+                  )
+                })}
+              </div>
+              <input type="hidden" name="collection_point_id" value={collectionPointId} />
+              {state.fieldErrors?.collection_point_id && (
+                <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
+              )}
+            </div>
 
-        {/* ── Parâmetro (opcional, chips) ────────────────────────────────── */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">
-            Parâmetro{' '}
-            <span className="font-normal text-muted-foreground">(opcional)</span>
-          </label>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => { setParameterId(''); setValueStr('') }}
-              disabled={isPending}
-              className={cn(CHIP_CLS, chipActive(parameterId === ''))}
-            >
-              Observação visual
-            </button>
-            {visibleParams.map((p) => {
-              const active = parameterId === p.id
-              return (
+            {/* ── Parâmetro (opcional, chips) — modo livre ─────────────── */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">
+                Parâmetro{' '}
+                <span className="font-normal text-muted-foreground">(opcional)</span>
+              </label>
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
                   type="button"
-                  key={p.id}
-                  onClick={() => { setParameterId(p.id); setValueStr('') }}
+                  onClick={() => { setParameterId(''); setValueStr('') }}
                   disabled={isPending}
-                  className={cn(CHIP_CLS, chipActive(active))}
+                  className={cn(CHIP_CLS, chipActive(parameterId === ''))}
                 >
-                  {p.name} <span className="font-normal opacity-70">({p.unit})</span>
+                  Observação visual
                 </button>
-              )
-            })}
-          </div>
-          {collectionPointId && !hasSchedule && (
-            <p className="text-xs text-amber-400">
-              Nenhum parâmetro pré-configurado para este ponto — peça ao gestor para configurar em Cronograma.
-            </p>
-          )}
-          <input type="hidden" name="parameter_id" value={parameterId} />
-        </div>
+                {visibleParams.map((p) => {
+                  const active = parameterId === p.id
+                  return (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => { setParameterId(p.id); setValueStr('') }}
+                      disabled={isPending}
+                      className={cn(CHIP_CLS, chipActive(active))}
+                    >
+                      {p.name} <span className="font-normal opacity-70">({p.unit})</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {collectionPointId && !hasSchedule && (
+                <p className="text-xs text-amber-400">
+                  Nenhum parâmetro pré-configurado para este ponto — peça ao gestor para configurar em Cronograma.
+                </p>
+              )}
+              <input type="hidden" name="parameter_id" value={parameterId} />
+            </div>
+          </>
+        )}
 
         {/* ── Valor medido (visível só quando há parâmetro) ─────────────── */}
         {selectedParam && (
@@ -262,6 +326,7 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
                 value={valueStr}
                 onChange={(e) => setValueStr(e.target.value)}
                 disabled={isPending}
+                autoFocus={lockedMode}
                 required
                 className={cn(
                   'w-full h-16 rounded-2xl bg-muted px-4 pr-16 text-3xl font-bold font-mono text-foreground outline-none border-2 transition-colors disabled:opacity-50',

@@ -6,11 +6,19 @@ import { ReadingForm } from './reading-form'
 import { getTenantId } from '@/lib/tenant'
 
 
-export default async function NovaLeituraPage() {
+export default async function NovaLeituraPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ point?: string; param?: string }>
+}) {
   const session = await auth()
   if (!session) redirect('/login')
 
   const tenantId = await getTenantId()
+  const { point: presetPointId, param: presetParamId } = await searchParams
+
+  // Modo locked: ponto e parâmetro vêm do checklist (query params)
+  const isLocked = !!(presetPointId && presetParamId)
 
   const [collectionPoints, parameters, schedules] = await Promise.all([
     prisma.collectionPoint.findMany({
@@ -37,10 +45,28 @@ export default async function NovaLeituraPage() {
     ;(allowedParams[s.collection_point_id] ??= []).push(s.parameter_id)
   }
 
+  // Resolver nomes para o modo locked
+  const lockedPointName = isLocked
+    ? collectionPoints.find((cp) => cp.id === presetPointId)?.name ?? null
+    : null
+  const lockedParamObj = isLocked
+    ? parameters.find((p) => p.id === presetParamId) ?? null
+    : null
+
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-4">
       <BackButton href="/operador/leituras" label="Leituras" />
-      <ReadingForm collectionPoints={collectionPoints} parameters={parameters} allowedParams={allowedParams} />
+      <ReadingForm
+        collectionPoints={collectionPoints}
+        parameters={parameters}
+        allowedParams={allowedParams}
+        lockedMode={isLocked}
+        presetPointId={presetPointId ?? null}
+        presetPointName={lockedPointName}
+        presetParamId={presetParamId ?? null}
+        presetParamName={lockedParamObj?.name ?? null}
+        presetParamUnit={lockedParamObj?.unit ?? null}
+      />
     </main>
   )
 }

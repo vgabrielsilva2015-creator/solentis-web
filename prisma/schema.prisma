@@ -23,38 +23,38 @@ model Tenant {
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
 
-  users                   User[]
-  sessions                Session[]
-  login_attempts          LoginAttempt[]
-  quality_parameters      QualityParameter[]
-  analysis_methods        AnalysisMethod[]
-  equipment_categories    EquipmentCategory[]
-  collection_points       CollectionPoint[]
-  shifts                  Shift[]
-  equipment               Equipment[]
-  readings                Reading[]
-  analyses                Analysis[]
-  preventive_maintenances PreventiveMaintenance[]
-  corrective_maintenances CorrectiveMaintenance[]
-  occurrences             Occurrence[]
-  occurrence_photos       OccurrencePhoto[]
-  shift_instances         ShiftInstance[]
-  shift_schedules         ShiftSchedule[]
-  shift_handovers         ShiftHandover[]
-  shift_tasks             ShiftTask[]
-  shift_task_templates    ShiftTaskTemplate[]
-  shift_task_photos       ShiftTaskPhoto[]
-  chemical_products       ChemicalProduct[]
-  chemical_stock_entries  ChemicalStockEntry[]
-  chemical_stock_exits    ChemicalStockExit[]
-  chemical_stock_counts   ChemicalStockCount[]
-  parameter_aliases       ParameterAlias[]
-  parameter_limits        ParameterLimit[]
-  external_analyses       ExternalAnalysis[]
-  monitoring_schedules    MonitoringSchedule[]
-  maintenance_logs        MaintenanceLog[]
-  shift_scales            ShiftScale[]
-  maintenance_days           MaintenanceDay[]
+  users                        User[]
+  sessions                     Session[]
+  login_attempts               LoginAttempt[]
+  quality_parameters           QualityParameter[]
+  analysis_methods             AnalysisMethod[]
+  equipment_categories         EquipmentCategory[]
+  collection_points            CollectionPoint[]
+  shifts                       Shift[]
+  equipment                    Equipment[]
+  readings                     Reading[]
+  analyses                     Analysis[]
+  preventive_maintenances      PreventiveMaintenance[]
+  corrective_maintenances      CorrectiveMaintenance[]
+  occurrences                  Occurrence[]
+  occurrence_photos            OccurrencePhoto[]
+  shift_instances              ShiftInstance[]
+  shift_schedules              ShiftSchedule[]
+  shift_handovers              ShiftHandover[]
+  shift_tasks                  ShiftTask[]
+  shift_task_templates         ShiftTaskTemplate[]
+  shift_task_photos            ShiftTaskPhoto[]
+  chemical_products            ChemicalProduct[]
+  chemical_stock_entries       ChemicalStockEntry[]
+  chemical_stock_exits         ChemicalStockExit[]
+  chemical_stock_counts        ChemicalStockCount[]
+  parameter_aliases            ParameterAlias[]
+  parameter_limits             ParameterLimit[]
+  external_analyses            ExternalAnalysis[]
+  monitoring_schedules         MonitoringSchedule[]
+  maintenance_logs             MaintenanceLog[]
+  shift_scales                 ShiftScale[]
+  maintenance_days             MaintenanceDay[]
   occurrence_severity_defaults OccurrenceSeverityDefault[]
 
   @@map("tenants")
@@ -229,7 +229,7 @@ model ParameterLimit {
   matrix          String
   min_limit       Float?
   max_limit       Float?
-  rule_type       String @default("TETO")
+  rule_type       String   @default("TETO")
   legal_reference String? // e.g. "CONAMA 430/2011"
   created_at      DateTime @default(now())
 
@@ -320,13 +320,13 @@ model CollectionPoint {
   is_external Boolean  @default(true)
   created_at  DateTime @default(now())
 
-  tenant     Tenant             @relation(fields: [tenant_id], references: [id])
-  readings    Reading[]
-  analyses    Analysis[]
+  tenant            Tenant               @relation(fields: [tenant_id], references: [id])
+  readings          Reading[]
+  analyses          Analysis[]
   external_analyses ExternalAnalysis[]
-  schedules   MonitoringSchedule[]
-  parameters  QualityParameter[]
-  occurrences Occurrence[]
+  schedules         MonitoringSchedule[]
+  parameters        QualityParameter[]
+  occurrences       Occurrence[]
 
   @@index([tenant_id])
   @@map("collection_points")
@@ -390,7 +390,7 @@ model OccurrenceSeverityDefault {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Equipment {
-  id                        String          @id @default(cuid())
+  id                        String    @id @default(cuid())
   tenant_id                 String
   name                      String
   category_id               String
@@ -398,15 +398,15 @@ model Equipment {
   location                  String?
   installation_date         DateTime?
   preventive_frequency_days Int
-  is_active                 Boolean         @default(true)
-  created_at                DateTime        @default(now())
+  is_active                 Boolean   @default(true)
+  created_at                DateTime  @default(now())
   created_by                String
   deleted_at                DateTime?
   manufacturer              String?
   model_name                String?
   manual_url                String?
   photo_url                 String?
-  status                    String @default("OPERATING")
+  status                    String    @default("OPERATING")
   responsible_id            String?
 
   tenant                  Tenant                  @relation(fields: [tenant_id], references: [id])
@@ -422,14 +422,14 @@ model Equipment {
 }
 
 model ShiftInstance {
-  id         String              @id @default(cuid())
+  id         String    @id @default(cuid())
   tenant_id  String
   shift_id   String
   date       DateTime
   opened_by  String
-  opened_at  DateTime            @default(now())
+  opened_at  DateTime  @default(now())
   closed_at  DateTime?
-  status     String @default("OPEN")
+  status     String    @default("OPEN")
   created_at DateTime  @default(now())
 
   tenant      Tenant         @relation(fields: [tenant_id], references: [id])
@@ -456,7 +456,7 @@ model Reading {
   unit                String?
   notes               String?
   is_non_conformant   Boolean?
-  origin              String @default("MANUAL")
+  origin              String   @default("MANUAL")
   metadata_origin     String?
   recorded_by         String
   recorded_at         DateTime
@@ -489,7 +489,7 @@ model Analysis {
   min_limit_applied   Float?
   max_limit_applied   Float?
   report_text         String?
-  laboratory_type     String @default("INTERNAL")
+  laboratory_type     String    @default("INTERNAL")
   is_non_conformant   Boolean
   approved_by         String?
   approved_at         DateTime?
@@ -529,8 +529,8 @@ model ExternalAnalysis {
   laboratory_name     String?
   laudo_number        String?
   is_non_conformant   Boolean?
-  status              String @default("PENDING_LAB")
-  origin              String             @default("MANUAL")
+  status              String    @default("PENDING_LAB")
+  origin              String    @default("MANUAL")
   collected_at        DateTime
   collected_by        String
   completed_at        DateTime?
@@ -548,15 +548,15 @@ model ExternalAnalysis {
 }
 
 model MonitoringSchedule {
-  id                  String          @id @default(cuid())
+  id                  String   @id @default(cuid())
   tenant_id           String
   collection_point_id String
   parameter_id        String
-  executor_role       String          // OPERATOR, TECHNICIAN
-  sample_type         String      // FIELD, INTERNAL, EXTERNAL
+  executor_role       String // OPERATOR, TECHNICIAN
+  sample_type         String // FIELD, INTERNAL, EXTERNAL
   frequency           String // PER_SHIFT, DAILY, WEEKLY, MONTHLY
-  days_of_week        Int[]    // 0=Sun, 1=Mon, ..., 6=Sat
-  days_of_month       Int[]    // 1-31
+  days_of_week        Int[] // 0=Sun, 1=Mon, ..., 6=Sat
+  days_of_month       Int[] // 1-31
   is_active           Boolean  @default(true)
   created_at          DateTime @default(now())
   created_by          String
@@ -573,14 +573,14 @@ model MonitoringSchedule {
 }
 
 model PreventiveMaintenance {
-  id             String            @id @default(cuid())
+  id             String    @id @default(cuid())
   tenant_id      String
   equipment_id   String
   scheduled_date DateTime
   completed_date DateTime?
   completed_by   String?
   notes          String?
-  status         String @default("SCHEDULED")
+  status         String    @default("SCHEDULED")
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 
@@ -599,10 +599,10 @@ model CorrectiveMaintenance {
   equipment_id   String
   description    String
   responsible_id String
-  priority       String?            @default("MEDIUM")
+  priority       String?   @default("MEDIUM")
   start_date     DateTime
   end_date       DateTime?
-  status         String  @default("IN_PROGRESS")
+  status         String    @default("IN_PROGRESS")
   estimated_cost Decimal?
   actual_cost    Decimal?
   notes          String?
@@ -621,13 +621,13 @@ model CorrectiveMaintenance {
 }
 
 model Occurrence {
-  id               String    @id @default(cuid())
-  tenant_id        String
+  id                  String    @id @default(cuid())
+  tenant_id           String
   description         String
-  category            String?   // VAZAMENTO, QUEBRA, FALTA_PRODUTO, OUTROS
-  type                String?   // OPERATIONAL | LABORATORY | EQUIPMENT | ENVIRONMENTAL | SAFETY
+  category            String? // VAZAMENTO, QUEBRA, FALTA_PRODUTO, OUTROS
+  type                String? // OPERATIONAL | LABORATORY | EQUIPMENT | ENVIRONMENTAL | SAFETY
   severity            String
-  status              String @default("OPEN")
+  status              String    @default("OPEN")
   deadline            DateTime
   resolved_at         DateTime?
   resolved_by         String?
@@ -640,13 +640,13 @@ model Occurrence {
   deleted_at          DateTime?
   immediate_action    String?
 
-  tenant              Tenant            @relation(fields: [tenant_id], references: [id])
-  reporter            User              @relation("OccurrenceReporter", fields: [reported_by], references: [id])
-  responsible         User?             @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
-  resolver            User?             @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
-  collection_point    CollectionPoint?  @relation(fields: [collection_point_id], references: [id])
-  photos              OccurrencePhoto[]
-  comments            OccurrenceComment[]
+  tenant           Tenant              @relation(fields: [tenant_id], references: [id])
+  reporter         User                @relation("OccurrenceReporter", fields: [reported_by], references: [id])
+  responsible      User?               @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
+  resolver         User?               @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
+  collection_point CollectionPoint?    @relation(fields: [collection_point_id], references: [id])
+  photos           OccurrencePhoto[]
+  comments         OccurrenceComment[]
 
   @@index([tenant_id, severity, status])
   @@index([deadline])
@@ -689,7 +689,7 @@ model ShiftHandover {
   timeout_at            DateTime
   incoming_observations String?
   confirmed_at          DateTime?
-  status                String @default("PENDING")
+  status                String    @default("PENDING")
   created_at            DateTime  @default(now())
 
   tenant         Tenant        @relation(fields: [tenant_id], references: [id])
@@ -713,7 +713,7 @@ model ShiftTask {
   completed_at      DateTime?
   completed_by      String?
   completion_notes  String?
-  status            String @default("PENDING")
+  status            String    @default("PENDING")
   template_id       String?
   requires_photo    Boolean   @default(false)
   repeated_from_id  String?
@@ -887,33 +887,33 @@ model AuditLog {
 }
 
 model MaintenanceLog {
-  id                     String    @id @default(cuid())
-  tenant_id              String
-  equipment_id           String
-  logged_at              DateTime  @default(now())
-  type                   String    // PREVENTIVE | CORRECTIVE | INSPECTION | REPLACEMENT
-  description            String
-  parts_replaced         String?
-  cost                   Decimal?
-  performed_by           String    // Nome/ID do executor
-  next_maintenance_date  DateTime?
-  attachment_url         String?   // Laudo, Nota Fiscal, etc.
+  id                    String    @id @default(cuid())
+  tenant_id             String
+  equipment_id          String
+  logged_at             DateTime  @default(now())
+  type                  String // PREVENTIVE | CORRECTIVE | INSPECTION | REPLACEMENT
+  description           String
+  parts_replaced        String?
+  cost                  Decimal?
+  performed_by          String // Nome/ID do executor
+  next_maintenance_date DateTime?
+  attachment_url        String? // Laudo, Nota Fiscal, etc.
 
-  tenant                 Tenant    @relation(fields: [tenant_id], references: [id])
-  equipment              Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
+  tenant    Tenant    @relation(fields: [tenant_id], references: [id])
+  equipment Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
 
   @@map("maintenance_logs")
 }
 
 model OccurrenceComment {
-  id            String     @id @default(cuid())
+  id            String   @id @default(cuid())
   occurrence_id String
   user_id       String
   text          String
-  created_at    DateTime   @default(now())
+  created_at    DateTime @default(now())
 
-  occurrence    Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
-  user          User       @relation(fields: [user_id], references: [id])
+  occurrence Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [user_id], references: [id])
 
   @@map("occurrence_comments")
 }
@@ -925,9 +925,9 @@ model ShiftScale {
   date        DateTime
   operator_id String
 
-  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
-  shift       Shift    @relation(fields: [shift_id], references: [id], onDelete: Cascade)
-  operator    User     @relation("ShiftScaleOperator", fields: [operator_id], references: [id])
+  tenant   Tenant @relation(fields: [tenant_id], references: [id])
+  shift    Shift  @relation(fields: [shift_id], references: [id], onDelete: Cascade)
+  operator User   @relation("ShiftScaleOperator", fields: [operator_id], references: [id])
 
   @@unique([tenant_id, date, shift_id, operator_id])
   @@map("shift_scales")
@@ -940,7 +940,7 @@ model MaintenanceDay {
   description String?
   created_at  DateTime @default(now())
 
-  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@unique([tenant_id, date])
   @@map("maintenance_days")

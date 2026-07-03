@@ -362,48 +362,40 @@ export default async function OperadorDashboard() {
           </div>
         )}
 
-        {/* Checklist de Coletas Diárias */}
-        <div className="space-y-2 pt-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Checklist de Coletas (Hoje)</h2>
+        {/* Coletas do Dia — Card-resumo com progresso */}
+        <Link
+          href="/operador/leituras"
+          className="block rounded-xl border border-border bg-card p-4 hover:bg-muted transition-colors space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground">📋 Coletas do Dia</h2>
+            {todaySchedules.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {todaySchedules.length - pendingChecklist.length}/{todaySchedules.length}
+              </span>
+            )}
+          </div>
           {todaySchedules.length === 0 ? (
-             <div className="rounded-xl border border-border bg-card/50 p-4">
-               <p className="text-sm text-muted-foreground">Nenhuma coleta agendada para hoje.</p>
-             </div>
+            <p className="text-xs text-muted-foreground">Nenhuma coleta agendada para hoje.</p>
           ) : pendingChecklist.length === 0 ? (
-             <div className="rounded-xl border border-green-900/40 bg-green-950/20 p-4 flex items-center justify-between">
-               <div>
-                 <p className="text-sm font-medium text-green-400">Tudo concluído!</p>
-                 <p className="text-xs text-green-500/70 mt-0.5">Você finalizou todas as {todaySchedules.length} coletas de hoje.</p>
-               </div>
-               <span className="text-green-500 text-2xl">✓</span>
-             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-400 text-sm">✓</span>
+              <p className="text-xs text-emerald-400 font-medium">Tudo concluído!</p>
+            </div>
           ) : (
-             <div className="grid gap-2">
-               {pendingChecklist.map(s => (
-                 <Link
-                   key={s.id}
-                   href={`/operador/leituras/nova?point=${s.collection_point_id}&param=${s.parameter_id}`}
-                   className="flex items-center justify-between rounded-xl border border-blue-900/40 bg-blue-950/20 p-4 hover:bg-blue-900/30 transition-colors"
-                 >
-                   <div>
-                     <p className="text-sm font-medium text-blue-100">{s.parameter.name}</p>
-                     <p className="text-xs text-blue-400/80 mt-0.5">{s.collection_point.name}</p>
-                   </div>
-                   <div className="flex shrink-0 items-center gap-2">
-                     <span className="text-xs font-medium text-blue-400">Registrar</span>
-                     <span className="text-blue-500">→</span>
-                   </div>
-                 </Link>
-               ))}
-               
-               {todaySchedules.length - pendingChecklist.length > 0 && (
-                 <div className="text-center pt-2">
-                   <p className="text-xs text-muted-foreground">{todaySchedules.length - pendingChecklist.length} de {todaySchedules.length} coletas realizadas.</p>
-                 </div>
-               )}
-             </div>
+            <>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-brand transition-all duration-500"
+                  style={{ width: `${Math.round(((todaySchedules.length - pendingChecklist.length) / todaySchedules.length) * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {pendingChecklist.length} pendente{pendingChecklist.length !== 1 ? 's' : ''} · Toque para ver checklist →
+              </p>
+            </>
           )}
-        </div>
+        </Link>
 
         {/* Leituras de hoje + Ocorrências em aberto */}
         <div className="grid grid-cols-2 gap-3">
