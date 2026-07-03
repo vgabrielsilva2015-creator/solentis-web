@@ -6,9 +6,15 @@ import { ReadingForm } from './reading-form'
 import { getTenantId } from '@/lib/tenant'
 
 
-export default async function NovaLeituraPage() {
+export default async function NovaLeituraPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ point?: string; param?: string }>
+}) {
   const session = await auth()
   if (!session) redirect('/login')
+
+  const { point, param } = await searchParams
 
   const tenantId = await getTenantId()
 
@@ -37,10 +43,23 @@ export default async function NovaLeituraPage() {
     ;(allowedParams[s.collection_point_id] ??= []).push(s.parameter_id)
   }
 
+  // Fluxo guiado pelo Checklist de Coletas: valida os IDs recebidos por query
+  // contra os dados reais (ignora links quebrados/desatualizados).
+  const initialCollectionPointId =
+    point && collectionPoints.some((cp) => cp.id === point) ? point : ''
+  const initialParameterId =
+    param && parameters.some((p) => p.id === param) ? param : ''
+
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-4">
       <BackButton href="/operador/leituras" label="Leituras" />
-      <ReadingForm collectionPoints={collectionPoints} parameters={parameters} allowedParams={allowedParams} />
+      <ReadingForm
+        collectionPoints={collectionPoints}
+        parameters={parameters}
+        allowedParams={allowedParams}
+        initialCollectionPointId={initialCollectionPointId}
+        initialParameterId={initialParameterId}
+      />
     </main>
   )
 }

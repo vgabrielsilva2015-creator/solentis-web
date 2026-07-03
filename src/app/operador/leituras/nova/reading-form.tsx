@@ -24,6 +24,9 @@ type Props = {
   parameters:       Parameter[]
   // ponto de coleta → ids de parâmetros configurados pelo gestor (cronograma)
   allowedParams:    Record<string, string[]>
+  // Fluxo guiado pelo Checklist de Coletas (query ?point=&param=), já validados
+  initialCollectionPointId?: string
+  initialParameterId?:       string
 }
 
 type Draft = {
@@ -48,18 +51,40 @@ const chipActive = (active: boolean) =>
     ? 'bg-[#3ad0d6]/15 border-[#3ad0d6] text-[#3ad0d6]'
     : 'bg-muted border-border text-foreground'
 
-export function ReadingForm({ collectionPoints, parameters, allowedParams }: Props) {
+export function ReadingForm({
+  collectionPoints,
+  parameters,
+  allowedParams,
+  initialCollectionPointId = '',
+  initialParameterId = '',
+}: Props) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(registrarLeitura, initialState)
+
+  // Fluxo guiado: chegou do Checklist de Coletas com ponto + parâmetro prontos.
+  const guided = !!initialCollectionPointId && !!initialParameterId
 
   // Controle de hidratação: impede salvar rascunho com estado vazio antes de carregar o draft
   const [mounted, setMounted]     = useState(false)
 
-  const [collectionPointId, setCollectionPointId] = useState('')
-  const [parameterId, setParameterId]             = useState('')
+  const [collectionPointId, setCollectionPointId] = useState(initialCollectionPointId)
+  const [parameterId, setParameterId]             = useState(initialParameterId)
   const [valueStr, setValueStr]                   = useState('')
   const [notes, setNotes]                         = useState('')
   const [recordedAt, setRecordedAt]               = useState('')
+
+  // No modo guiado, os chips começam ocultos (cabeçalho fixo + "Trocar").
+  const [revealChips, setRevealChips] = useState(false)
+  // Busca por nome de ponto (só aparece quando há muitos pontos).
+  const [pointQuery, setPointQuery]   = useState('')
+
+  const guidedPoint = collectionPoints.find((cp) => cp.id === initialCollectionPointId)
+  const guidedParam = parameters.find((p) => p.id === initialParameterId)
+
+  const showChips = !guided || revealChips
+  const filteredPoints = pointQuery.trim()
+    ? collectionPoints.filter((cp) => cp.name.toLowerCase().includes(pointQuery.trim().toLowerCase()))
+    : collectionPoints
 
   // ── Carregar rascunho do localStorage na montagem ──────────────────────────
   useEffect(() => {
@@ -67,10 +92,22 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
     if (raw) {
       try {
         const d = JSON.parse(raw) as Partial<Draft>
-        setCollectionPointId(d.collection_point_id ?? '')
-        setParameterId(d.parameter_id ?? '')
-        setValueStr(d.value ?? '')
-        setNotes(d.notes ?? '')
+        if (guided) {
+          // Guiado pelo checklist: ponto/parâmetro vêm da query (já no estado).
+          // Só recupera valor/observação se o rascunho for desta mesma combinação.
+          const sameTarget =
+            d.collection_point_id === initialCollectionPointId &&
+            d.parameter_id === initialParameterId
+          if (sameTarget) {
+            setValueStr(d.value ?? '')
+            setNotes(d.notes ?? '')
+          }
+        } else {
+          setCollectionPointId(d.collection_point_id ?? '')
+          setParameterId(d.parameter_id ?? '')
+          setValueStr(d.value ?? '')
+          setNotes(d.notes ?? '')
+        }
         setRecordedAt(d.recorded_at ?? formatDatetimeLocal(new Date()))
       } catch {
         setRecordedAt(formatDatetimeLocal(new Date()))
@@ -179,68 +216,112 @@ export function ReadingForm({ collectionPoints, parameters, allowedParams }: Pro
         className="space-y-5"
       >
 
-        {/* ── Ponto de coleta (chips) ───────────────────────────────────── */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Ponto de coleta</label>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {collectionPoints.map((cp) => {
-              const active = collectionPointId === cp.id
-              return (
-                <button
-                  type="button"
-                  key={cp.id}
-                  onClick={() => setCollectionPointId(cp.id)}
-                  disabled={isPending}
-                  className={cn(CHIP_CLS, chipActive(active))}
-                >
-                  {cp.name}
-                </button>
-              )
-            })}
-          </div>
-          <input type="hidden" name="collection_point_id" value={collectionPointId} />
-          {state.fieldErrors?.collection_point_id && (
-            <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
-          )}
-        </div>
-
-        {/* ── Parâmetro (opcional, chips) ────────────────────────────────── */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">
-            Parâmetro{' '}
-            <span className="font-normal text-muted-foreground">(opcional)</span>
-          </label>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* ── Alvo da leitura: guiado (cabeçalho fixo) ou seletores ──────── */}
+        {guided && !revealChips ? (
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-[#3ad0d6]/30 bg-[#3ad0d6]/10 p-4">
+            <div className="min-w-0 space-y-2">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Ponto</p>
+                <p className="truncate text-sm font-semibold text-foreground">{guidedPoint?.name ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Parâmetro</p>
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {guidedParam?.name ?? '—'}
+                  {guidedParam?.unit && <span className="font-normal text-muted-foreground"> ({guidedParam.unit})</span>}
+                </p>
+              </div>
+            </div>
             <button
               type="button"
-              onClick={() => { setParameterId(''); setValueStr('') }}
-              disabled={isPending}
-              className={cn(CHIP_CLS, chipActive(parameterId === ''))}
+              onClick={() => setRevealChips(true)}
+              className="shrink-0 text-sm font-medium text-[#3ad0d6] hover:underline"
             >
-              Observação visual
+              Trocar
             </button>
-            {visibleParams.map((p) => {
-              const active = parameterId === p.id
-              return (
+          </div>
+        ) : (
+          <>
+            {/* ── Ponto de coleta (chips) ───────────────────────────────── */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Ponto de coleta</label>
+              {collectionPoints.length > 6 && (
+                <input
+                  type="text"
+                  inputMode="search"
+                  value={pointQuery}
+                  onChange={(e) => setPointQuery(e.target.value)}
+                  disabled={isPending}
+                  placeholder="Buscar ponto…"
+                  className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+                />
+              )}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {filteredPoints.map((cp) => {
+                  const active = collectionPointId === cp.id
+                  return (
+                    <button
+                      type="button"
+                      key={cp.id}
+                      onClick={() => setCollectionPointId(cp.id)}
+                      disabled={isPending}
+                      className={cn(CHIP_CLS, chipActive(active))}
+                    >
+                      {cp.name}
+                    </button>
+                  )
+                })}
+                {filteredPoints.length === 0 && (
+                  <p className="py-2 text-xs text-muted-foreground">Nenhum ponto encontrado.</p>
+                )}
+              </div>
+              {state.fieldErrors?.collection_point_id && (
+                <p className="text-xs text-red-400">{state.fieldErrors.collection_point_id[0]}</p>
+              )}
+            </div>
+
+            {/* ── Parâmetro (opcional, chips) ───────────────────────────── */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">
+                Parâmetro{' '}
+                <span className="font-normal text-muted-foreground">(opcional)</span>
+              </label>
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
                   type="button"
-                  key={p.id}
-                  onClick={() => { setParameterId(p.id); setValueStr('') }}
+                  onClick={() => { setParameterId(''); setValueStr('') }}
                   disabled={isPending}
-                  className={cn(CHIP_CLS, chipActive(active))}
+                  className={cn(CHIP_CLS, chipActive(parameterId === ''))}
                 >
-                  {p.name} <span className="font-normal opacity-70">({p.unit})</span>
+                  Observação visual
                 </button>
-              )
-            })}
-          </div>
-          {collectionPointId && !hasSchedule && (
-            <p className="text-xs text-amber-400">
-              Nenhum parâmetro pré-configurado para este ponto — peça ao gestor para configurar em Cronograma.
-            </p>
-          )}
-          <input type="hidden" name="parameter_id" value={parameterId} />
-        </div>
+                {visibleParams.map((p) => {
+                  const active = parameterId === p.id
+                  return (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => { setParameterId(p.id); setValueStr('') }}
+                      disabled={isPending}
+                      className={cn(CHIP_CLS, chipActive(active))}
+                    >
+                      {p.name} <span className="font-normal opacity-70">({p.unit})</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {collectionPointId && !hasSchedule && (
+                <p className="text-xs text-amber-400">
+                  Nenhum parâmetro pré-configurado para este ponto — peça ao gestor para configurar em Cronograma.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Valores enviados — sempre presentes, mesmo no modo guiado */}
+        <input type="hidden" name="collection_point_id" value={collectionPointId} />
+        <input type="hidden" name="parameter_id" value={parameterId} />
 
         {/* ── Valor medido (visível só quando há parâmetro) ─────────────── */}
         {selectedParam && (
