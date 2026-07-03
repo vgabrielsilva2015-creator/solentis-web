@@ -3,7 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
-import { logger } from '@/lib/logger'
+import { getLogger } from '@/lib/logger'
 import {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_ATTEMPTS,
@@ -56,6 +56,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null
 
         const { email, password } = parsed.data
+        const log = await getLogger({ action: 'login' })
 
         // Para evitar timing attacks, consultamos o usuário primeiro,
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
@@ -97,8 +98,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // ⚠️ FAIL-OPEN: se a checagem falhar, o login segue SEM proteção de brute-force.
           // Mantido de propósito (não travar todos os logins num soluço do banco),
           // mas registrado em WARN para ficar visível caso vire recorrente.
-          logger.warn(
-            { err: error, tenantId: tenantIdForLog, component: 'auth' },
+          log.warn(
+            { err: error, tenantId: tenantIdForLog, attemptedEmail: email },
             'Falha ao checar rate limit — login prosseguindo sem proteção de brute-force',
           )
         }
@@ -115,8 +116,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           })
         } catch (error) {
-          logger.error(
-            { err: error, tenantId: tenantIdForLog, component: 'auth' },
+          log.error(
+            { err: error, tenantId: tenantIdForLog },
             'Falha ao registrar tentativa de login',
           )
         }
@@ -129,8 +130,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             data: { last_login_at: new Date() },
           })
         } catch (error) {
-          logger.error(
-            { err: error, tenantId: tenantIdForLog, userId: user.id, component: 'auth' },
+          log.error(
+            { err: error, tenantId: tenantIdForLog, userId: user.id },
             'Falha ao atualizar last_login_at',
           )
         }

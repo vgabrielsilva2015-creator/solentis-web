@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertCircle } from 'lucide-react'
+import { clientLogger } from '@/lib/client-logger'
 
 export default function Error({
   error,
@@ -12,8 +13,8 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log do erro (ex: Sentry)
-    console.error('Unhandled error:', error)
+    // Log do erro enviado ao backend (Pino)
+    clientLogger.fatal('Global unhandled error', error, { digest: error.digest })
   }, [error])
 
   return (

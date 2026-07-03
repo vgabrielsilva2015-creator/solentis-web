@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { subscribeUser, unsubscribeUser } from '@/lib/push-actions'
 import { Bell, BellOff } from 'lucide-react'
+import { clientLogger } from '@/lib/client-logger'
 
 const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
 
@@ -48,7 +49,7 @@ export function PushManager() {
       await subscribeUser(sub as any)
       setIsSubscribed(true)
     } catch (err) {
-      console.error('Failed to subscribe', err)
+      clientLogger.error('Failed to subscribe to push notifications', err, { component: 'PushManager' })
     }
   }
 
@@ -62,7 +63,7 @@ export function PushManager() {
         setIsSubscribed(false)
       }
     } catch (err) {
-      console.error('Failed to unsubscribe', err)
+      clientLogger.error('Failed to unsubscribe from push notifications', err, { component: 'PushManager' })
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { registrarLeitura } from '@/app/operador/leituras/actions'
+import { clientLogger } from '@/lib/client-logger'
 
 export function SyncManager() {
   useEffect(() => {
@@ -29,10 +30,10 @@ export function SyncManager() {
             if (res?.success) {
               successCount++
             } else {
-              console.error('[SyncManager] Falha na leitura:', res?.error)
+              clientLogger.error('Falha na leitura', res?.error, { component: 'SyncManager' })
             }
           } catch (err) {
-             console.error('[SyncManager] Erro no try-catch do item', err)
+             clientLogger.error('Erro no try-catch do item', err, { component: 'SyncManager' })
           }
         }
         
@@ -45,7 +46,7 @@ export function SyncManager() {
           alert(`Sincronização concluída: ${successCount} leituras enviadas.`)
         }
       } catch (err) {
-        console.error('[SyncManager] Erro fatal na sincronização', err)
+        clientLogger.error('Erro fatal na sincronização', err, { component: 'SyncManager' })
       }
     }
 
