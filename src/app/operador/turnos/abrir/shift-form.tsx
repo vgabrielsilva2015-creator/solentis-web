@@ -52,7 +52,6 @@ export function ShiftForm({ shifts }: { shifts: Shift[] }) {
               className="accent-emerald-500"
             />
             <div>
-<<<<<<< HEAD
               <p className="text-sm font-medium">
                 {shift.name}
                 {shift.id === recommendedShiftId && (
