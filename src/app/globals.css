@@ -425,3 +425,12 @@
   from { transform: scaleX(1); }
   to   { transform: scaleX(0); }
 }
+
+/* Esconde a barra de rolagem dos carrosséis de chips (scroll por gesto continua) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
