@@ -124,6 +124,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isValid) return null
 
+        // Conta desativada (soft-delete) não autentica, mesmo com senha correta.
+        // Garante que "desativar usuário" revogue o acesso de fato.
+        if (!user.is_active) {
+          log.warn(
+            { tenantId: tenantIdForLog, userId: user.id },
+            'Login bloqueado: conta desativada',
+          )
+          return null
+        }
+
         try {
           await prisma.user.update({
             where: { id: user.id },
