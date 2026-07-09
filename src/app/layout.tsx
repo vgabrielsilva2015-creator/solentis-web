@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { SyncManager } from "@/components/sync-manager";
 import { ToastProvider } from "@/components/ui/toast";
+import { ThemeScript } from "@/components/theme-provider";
 import type { Viewport } from "next";
 
 const sora = Sora({
@@ -53,12 +54,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${sora.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-full flex flex-col">
+      <html
+        lang="pt-BR"
+        className={`${sora.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
+        suppressHydrationWarning
+      >
+        <head>
+          <ThemeScript />
+        </head>
+        <body className="min-h-full flex flex-col">
         <OfflineIndicator />
         <SyncManager />
         <ToastProvider position="bottom-right">
