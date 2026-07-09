@@ -256,6 +256,15 @@ export async function addOccurrenceComment(occurrenceId: string, text: string) {
     throw new Error('Comentário deve ter pelo menos 2 caracteres.')
   }
 
+  // Isolamento de tenant: confirma que a ocorrência pertence ao tenant do usuário
+  // antes de gravar. A tabela occurrence_comments não tem tenant_id próprio, então
+  // este check é a única barreira contra escrita cross-tenant (IDOR).
+  const occ = await prisma.occurrence.findFirst({
+    where: { id: occurrenceId, tenant_id: tenantId },
+    select: { id: true },
+  })
+  if (!occ) throw new Error('Ocorrência não encontrada.')
+
   await prisma.occurrenceComment.create({
     data: {
       occurrence_id: occurrenceId,
