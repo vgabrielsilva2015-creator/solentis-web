@@ -118,8 +118,12 @@ export async function abrirTurno(
 
   const tenant_id = await getTenantId()
 
-  // Verificação de duplicado em transação (SQLite serializa escritas — seguro no MVP)
-  const result = await prisma.$transaction(async (tx) => {
+  // Verificação de duplicado em transação. A garantia atômica REAL vem do índice
+  // único parcial uniq_shift_instance_ativa (prisma/sql/add_unique_open_shift.sql):
+  // sob Postgres a checagem abaixo sozinha não impede corrida entre cliques concorrentes.
+  let result: TurnoFormState | null
+  try {
+    result = await prisma.$transaction(async (tx) => {
     const existing = await tx.shiftInstance.findFirst({
       where: {
         tenant_id,
@@ -197,7 +201,14 @@ export async function abrirTurno(
     }
 
     return null
-  })
+    })
+  } catch (e: unknown) {
+    // Corrida perdida: o índice único parcial rejeitou a 2ª criação concorrente.
+    if (e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === 'P2002') {
+      return { error: 'Já existe um turno aberto para este período.' }
+    }
+    throw e
+  }
 
   if (result?.error) return result
   revalidatePath('/operador/turnos')
