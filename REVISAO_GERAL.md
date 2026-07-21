@@ -14,7 +14,7 @@ Auditei **tudo que é código, git e configuração**. **Não acesso ao vivo** o
 
 ## 1. VEREDITO GERAL
 
-**Saúde do projeto: BOA. Pronto para produção com clientes pagantes: AINDA NÃO — falta 1 rodada de correções (a maioria rápida).**
+**Saúde do projeto: BOA. Rodada de correções de código CONCLUÍDA (2026-07-21) — todos os Altos, Médios e Baixos acionáveis por código foram corrigidos. Restam apenas itens de INFRA/DONO (RLS no Supabase, baseline de migration, envs, backup) antes de clientes pagantes.**
 
 | Dimensão | Estado |
 |---|---|
@@ -25,11 +25,11 @@ Auditei **tudo que é código, git e configuração**. **Não acesso ao vivo** o
 | 🐙 GitHub | **Zero segredos vazados no histórico** ✅ · CI bom mas com pontos cegos · local 4 commits atrás |
 
 ### Top 5 prioridades (ordem de ataque)
-1. ✅ **[FEITO]** Login de conta desativada + IDOR de comentário — corrigidos nesta sessão.
-2. 🟠 **Push notifications quebradas** — `session.user.id` nunca é preenchido (bug funcional). Ver FUNC-01.
-3. 🟡 **Race de turno duplicado** — a proteção assume SQLite, mas o banco é Postgres. Ver FUNC-02.
-4. 🟡 **Headers de segurança ausentes** (CSP/HSTS/X-Frame-Options/nosniff). Ver SECURITY_AUDIT MÉDIO-01.
-5. 🟡 **Sem caminho de migração do banco** (4 migrations p/ 42 tabelas) — risco de recuperação de desastre. Ver DB-01.
+1. ✅ **[FEITO]** Login de conta desativada + IDOR de comentário.
+2. ✅ **[FEITO]** Push notifications (`session.user.id`) — FUNC-01 (commit a8e8439).
+3. ✅ **[FEITO]** Race de turno duplicado — índice único parcial via SQL aditivo — FUNC-02 (commit df0ee1b).
+4. ✅ **[FEITO]** Headers de segurança (CSP-RO/HSTS/X-Frame-Options/nosniff) — MÉDIO-01.
+5. ⏳ **[DONO]** Sem caminho de migração do banco (4 migrations p/ 42 tabelas) — DB-01. Precisa de baseline com cuidado (ver memória "migrations quebradas"); não executado nesta sessão por ser fora do alcance de código seguro.
 
 ---
 
@@ -41,14 +41,19 @@ Detalhe completo e patches em **`SECURITY_AUDIT.md`**. Situação após esta ses
 |---|---|---|---|
 | ALTO-01 | 🟠 Alto | Usuário desativado ainda logava (`is_active` ignorado) | ✅ **Corrigido** |
 | ALTO-02 | 🟠 Alto | IDOR cross-tenant em `addOccurrenceComment` | ✅ **Corrigido** |
-| MÉDIO-01 | 🟡 Médio | Sem headers de segurança HTTP | ⏳ Pendente |
-| MÉDIO-02 | 🟡 Médio | Senha provisória com `Math.random()` | ⏳ Pendente |
-| MÉDIO-03 | 🟡 Médio | `extractDataFromPDF` (IA) sem guard de role → abuso de custo | ⏳ Pendente |
-| MÉDIO-04 | 🟡 Médio | CSV/formula injection na exportação | ⏳ Pendente |
-| MÉDIO-05 | 🟡 Médio | Upload valida só MIME do cliente (sem magic bytes) | ⏳ Pendente |
-| MÉDIO-06 | 🟡 Médio | Enumeração de usuário por timing (dummy hash inválido) | ⏳ Pendente |
-| MÉDIO-07 | 🟡 Médio | PWA cacheia páginas autenticadas (device compartilhado) | ⏳ Pendente |
-| BAIXO-01..06 | 🔵 Baixo | `/api/logs` frouxo, pointId, política de senha, JWT sem revogação, etc. | ⏳ Pendente |
+| MÉDIO-01 | 🟡 Médio | Sem headers de segurança HTTP | ✅ **Corrigido** (CSP em Report-Only) |
+| MÉDIO-02 | 🟡 Médio | Senha provisória com `Math.random()` | ✅ **Corrigido** (CSPRNG) |
+| MÉDIO-03 | 🟡 Médio | `extractDataFromPDF` (IA) sem guard de role → abuso de custo | ✅ **Corrigido** |
+| MÉDIO-04 | 🟡 Médio | CSV/formula injection na exportação | ✅ **Corrigido** |
+| MÉDIO-05 | 🟡 Médio | Upload valida só MIME do cliente (sem magic bytes) | ✅ **Corrigido** |
+| MÉDIO-06 | 🟡 Médio | Enumeração de usuário por timing (dummy hash inválido) | ✅ **Corrigido** |
+| MÉDIO-07 | 🟡 Médio | PWA cacheia páginas autenticadas (device compartilhado) | ✅ **Corrigido** (NetworkOnly) |
+| BAIXO-01 | 🔵 Baixo | `/api/logs` frouxo (sem validação, spread de contexto) | ✅ **Corrigido** |
+| BAIXO-02 | 🔵 Baixo | `pointId` de outro tenant aceito no import de laudo | ✅ **Corrigido** |
+| BAIXO-04 | 🔵 Baixo | Política de senha duplicada/morta | ✅ **Corrigido** |
+| BAIXO-03/05/06 | 🔵 Baixo | JWT sem revogação · troca sem senha atual · postcss (Next) | ⏳ Design/dono (ver §7) |
+| DB-02 | 🟡 Médio | Guardião de isolamento não cobria escritas | ✅ **Corrigido** |
+| DB-01/03/04 | 🟡/🔵 | Baseline de migration · RLS no Supabase · `tenant_id` faltante | ⏳ Dono/infra (ver §7) |
 
 **Vazamento de dados entre plantas (o maior risco de um SaaS multi-tenant):** o isolamento é feito **na aplicação** (Prisma bypassa RLS). Está aplicado de forma consistente — verificado em fotos, usuários, export, busca, ocorrências, turnos, estoque. A única falha de escrita cross-tenant (comentário) foi corrigida. **Recomendação estrutural:** habilitar RLS no Supabase como rede de segurança (§4 DB-03).
 
