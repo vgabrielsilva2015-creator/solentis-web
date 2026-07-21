@@ -14,6 +14,13 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
 
+  // Rotas de debug/diagnóstico: bloqueadas permanentemente (404) para evitar
+  // reintrodução acidental de endpoints de diagnóstico em produção. Já houve uma
+  // `/api/debug/email` no histórico; este guard fecha a porta de vez.
+  if (pathname === '/api/debug' || pathname.startsWith('/api/debug/')) {
+    return new NextResponse('Not found', { status: 404 })
+  }
+
   // Rotas públicas de auth: liberadas independentemente de sessão
   if (PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next()
