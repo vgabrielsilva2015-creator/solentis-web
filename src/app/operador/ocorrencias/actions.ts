@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload } from '@/lib/storage'
+import { saveUpload, sniffImageType } from '@/lib/storage'
 import { logAudit } from '@/lib/audit'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
@@ -107,16 +107,21 @@ export async function registrarOcorrencia(
       return { error: `Arquivo ${file.name} é muito grande. Máximo 5 MB.` }
     }
 
-    const ext      = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
-    const filename = `${crypto.randomUUID()}.${ext}`
-
     const buffer = Buffer.from(await file.arrayBuffer())
-    const stored = await saveUpload('occurrences', filename, buffer, file.type)
+    // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
+    const realType = sniffImageType(buffer)
+    if (!realType) {
+      return { error: `O conteúdo de ${file.name} não é uma imagem JPG, PNG ou WEBP válida.` }
+    }
+
+    const ext      = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
+    const filename = `${crypto.randomUUID()}.${ext}`
+    const stored   = await saveUpload('occurrences', filename, buffer, realType)
 
     photoPayloads.push({
       filename: stored,
       original_name: file.name,
-      mime_type:     file.type,
+      mime_type:     realType,
       size_bytes:    file.size,
     })
   }
@@ -218,6 +223,7 @@ export async function resolverOcorrencia(formData: FormData) {
     })
     if (!occurrence) throw new Error('Ocorrência não encontrada.')
 
+    // @tenant-checked: occurrence validada por tenant_id no findUnique acima.
     await tx.occurrence.update({
       where: { id: occurrenceId },
       data: {
@@ -312,6 +318,7 @@ export async function updateOccurrenceStatus(
 
   await prisma.$transaction(async (tx) => {
     const isResolving = newStatus === 'RESOLVED'
+    // @tenant-checked: occurrence validada por tenant_id no findFirst acima.
     await tx.occurrence.update({
       where: { id: occurrenceId },
       data: {
