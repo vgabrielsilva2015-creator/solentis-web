@@ -49,10 +49,15 @@ function userEmailIsGloballyUnique(): boolean {
 const USER_EMAIL_GLOBAL = userEmailIsGloballyUnique()
 const TENANT_DELEGATES = new Set([...TENANT_MODELS].map(toDelegate))
 
-// Operações que tocam linhas e portanto precisam de escopo de tenant
+// Operações que tocam linhas e portanto precisam de escopo de tenant.
+// Inclui ESCRITAS (create/update/upsert/delete): foi por não cobrir escrita que
+// o IDOR de comentário passou batido. Uma escrita conta como isolada se o bloco
+// referencia tenant_id (ex.: create com `data: { tenant_id }`), usa PK composta
+// (tenant_id_*), OU tem o selo auditado `// @tenant-checked` na linha anterior
+// (para check-then-act via relação em modelos sem tenant_id próprio).
 const SCOPED_OPS = [
   'findMany', 'findFirst', 'findUnique', 'count', 'aggregate', 'groupBy',
-  'updateMany', 'deleteMany',
+  'create', 'createMany', 'update', 'updateMany', 'upsert', 'delete', 'deleteMany',
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,11 +157,13 @@ function scan(): Violation[] {
       // Se usa variável `where`, validar que TODAS as where-vars do arquivo têm tenant
       if (usesWhereVariable(block) && whereVarsAreScoped(text)) continue
 
-      // Exceção auditada: linha anterior contém // @tenant-safe: <motivo>
-      // Usado APENAS para jobs de sistema que varrem todos os tenants de propósito.
+      // Exceções auditadas nas linhas imediatamente acima da query:
+      //  • @tenant-safe:    job de sistema que varre todos os tenants de propósito.
+      //  • @tenant-checked: escrita em modelo sem tenant_id próprio (ex.: comentário),
+      //    cujo isolamento é garantido por um check-then-act via relação logo acima.
       const lineNum = text.slice(0, m.index).split('\n').length
       const prevLines = text.split('\n').slice(Math.max(0, lineNum - 4), lineNum - 1).join('\n')
-      if (/@tenant-safe:/.test(prevLines)) continue
+      if (/@tenant-safe:/.test(prevLines) || /@tenant-checked/.test(prevLines)) continue
 
       // Caso contrário: VIOLAÇÃO
       const line = lineNum

@@ -67,6 +67,7 @@ export async function trocarSenhaAction(
       return { error: 'Usuário não encontrado no banco.' }
     }
 
+    // @tenant-checked: userToUpdate foi buscado com tenant_id da sessão acima.
     await prisma.user.update({
       where: { id: userToUpdate.id },
       data: {

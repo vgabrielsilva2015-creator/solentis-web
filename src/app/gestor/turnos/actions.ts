@@ -145,6 +145,7 @@ export async function toggleDaySchedule(shiftId: string, days_of_week: number[])
   })
 
   if (schedule) {
+    // @tenant-checked: schedule buscado por tenant_id logo acima.
     await prisma.shiftSchedule.update({
       where: { id: schedule.id },
       data: { days_of_week }
