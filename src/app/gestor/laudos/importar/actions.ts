@@ -8,6 +8,21 @@ function delay(ms: number) {
 }
 
 export async function extractDataFromPDF(base64Data: string, mimeType: string) {
+  // Server Actions são endpoints públicos: estar sob /gestor não protege.
+  // Sem este guard, qualquer sessão poderia queimar a cota paga do Gemini.
+  const { auth } = await import('@/lib/auth')
+  const session = await auth()
+  if (!session || session.user.role !== 'MANAGER') {
+    throw new Error('Não autorizado.')
+  }
+  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType)) {
+    throw new Error('Tipo de arquivo inválido.')
+  }
+  // base64 ~= 1.37x os bytes reais → ~10 MB de arquivo original.
+  if (typeof base64Data !== 'string' || base64Data.length > 14_000_000) {
+    throw new Error('Arquivo muito grande.')
+  }
+
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY não configurada no servidor.')
@@ -101,6 +116,13 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
 export async function getMappingContext() {
   const { prisma } = await import('@/lib/prisma')
   const { getTenantId } = await import('@/lib/tenant')
+  const { auth } = await import('@/lib/auth')
+
+  const session = await auth()
+  if (!session || session.user.role !== 'MANAGER') {
+    throw new Error('Não autorizado.')
+  }
+
   const tenantId = await getTenantId()
   
   const parameters = await prisma.qualityParameter.findMany({
@@ -188,11 +210,14 @@ export async function saveMappedReadings(data: {
   })
   if (!user) return { success: false, error: 'Usuário não encontrado.' }
 
-  // Buscar a matriz do ponto para verificação multi-matriz
+  // Buscar a matriz do ponto para verificação multi-matriz.
+  // Rejeita ponto inexistente/de outro tenant — a FK é global, então sem este
+  // check um ponto de outro tenant poderia ser associado à análise.
   const point = await prisma.collectionPoint.findFirst({
     where: { id: data.pointId, tenant_id: tenantId }
   })
-  const matrixName = point?.matrix || null
+  if (!point) return { success: false, error: 'Ponto de coleta inválido.' }
+  const matrixName = point.matrix || null
 
   // Usar fallback de metodo
   const fallbackMethod = await prisma.analysisMethod.findFirst({
