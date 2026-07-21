@@ -65,12 +65,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email },
         })
 
-        // Hash pré-computado dummy (exemplo: bcrypt de "dummy")
-        const dummyHash = "$2a$10$8.z8o.bM.g0U8Q8z9w9f8.3.4.5.6.7.8.9.0.1.2.3.4.5.6.7.8"
+        // Hash bcrypt REAL (custo 12) de uma senha aleatória descartada. Precisa
+        // ser um hash válido: bcrypt.compare contra um hash malformado retorna
+        // imediatamente, sem rodar o KDF, o que reabriria a enumeração por timing.
+        const dummyHash = '$2b$12$OpBwXlX38xxe3BDPyl0gGOy3o8hdTpVHn.8UmpKJKrYktAlHFGEli'
 
         if (!user) {
-          // Usuário não existe:
-          // Fazemos a verificação do hash dummy para prevenir timing attacks e não tentamos logar auditoria.
+          // Usuário não existe: gastamos o MESMO tempo de um bcrypt custo 12 para
+          // que a resposta seja indistinguível de um e-mail existente (anti-timing).
           await verifyPassword(password, dummyHash).catch(() => {})
           return null
         }
@@ -135,6 +137,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         try {
+          // @tenant-checked: user é o registro autenticado nesta própria função.
           await prisma.user.update({
             where: { id: user.id },
             data: { last_login_at: new Date() },

@@ -1,5 +1,6 @@
 'use server'
 
+import { randomInt } from 'crypto'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
@@ -18,9 +19,11 @@ async function requireSuperAdmin() {
 }
 
 function gerarSenhaProvisoria(): string {
+  // CSPRNG (randomInt) em vez de Math.random(), que é previsível. 10 caracteres
+  // aleatórios sobre o prefixo fixo elevam a entropia da senha provisória.
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
   let pwd = 'Sol@'
-  for (let i = 0; i < 6; i++) pwd += chars[Math.floor(Math.random() * chars.length)]
+  for (let i = 0; i < 10; i++) pwd += chars[randomInt(chars.length)]
   return pwd
 }
 
