@@ -237,8 +237,9 @@ export async function editarParametro(
       })
     }
 
-    await tx.qualityParameter.update({ 
-      where: { id: parametroId }, 
+    // @tenant-checked: parametroId validado por tenant no findFirst inicial.
+    await tx.qualityParameter.update({
+      where: { id: parametroId },
       data: {
         name:            parsed.data.name,
         unit:            parsed.data.unit,

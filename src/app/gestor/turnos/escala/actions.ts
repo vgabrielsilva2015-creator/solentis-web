@@ -76,6 +76,7 @@ export async function toggleMaintenanceDay(dateStr: string, description?: string
   })
 
   if (existing) {
+    // @tenant-checked: existing buscado pela PK composta tenant_id_date acima.
     await prisma.maintenanceDay.delete({
       where: { id: existing.id }
     })
@@ -173,6 +174,7 @@ export async function deleteShiftTask(taskId: string) {
   })
   if (!task) throw new Error('Tarefa não encontrada.')
 
+  // @tenant-checked: task validada por tenant_id no findFirst acima.
   await prisma.shiftTask.delete({
     where: { id: taskId }
   })

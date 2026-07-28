@@ -4,9 +4,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload } from '@/lib/storage'
+import { saveUpload, sniffImageType } from '@/lib/storage'
 import { randomUUID } from 'crypto'
-import { isMimeTypeValido } from '@/lib/occurrence-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 
@@ -118,8 +117,12 @@ export async function abrirTurno(
 
   const tenant_id = await getTenantId()
 
-  // Verificação de duplicado em transação (SQLite serializa escritas — seguro no MVP)
-  const result = await prisma.$transaction(async (tx) => {
+  // Verificação de duplicado em transação. A garantia atômica REAL vem do índice
+  // único parcial uniq_shift_instance_ativa (prisma/sql/add_unique_open_shift.sql):
+  // sob Postgres a checagem abaixo sozinha não impede corrida entre cliques concorrentes.
+  let result: TurnoFormState | null
+  try {
+    result = await prisma.$transaction(async (tx) => {
     const existing = await tx.shiftInstance.findFirst({
       where: {
         tenant_id,
@@ -197,7 +200,14 @@ export async function abrirTurno(
     }
 
     return null
-  })
+    })
+  } catch (e: unknown) {
+    // Corrida perdida: o índice único parcial rejeitou a 2ª criação concorrente.
+    if (e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === 'P2002') {
+      return { error: 'Já existe um turno aberto para este período.' }
+    }
+    throw e
+  }
 
   if (result?.error) return result
   revalidatePath('/operador/turnos')
@@ -443,18 +453,21 @@ export async function concluirTarefa(
     return { error: `Máximo de ${MAX_PHOTOS_TASK} fotos por tarefa.` }
   }
   for (const file of files) {
-    if (!isMimeTypeValido(file.type)) return { error: `Arquivo inválido: ${file.name}. Use JPG, PNG ou WebP.` }
-    if (file.size > MAX_FILE_SIZE)    return { error: `${file.name} excede 5 MB.` }
+    if (file.size > MAX_FILE_SIZE) return { error: `${file.name} excede 5 MB.` }
   }
 
   // Salva arquivos no storage (Blob em produção, disco em dev) antes da transação
   const photoRecords: { filename: string; original_name: string; mime_type: string; size_bytes: number }[] = []
   if (files.length > 0) {
     for (const file of files) {
-      const ext      = file.name.split('.').pop() ?? 'bin'
+      const buffer   = Buffer.from(await file.arrayBuffer())
+      // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
+      const realType = sniffImageType(buffer)
+      if (!realType) return { error: `Arquivo inválido: ${file.name}. Use JPG, PNG ou WebP.` }
+      const ext      = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
       const filename = `${randomUUID()}.${ext}`
-      const stored   = await saveUpload('tasks', filename, Buffer.from(await file.arrayBuffer()), file.type)
-      photoRecords.push({ filename: stored, original_name: file.name, mime_type: file.type, size_bytes: file.size })
+      const stored   = await saveUpload('tasks', filename, buffer, realType)
+      photoRecords.push({ filename: stored, original_name: file.name, mime_type: realType, size_bytes: file.size })
     }
   }
 

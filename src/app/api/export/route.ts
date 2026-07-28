@@ -3,6 +3,15 @@ import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { NextResponse } from 'next/server'
 
+// Neutraliza formula/CSV injection: uma célula iniciada por = + - @ (ou tab/CR)
+// é interpretada como fórmula pelo Excel/Sheets. Prefixamos com apóstrofo e
+// escapamos aspas. Aplicar em TODA célula que vai ao CSV.
+function csvSafe(value: unknown): string {
+  const s = String(value ?? '')
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
 export async function GET(request: Request) {
   const session = await auth()
   if (!session || session.user.role !== 'MANAGER') {
@@ -47,9 +56,9 @@ export async function GET(request: Request) {
         oc.status,
         oc.deadline.toISOString(),
         oc.reporter.name,
-        `"${oc.description.replace(/"/g, '""')}"`
+        oc.description,
       ]
-      csv += row.join(';') + '\n'
+      csv += row.map(csvSafe).join(';') + '\n'
     }
 
     filename = `ocorrencias_${new Date().toISOString().slice(0, 10)}.csv`
@@ -79,7 +88,7 @@ export async function GET(request: Request) {
         r.recorder.name,
         r.is_non_conformant ? 'SIM' : 'NÃO'
       ]
-      csv += row.join(';') + '\n'
+      csv += row.map(csvSafe).join(';') + '\n'
     }
 
     filename = `leituras_${new Date().toISOString().slice(0, 10)}.csv`
@@ -108,7 +117,7 @@ export async function GET(request: Request) {
         a.recorder.name,
         a.is_non_conformant ? 'SIM' : 'NÃO'
       ]
-      csv += row.join(';') + '\n'
+      csv += row.map(csvSafe).join(';') + '\n'
     }
 
     filename = `analises_${new Date().toISOString().slice(0, 10)}.csv`
@@ -129,15 +138,15 @@ export async function GET(request: Request) {
     for (const m of maintenances) {
       const row = [
         m.id,
-        `"${m.equipment.name}"`,
+        m.equipment.name,
         m.equipment.serial_number ?? '',
         m.scheduled_date.toISOString(),
         m.completed_date ? m.completed_date.toISOString() : '',
         m.status,
         m.completer?.name ?? '',
-        m.notes ? `"${m.notes.replace(/"/g, '""')}"` : ''
+        m.notes ?? '',
       ]
-      csv += row.join(';') + '\n'
+      csv += row.map(csvSafe).join(';') + '\n'
     }
 
     filename = `preventivas_${new Date().toISOString().slice(0, 10)}.csv`
@@ -170,7 +179,7 @@ export async function GET(request: Request) {
         a.status === 'COMPLETED' ? 'CONCLUÍDO' : 'AGUARDANDO LAUDO',
         a.is_non_conformant ? 'SIM' : (a.is_non_conformant === false ? 'NÃO' : '')
       ]
-      csv += row.join(';') + '\n'
+      csv += row.map(csvSafe).join(';') + '\n'
     }
 
     filename = `laudos_externos_${new Date().toISOString().slice(0, 10)}.csv`

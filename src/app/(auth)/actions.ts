@@ -115,11 +115,13 @@ export async function resetPassword(token: string, newPassword: string) {
     const hashed = await hashPassword(newPassword)
 
     // Troca a senha e marca o token como usado de forma atômica.
+    // @tenant-checked: alvo derivado do token de reset validado acima (record).
     await prisma.$transaction([
       prisma.user.update({
         where: { id: record.user_id },
         data: { password_hash: hashed, must_change_password: false },
       }),
+      // @tenant-checked: mesmo registro de token validado acima.
       prisma.passwordResetToken.update({
         where: { id: record.id },
         data: { used_at: new Date() },
