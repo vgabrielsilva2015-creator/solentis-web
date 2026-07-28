@@ -30,6 +30,24 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
 ✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`.
 
+## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
+
+Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0 críticos / 2 altos / 7 médios / 6 baixos). Branch `fix/revisao-seguranca-e-bugs` **mergeada na `main` via PR #28** (merge commit `f5caa5b`). Todos os itens acionáveis por código foram corrigidos:
+- **Altos:** login de conta desativada (`is_active`) · IDOR cross-tenant em `addOccurrenceComment`.
+- **Bugs funcionais:** `session.user.id` populado no callback (push notifications) · índice único parcial contra turno duplicado (race Postgres, SQL aditivo `prisma/sql/add_unique_open_shift.sql`).
+- **Médios:** headers HTTP/CSP-RO + bloqueio `/api/debug/*` · senha provisória CSPRNG · guard de role na IA de laudos · CSV/formula injection · magic bytes em upload · dummy hash anti-timing · PWA NetworkOnly em rota autenticada.
+- **Baixos:** `/api/logs` validado · pointId de outro tenant rejeitado · política de senha morta removida.
+- **CI:** guardião de isolamento agora cobre escritas · `testTimeout` maior.
+- **Deps (commit `2d05151`):** next 16.2.10→16.2.12 · `npm audit fix` (crítico @auth/core + brace-expansion) · `overrides` postcss `^8.5.18` / sharp `^0.35.0`. Gate `npm audit --omit=dev --audit-level=high` = **0 vulnerabilidades**. 162 testes verdes, build OK.
+
+### ⏳ PENDENTE — só o dono/infra faz (checklist §7 do REVISAO_GERAL)
+- **DB-01** baseline de migration reproduzível (4 migrations p/ 42 tabelas; cuidado — ver memória "migrations quebradas").
+- **DB-03** habilitar **RLS no Supabase** (isolamento hoje é 100% na aplicação) — defesa em profundidade.
+- **Envs na Vercel** conferir (`AUTH_SECRET`/`CRON_SECRET`/`RESEND_API_KEY`/`BLOB_READ_WRITE_TOKEN`/`GEMINI_API_KEY`/`WHATSAPP_*`/`DATABASE_URL`); nenhuma `NEXT_PUBLIC_` exceto VAPID pública.
+- **Rotacionar** token do GitHub que já apareceu no `git remote`.
+- **Backup Supabase** confirmar PITR e **testar restore**.
+- Testar push em produção após o fix · acompanhar advisories do `next-auth@5-beta`.
+
 ## 🔧 Sessão de Hardening — 2026-06-26
 
 Análise crítica + correção dos problemas que impediam virar produto. Todos os itens abaixo estão commitados e no `main`/Vercel.
