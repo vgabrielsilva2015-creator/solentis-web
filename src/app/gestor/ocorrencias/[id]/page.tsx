@@ -46,6 +46,9 @@ export default async function OcorrenciaDetailPage({
           user: { select: { name: true, role: true } }
         },
         orderBy: { created_at: 'asc' }
+      },
+      tasks: {
+        select: { id: true, title: true, status: true }
       }
     },
   })
@@ -143,6 +146,27 @@ export default async function OcorrenciaDetailPage({
             <div className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4 space-y-1">
               <span className="block text-[10px] font-bold text-amber-400 uppercase tracking-wider">Ação Imediata Executada</span>
               <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{occurrence.immediate_action}</p>
+            </div>
+          )}
+
+          {/* Tarefas Vinculadas (Planos de Ação) */}
+          {occurrence.tasks.length > 0 && (
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
+              <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Planos de Ação Vinculados</span>
+              <ul className="space-y-2">
+                {occurrence.tasks.map(task => (
+                  <li key={task.id} className="flex justify-between items-center text-xs p-2 bg-background border border-border rounded">
+                    <span className="text-foreground">{task.title}</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                      task.status === 'COMPLETED' ? 'bg-green-950/60 text-green-400 border border-green-900/50' :
+                      task.status === 'IN_PROGRESS' ? 'bg-sky-950/60 text-sky-400 border border-sky-900/50' :
+                      'bg-amber-950/60 text-amber-400 border border-amber-900/50'
+                    }`}>
+                      {task.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
+import { revalidatePath } from 'next/cache'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -79,9 +80,9 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
         const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
         
         return { success: true, data: JSON.parse(cleaned), usedModel: modelName }
-      } catch (err: any) {
+      } catch (err: unknown) {
         lastError = err
-        const errorMsg = (err.message || '').toLowerCase()
+        const errorMsg = (err instanceof Error ? err.message : '').toLowerCase()
         log.warn({ err, model: modelName, attempt: attempt + 1, maxRetries: MAX_RETRIES }, 'Tentativa da IA (Gemini) falhou')
 
         // Detectar erros retryable de forma mais abrangente
@@ -182,7 +183,7 @@ export async function createParameterFromImport(data: { name: string; unit: stri
     })
 
     return { success: true, parameter: { id: param.id, name: param.name, unit: param.unit } }
-  } catch (err: any) {
+  } catch (err: unknown) {
     const log = await getLogger({ action: 'criarParametroDoLaudo' })
     log.error({ err }, 'Erro ao criar parâmetro')
     return { success: false, error: 'Não foi possível criar o parâmetro. Tente novamente.' }
@@ -316,9 +317,9 @@ export async function saveMappedReadings(data: {
     }
     
     return { success: true }
-  } catch (err: any) {
-    const log = await getLogger({ action: 'salvarLeiturasDoLaudo' })
-    log.error({ err }, 'Erro ao salvar leituras do laudo')
+  } catch (err: unknown) {
+    const log = await getLogger({ action: 'salvarLeiturasLaudo' })
+    log.error({ err }, 'Falha na transação de salvamento do laudo')
     return { success: false, error: 'Não foi possível salvar as leituras. Verifique os dados e tente novamente.' }
   }
 }

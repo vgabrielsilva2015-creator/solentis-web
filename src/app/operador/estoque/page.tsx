@@ -6,19 +6,13 @@ import { calcularEstoqueAtual, estaAbaixoMinimo, formatarQuantidade } from '@/li
 import { getTenantId } from '@/lib/tenant'
 
 
+import { getProductsWithStock } from '@/lib/stock-queries'
+
 export default async function OperadorEstoquePage() {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const products = await prisma.chemicalProduct.findMany({
-    where:   { tenant_id: (await getTenantId()), is_active: true },
-    orderBy: { name: 'asc' },
-    include: {
-      entries: { select: { quantity: true } },
-      exits:   { select: { quantity: true } },
-      counts:  { select: { counted_quantity: true, counted_at: true }, orderBy: { counted_at: 'desc' }, take: 1 },
-    },
-  })
+  const products = await getProductsWithStock(await getTenantId())
 
   return (
     <main className="px-4 py-6 max-w-lg mx-auto space-y-3">
@@ -27,12 +21,10 @@ export default async function OperadorEstoquePage() {
           <p className="text-sm text-muted-foreground text-center py-12">Nenhum produto cadastrado.</p>
         ) : (
           products.map((p) => {
-            const totalEntradas = p.entries.reduce((s, e) => s + e.quantity, 0)
-            const totalSaidas   = p.exits.reduce((s, e) => s + e.quantity, 0)
-            const calculado     = calcularEstoqueAtual(totalEntradas, totalSaidas)
-            const fisico        = p.counts[0]?.counted_quantity ?? null
+            const calculado     = p.current_stock
+            const fisico        = p.last_count?.counted_quantity ?? null
             const alerta        = estaAbaixoMinimo(calculado, fisico, p.min_stock)
-            const ultimaContagem = p.counts[0]?.counted_at
+            const ultimaContagem = p.last_count?.counted_at
 
             return (
               <div

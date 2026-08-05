@@ -8,6 +8,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─── NOTA SOBRE ÍNDICES PARCIAIS ─────────────────────────────────────────────
+// O Prisma ORM não suporta nativamente a criação de índices parciais 
+// (ex: WHERE deleted_at IS NULL). Quaisquer índices desse tipo devem ser 
+// gerenciados em SQL puro fora do Prisma (ex: `prisma/sql/add_indexes.sql`).
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Enums implementados como String + constantes TypeScript (src/types/index.ts)
 // + validação Zod. Campos abaixo usam String; os valores válidos são garantidos
 // na aplicação. (Decisão: evitar enums nativos do Postgres — ver histórico.)
@@ -70,6 +76,7 @@ model User {
   role                 String
   must_change_password Boolean   @default(true)
   is_active            Boolean   @default(true)
+  receive_nc_push      Boolean   @default(true)
   last_login_at        DateTime?
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
@@ -230,7 +237,7 @@ model ParameterLimit {
   min_limit       Float?
   max_limit       Float?
   rule_type       String   @default("TETO")
-  legal_reference String? // e.g. "CONAMA 430/2011"
+  legal_reference String   @default("") // e.g. "CONAMA 430/2011"
   created_at      DateTime @default(now())
 
   tenant    Tenant           @relation(fields: [tenant_id], references: [id])
@@ -648,6 +655,7 @@ model Occurrence {
   collection_point CollectionPoint?    @relation(fields: [collection_point_id], references: [id])
   photos           OccurrencePhoto[]
   comments         OccurrenceComment[]
+  tasks            ShiftTask[]
 
   @@index([tenant_id, severity, status])
   @@index([deadline])
@@ -705,7 +713,8 @@ model ShiftHandover {
 model ShiftTask {
   id                String    @id @default(cuid())
   tenant_id         String
-  shift_instance_id String
+  shift_instance_id String?
+  occurrence_id     String?
   title             String
   description       String?
   assigned_to_id    String?
@@ -721,7 +730,8 @@ model ShiftTask {
   repeat_reason     String?
 
   tenant         Tenant             @relation(fields: [tenant_id], references: [id])
-  shift_instance ShiftInstance      @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
+  shift_instance ShiftInstance?     @relation(fields: [shift_instance_id], references: [id], onDelete: Cascade)
+  occurrence     Occurrence?        @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
   assignee       User?              @relation("TaskAssignee", fields: [assigned_to_id], references: [id])
   creator        User               @relation("TaskCreator", fields: [created_by], references: [id])
   completer      User?              @relation("TaskCompleter", fields: [completed_by], references: [id])

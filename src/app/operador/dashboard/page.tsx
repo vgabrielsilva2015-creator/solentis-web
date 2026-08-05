@@ -42,15 +42,9 @@ export default async function OperadorDashboard() {
 
       // Produtos com estoque calculado abaixo do mínimo
       (async () => {
-        const products = await prisma.chemicalProduct.findMany({
-          where:  { tenant_id: tenantId, is_active: true },
-          select: { min_stock: true, entries: { select: { quantity: true } }, exits: { select: { quantity: true } } },
-        })
-        return products.filter((p) => {
-          const calc = p.entries.reduce((s, e) => s + e.quantity, 0)
-                     - p.exits.reduce((s, e) => s + e.quantity, 0)
-          return calc < p.min_stock
-        }).length
+        const { getProductsWithStock } = await import('@/lib/stock-queries')
+        const products = await getProductsWithStock(tenantId)
+        return products.filter((p) => p.current_stock < p.min_stock).length
       })(),
 
       // Leituras registradas hoje por este operador

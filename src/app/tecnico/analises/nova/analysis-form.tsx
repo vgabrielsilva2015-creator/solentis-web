@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { registrarAnalise, type AnaliseFormState } from '../actions'
+import { calcularNaoConformidade } from '@/lib/readings-utils'
 
 const DRAFT_KEY = 'analysis_draft'
 
@@ -106,9 +107,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
     if (!selectedParam || valueStr === '') return null
     const v = parseFloat(valueStr)
     if (isNaN(v)) return null
-    const below = selectedParam.min_limit !== null && v < selectedParam.min_limit
-    const above = selectedParam.max_limit !== null && v > selectedParam.max_limit
-    return below || above
+    return calcularNaoConformidade(v, selectedParam.min_limit, selectedParam.max_limit) ?? null
   })()
 
   const hasLimits = selectedParam

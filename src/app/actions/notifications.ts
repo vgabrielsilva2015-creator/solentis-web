@@ -57,8 +57,10 @@ export async function getNotifications(): Promise<NotificationItem[]> {
     const activeShiftInstance = await prisma.shiftInstance.findFirst({
       where: {
         tenant_id: tenantId,
+        opened_by: user.id,
         status: 'OPEN',
       },
+      orderBy: { opened_at: 'desc' },
       select: { id: true },
     })
 

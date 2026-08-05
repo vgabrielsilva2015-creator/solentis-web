@@ -4,12 +4,13 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload, sniffImageType } from '@/lib/storage'
+import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { logAudit } from '@/lib/audit'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
 import { logger } from '@/lib/logger'
+import { handleNewOccurrence } from '@/lib/occurrences'
 
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
@@ -103,29 +104,22 @@ export async function registrarOcorrencia(
     if (!ALLOWED_TYPES.includes(file.type)) {
       return { error: `Formato inválido para ${file.name}. Use JPG, PNG ou WEBP.` }
     }
-    if (file.size > MAX_FILE_BYTES) {
-      return { error: `Arquivo ${file.name} é muito grande. Máximo 5 MB.` }
+    let stored: string
+    try {
+      stored = await saveImageUpload(file, 'occurrences', MAX_FILE_BYTES)
+    } catch (err: unknown) {
+      return { error: err instanceof Error ? err.message : `Erro no upload de ${file.name}` }
     }
-
-    const buffer = Buffer.from(await file.arrayBuffer())
-    // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
-    const realType = sniffImageType(buffer)
-    if (!realType) {
-      return { error: `O conteúdo de ${file.name} não é uma imagem JPG, PNG ou WEBP válida.` }
-    }
-
-    const ext      = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
-    const filename = `${crypto.randomUUID()}.${ext}`
-    const stored   = await saveUpload('occurrences', filename, buffer, realType)
 
     photoPayloads.push({
       filename: stored,
       original_name: file.name,
-      mime_type:     realType,
+      mime_type:     file.type,
       size_bytes:    file.size,
     })
   }
 
+  let postCommitHooks: Array<() => Promise<void>> = []
   // Cria ocorrência (+ fotos + audit) em transação atômica
   await prisma.$transaction(async (tx) => {
     const occurrence = await tx.occurrence.create({
@@ -142,6 +136,9 @@ export async function registrarOcorrencia(
         immediate_action: parsed.data.immediate_action || null,
       },
     })
+    
+    const hook = await handleNewOccurrence(tx, occurrence)
+    if (hook) postCommitHooks.push(hook)
 
     if (photoPayloads.length > 0) {
       await tx.occurrencePhoto.createMany({
@@ -173,6 +170,10 @@ export async function registrarOcorrencia(
       },
     })
   })
+
+  for (const hook of postCommitHooks) {
+    await hook().catch(err => console.error('Error in postCommitHook:', err))
+  }
 
   // Disparo de WhatsApp para gestores se for CRÍTICA ou ALTA
   if (parsed.data.severity === 'CRITICAL' || parsed.data.severity === 'HIGH') {

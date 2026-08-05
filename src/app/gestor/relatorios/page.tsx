@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { RdoDownloadBtn } from './rdo-download-btn'
+import { AutomonitoramentoDownloadBtn } from './automonitoramento-download-btn'
 
 export default async function RelatoriosPage({
   searchParams,
@@ -29,7 +30,10 @@ export default async function RelatoriosPage({
   const endOfDay = new Date(targetDate)
   endOfDay.setHours(23, 59, 59, 999)
 
-  const [rawLeituras, rawExits, rawOcorrencias, tenant] = await Promise.all([
+  const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
+  const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999)
+
+  const [rawLeituras, rawExits, rawOcorrencias, tenant, rawAnalises, rawExterna] = await Promise.all([
     // Leituras
     prisma.reading.findMany({
       where: {
@@ -40,7 +44,8 @@ export default async function RelatoriosPage({
         collection_point: { select: { name: true } },
         parameter: { select: { name: true, unit: true } }
       },
-      orderBy: { recorded_at: 'asc' }
+      orderBy: { recorded_at: 'asc' },
+      take: 500
     }),
     // Consumo Químico (saídas de estoque)
     prisma.chemicalStockExit.findMany({
@@ -51,7 +56,8 @@ export default async function RelatoriosPage({
       include: {
         product: { select: { name: true, unit: true } }
       },
-      orderBy: { used_at: 'asc' }
+      orderBy: { used_at: 'asc' },
+      take: 500
     }),
     // Ocorrências
     prisma.occurrence.findMany({
@@ -59,12 +65,27 @@ export default async function RelatoriosPage({
         tenant_id: tenantId,
         created_at: { gte: startOfDay, lte: endOfDay }
       },
-      orderBy: { created_at: 'asc' }
+      orderBy: { created_at: 'asc' },
+      take: 500
     }),
     // Dados da Planta
     prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { name: true }
+    }),
+    // Análises (Internas) do mês para o automonitoramento
+    prisma.analysis.findMany({
+      where: { tenant_id: tenantId, collected_at: { gte: startOfMonth, lte: endOfMonth } },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true, unit: true } } },
+      orderBy: { collected_at: 'asc' },
+      take: 500
+    }),
+    // Análises (Externas) do mês para o automonitoramento
+    prisma.externalAnalysis.findMany({
+      where: { tenant_id: tenantId, collected_at: { gte: startOfMonth, lte: endOfMonth } },
+      include: { collection_point: { select: { name: true } }, parameter: { select: { name: true, unit: true } } },
+      orderBy: { collected_at: 'asc' },
+      take: 500
     })
   ])
 
@@ -106,6 +127,40 @@ export default async function RelatoriosPage({
     leituras,
     consumos,
     ocorrencias
+  }
+
+  // Mapear análises para o automonitoramento
+  const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+  const analisesFormatted = [
+    ...rawAnalises.map(a => ({
+      time: dateFormatter.format(a.collected_at),
+      point: a.collection_point.name,
+      parameter: a.parameter.name,
+      value: a.value,
+      unit: a.parameter.unit,
+      minLimit: a.min_limit_applied,
+      maxLimit: a.max_limit_applied,
+      isNonConformant: a.is_non_conformant ?? false,
+      source: 'Interna'
+    })),
+    ...rawExterna.map(e => ({
+      time: dateFormatter.format(e.collected_at),
+      point: e.collection_point.name,
+      parameter: e.parameter.name,
+      value: e.value,
+      unit: e.parameter.unit,
+      minLimit: e.min_limit_applied,
+      maxLimit: e.max_limit_applied,
+      isNonConformant: e.is_non_conformant ?? false,
+      source: 'Externa'
+    }))
+  ].sort((a, b) => a.time.localeCompare(b.time))
+
+  const automonitoramentoData = {
+    monthStr: monthFormatter.format(targetDate),
+    generatedBy: session.user.name ?? session.user.email ?? 'Usuário',
+    tenantName: tenant?.name ?? 'Planta Principal',
+    analises: analisesFormatted
   }
 
   return (
@@ -151,10 +206,33 @@ export default async function RelatoriosPage({
           </div>
         </div>
 
-        {/* Placeholder futuro */}
-        <div className="rounded-xl border border-border border-dashed bg-card/20 p-6 flex flex-col items-center justify-center text-center">
-          <p className="text-sm font-medium text-muted-foreground">Mais relatórios em breve</p>
-          <p className="text-xs text-muted-foreground mt-1">Laudos do CONAMA e Relatórios Mensais estarão disponíveis aqui.</p>
+        {/* Card do Automonitoramento */}
+        <div className="rounded-xl border border-border bg-card/50 p-6 flex flex-col justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Relatório de Automonitoramento</h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Consolida todas as análises laboratoriais internas e externas realizadas no mês. Documento oficial de Compliance.
+            </p>
+            
+            <div className="mt-4 p-3 rounded-lg bg-background border border-border space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Mês de Referência:</span>
+                <span className="font-medium text-foreground capitalize">{monthFormatter.format(targetDate)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Análises Internas:</span>
+                <span className="font-medium text-foreground">{rawAnalises.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Laudos Externos:</span>
+                <span className="font-medium text-foreground">{rawExterna.length}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
+             <AutomonitoramentoDownloadBtn data={automonitoramentoData} />
+          </div>
         </div>
       </div>
     </main>

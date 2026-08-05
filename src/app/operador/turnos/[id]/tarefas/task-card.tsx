@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { concluirTarefa, pularTarefa, repetirTarefa, type TurnoFormState } from '../../actions'
+import { compressFilesInInput, sumBytes, MAX_TOTAL_UPLOAD_BYTES, formatMB } from '@/lib/compress-image'
 
 const INITIAL: TurnoFormState = {}
 
@@ -41,6 +42,8 @@ export function TaskCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [photoCount, setPhotoCount] = useState(0)
+  const [compressing, setCompressing] = useState(false)
+  const [totalError, setTotalError] = useState<string | null>(null)
   const [repeating, setRepeating] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
 
@@ -259,7 +262,17 @@ export function TaskCard({
       {expanded && canAct && (
         <form
           action={formAction}
-          onSubmit={(e) => { if (photoMissing) e.preventDefault() }}
+          onSubmit={(e) => {
+            if (photoMissing || compressing) { e.preventDefault(); return }
+            const input = e.currentTarget.elements.namedItem('photos') as HTMLInputElement | null
+            const files = input?.files ? Array.from(input.files) : []
+            const total = sumBytes(files)
+            // O Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL antes de enviar.
+            if (total > MAX_TOTAL_UPLOAD_BYTES) {
+              e.preventDefault()
+              setTotalError(`As fotos somam ${formatMB(total)} e o limite por envio é ${formatMB(MAX_TOTAL_UPLOAD_BYTES)}. Remova uma foto e tente novamente.`)
+            }
+          }}
           className="border-t border-border bg-card/60 p-4 space-y-4"
         >
           <textarea
@@ -283,12 +296,22 @@ export function TaskCard({
               type="file"
               multiple
               accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => setPhotoCount(e.target.files?.length ?? 0)}
+              onChange={async (e) => {
+                setTotalError(null)
+                setCompressing(true)
+                await compressFilesInInput(e.target)
+                setPhotoCount(e.target.files?.length ?? 0)
+                setCompressing(false)
+              }}
               className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground
                 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-900/60 file:px-3 file:py-1.5
                 file:text-xs file:text-emerald-300 file:font-medium focus:outline-none"
             />
-            <p className="text-xs text-muted-foreground">JPG, PNG ou WebP · máx. 5 MB cada</p>
+            <p className="text-xs text-muted-foreground">JPG, PNG ou WebP · a foto é comprimida automaticamente</p>
+            {compressing && <p className="text-xs text-sky-400 animate-pulse">Comprimindo foto…</p>}
+            {totalError && (
+              <p className="rounded-lg border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">{totalError}</p>
+            )}
             {photoMissing && (
               <p className="text-xs text-amber-400">Anexe ao menos 1 foto para concluir esta tarefa.</p>
             )}
@@ -310,7 +333,7 @@ export function TaskCard({
             </Button>
             <Button
               type="submit"
-              disabled={isPending || photoMissing}
+              disabled={isPending || photoMissing || compressing}
               className="h-12 flex-1 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-medium disabled:opacity-60"
             >
               {isPending ? 'Salvando…' : 'Confirmar conclusão'}

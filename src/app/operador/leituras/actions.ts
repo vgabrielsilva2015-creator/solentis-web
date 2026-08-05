@@ -9,8 +9,8 @@ import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
-import { getLogger } from '@/lib/logger'
-import { saveUpload, sniffImageType } from '@/lib/storage'
+import { saveUpload, saveImageUpload } from '@/lib/storage'
+import { handleNewOccurrence } from '@/lib/occurrences'
 
 const MAX_IMG_BYTES = 5 * 1024 * 1024
 
@@ -134,16 +134,14 @@ export async function registrarLeitura(
   let photoFilename: string | null = null
   const photoFile = formData.get('photo') as File | null
   if (photoFile && photoFile.size > 0) {
-    if (photoFile.size > MAX_IMG_BYTES) return { error: 'Foto muito grande. Máximo 5 MB.' }
-    const buffer = Buffer.from(await photoFile.arrayBuffer())
-    // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
-    const realType = sniffImageType(buffer)
-    if (!realType) return { error: 'Foto em formato inválido. Use JPG, PNG ou WEBP.' }
-    const ext = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
-    const filename = `${crypto.randomUUID()}.${ext}`
-    photoFilename = await saveUpload('readings', filename, buffer, realType)
+    try {
+      photoFilename = await saveImageUpload(photoFile, 'readings', MAX_IMG_BYTES)
+    } catch (err: unknown) {
+      return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
+    }
   }
 
+  let postCommitHooks: Array<() => Promise<void>> = []
   await prisma.$transaction(async (tx) => {
     const reading = await tx.reading.create({
       data: {
@@ -172,7 +170,7 @@ export async function registrarLeitura(
       const deadline = new Date()
       deadline.setHours(deadline.getHours() + deadlineHours)
 
-      await tx.occurrence.create({
+      const occurrence = await tx.occurrence.create({
         data: {
           tenant_id:   tenantId,
           description: `Não Conformidade (${paramName}): Leitura registrada = ${parsed.data.value} ${unit ?? ''}. O valor está fora dos limites aceitáveis.`,
@@ -184,23 +182,16 @@ export async function registrarLeitura(
           collection_point_id: parsed.data.collection_point_id,
         }
       })
+      const hook = await handleNewOccurrence(tx, occurrence)
+      if (hook) postCommitHooks.push(hook)
     }
   })
 
-  // Nível 3 — push para gestores quando a leitura fica fora do limite CONAMA.
-  // Assíncrono e não-bloqueante: falha de push não impede o registro da leitura.
-  if (isNonConformant) {
-    try {
-      await sendPushToRole(await getTenantId(), 'MANAGER', {
-        title: '⚠️ Não-conformidade registrada',
-        body: `${paramName}: ${parsed.data.value} ${unit ?? ''} fora do limite${pointName ? ` no ponto ${pointName}` : ''}`,
-        url: '/gestor/dashboard',
-      })
-    } catch (err) {
-      const log = await getLogger({ userId, action: 'registrarLeitura' })
-      log.warn({ err }, 'Falha ao enviar push de não-conformidade')
-    }
+  for (const hook of postCommitHooks) {
+    await hook().catch(err => console.error('Error in postCommitHook:', err))
   }
+
+
 
   revalidatePath('/operador/leituras')
   revalidatePath('/operador/ocorrencias')

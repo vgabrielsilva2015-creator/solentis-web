@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs/promises'
 import { put } from '@vercel/blob'
+import crypto from 'crypto'
 
 /**
  * Camada de armazenamento de arquivos enviados pelos usuários.
@@ -61,6 +62,28 @@ export async function saveUpload(
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(path.join(dir, filename), data)
   return filename
+}
+
+/**
+ * Processa um File de imagem (valida tamanho, sniffImageType, gera UUID e salva).
+ * Retorna a string da URL gerada.
+ */
+export async function saveImageUpload(
+  file: File,
+  folder: string,
+  maxBytes: number = 5 * 1024 * 1024
+): Promise<string> {
+  if (file.size > maxBytes) {
+    throw new Error(`Arquivo muito grande. Máximo de ${maxBytes / 1024 / 1024} MB.`)
+  }
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const realType = sniffImageType(buffer)
+  if (!realType) {
+    throw new Error('Formato de foto inválido. Use JPG, PNG ou WEBP.')
+  }
+  const ext = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
+  const filename = `${crypto.randomUUID()}.${ext}`
+  return saveUpload(folder, filename, buffer, realType)
 }
 
 export async function readUpload(folder: string, stored: string): Promise<Buffer | null> {

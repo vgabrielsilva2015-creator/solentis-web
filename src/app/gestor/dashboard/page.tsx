@@ -38,7 +38,7 @@ export default async function GestorDashboard({
   
   const diasValidos = [1, 7, 30] as const
   type Dias = typeof diasValidos[number]
-  const diasNum = diasValidos.includes(Number(diasParam) as Dias) ? (Number(diasParam) as Dias) : 7
+  const diasNum = diasValidos.includes(Number(diasParam) as Dias) ? (Number(diasParam) as Dias) : 30
 
   const now = new Date()
   const today = new Date(now)
@@ -99,7 +99,9 @@ export default async function GestorDashboard({
         COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoAnteriorInicio} AND ${dateCol} < ${periodoInicio} AND is_non_conformant = true) AS nc_prev,
         COUNT(*) FILTER (WHERE ${dateCol} >= ${today} AND is_non_conformant = true) AS today_nc
       FROM ${table}
-      WHERE tenant_id = ${tenant_id} ${pointSql}
+      WHERE tenant_id = ${tenant_id} 
+        AND ${dateCol} >= ${periodoAnteriorInicio}
+        ${pointSql}
     `)
 
   const [

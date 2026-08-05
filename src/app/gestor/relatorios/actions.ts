@@ -29,7 +29,8 @@ export async function getReportData(startDate: string, endDate: string) {
     include: {
       parameter: true,
       collection_point: true
-    }
+    },
+    take: 1000
   })
 
   // Group readings by parameter
@@ -89,7 +90,8 @@ export async function getReportData(startDate: string, endDate: string) {
       reporter: { select: { name: true } },
       resolver: { select: { name: true } }
     },
-    orderBy: { created_at: 'desc' }
+    orderBy: { created_at: 'desc' },
+    take: 1000
   })
 
   // SLA Calculation

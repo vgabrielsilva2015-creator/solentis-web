@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { registrarLeitura, type LeituraFormState } from '../actions'
 import { cn } from '@/lib/utils'
 import { MapPin, Beaker } from 'lucide-react'
+import { compressFilesInInput, sumBytes, MAX_TOTAL_UPLOAD_BYTES, formatMB } from '@/lib/compress-image'
+import { calcularNaoConformidade } from '@/lib/readings-utils'
 
 const DRAFT_KEY = 'reading_draft'
 
@@ -78,6 +80,8 @@ export function ReadingForm({
   const [valueStr, setValueStr]                   = useState('')
   const [notes, setNotes]                         = useState('')
   const [recordedAt, setRecordedAt]               = useState('')
+  const [compressing, setCompressing]             = useState(false)
+  const [totalError, setTotalError]               = useState<string | null>(null)
 
   // ── Carregar rascunho do localStorage na montagem ──────────────────────────
   useEffect(() => {
@@ -151,11 +155,10 @@ export function ReadingForm({
   // Verificação de não-conformidade em tempo real (client-side)
   const nonConformant: boolean | null = (() => {
     if (!selectedParam || valueStr === '') return null
-    const v = parseFloat(valueStr)
+    // Aceita vírgula decimal (padrão brasileiro): "7,2" → 7.2
+    const v = parseFloat(valueStr.replace(',', '.'))
     if (isNaN(v)) return null
-    const below = selectedParam.min_limit !== null && v < selectedParam.min_limit
-    const above = selectedParam.max_limit !== null && v > selectedParam.max_limit
-    return below || above
+    return calcularNaoConformidade(v, selectedParam.min_limit, selectedParam.max_limit) ?? null
   })()
 
   const hasLimits = selectedParam
@@ -186,6 +189,7 @@ export function ReadingForm({
       <form
         action={formAction}
         onSubmit={(e) => {
+          if (compressing) { e.preventDefault(); return }
           if (!navigator.onLine) {
             e.preventDefault()
             const offlineQueueRaw = localStorage.getItem('solentis_offline_leituras')
@@ -205,6 +209,15 @@ export function ReadingForm({
             
             alert('Você está offline. Leitura salva localmente e será sincronizada assim que a internet voltar.')
             router.push('/operador/leituras')
+            return
+          }
+          // Online: o Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL antes de enviar.
+          const input = e.currentTarget.elements.namedItem('photo') as HTMLInputElement | null
+          const files = input?.files ? Array.from(input.files) : []
+          const total = sumBytes(files)
+          if (total > MAX_TOTAL_UPLOAD_BYTES) {
+            e.preventDefault()
+            setTotalError(`A foto tem ${formatMB(total)} e o limite por envio é ${formatMB(MAX_TOTAL_UPLOAD_BYTES)}. Tente outra foto.`)
           }
         }}
         className="space-y-5"
@@ -319,9 +332,10 @@ export function ReadingForm({
               <input
                 id="value"
                 name="value"
-                type="number"
-                step="0.001"
+                type="text"
                 inputMode="decimal"
+                pattern="-?[0-9]*[.,]?[0-9]*"
+                title="Digite um número. Vírgula ou ponto como separador decimal."
                 placeholder="0,00"
                 value={valueStr}
                 onChange={(e) => setValueStr(e.target.value)}
@@ -410,15 +424,26 @@ export function ReadingForm({
           <label htmlFor="photo" className="text-sm font-medium text-foreground">
             Foto da leitura <span className="font-normal text-muted-foreground">(opcional)</span>
           </label>
-          <input id="photo" name="photo" type="file" accept="image/*" capture="environment" disabled={isPending}
+          <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+            disabled={isPending}
+            onChange={async (e) => {
+              setTotalError(null)
+              setCompressing(true)
+              await compressFilesInInput(e.target)
+              setCompressing(false)
+            }}
             className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-4 file:py-2 file:text-sm file:text-foreground hover:file:bg-muted/70" />
-          <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP. Máx. 5 MB.</p>
+          <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP · a foto é comprimida automaticamente</p>
+          {compressing && <p className="text-xs text-sky-400 animate-pulse">Comprimindo foto…</p>}
+          {totalError && (
+            <p className="rounded-md border border-red-800/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">{totalError}</p>
+          )}
         </div>
 
         {/* ── Submit ─────────────────────────────────────────────────────── */}
         <Button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || compressing}
           className="h-14 w-full bg-primary text-primary-foreground text-base hover:bg-primary/90 disabled:opacity-50"
         >
           {isPending ? 'Registrando…' : 'Registrar leitura'}

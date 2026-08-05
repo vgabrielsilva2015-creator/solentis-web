@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { registrarOcorrencia, type OcorrenciaFormState } from '../actions'
 import { Button } from '@/components/ui/button'
 import { X, Image as ImageIcon } from 'lucide-react'
+import { compressPhoto, sumBytes, MAX_TOTAL_UPLOAD_BYTES, formatMB } from '@/lib/compress-image'
 
 const DRAFT_KEY = 'occurrence_draft'
 const INITIAL: OcorrenciaFormState = {}
@@ -43,6 +44,7 @@ export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([])
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
+  const [compressing, setCompressing] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [offlineError, setOfflineError] = useState(false)
 
@@ -81,7 +83,7 @@ export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {
     }
   }, [state.success, router, photoPreviews])
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhotoError(null)
     const files = e.target.files ? Array.from(e.target.files) : []
     if (files.length === 0) return
@@ -92,21 +94,29 @@ export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {
     }
 
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    const newPhotos: File[] = []
-    const newPreviews: string[] = []
-
     for (const file of files) {
       if (!allowed.includes(file.type)) {
         setPhotoError(`Formato de ${file.name} inválido. Use JPG, PNG ou WEBP.`)
         return
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setPhotoError(`${file.name} é muito grande. Máximo 5 MB.`)
+    }
+
+    // Comprime no navegador: evita o limite de 4,5 MB por requisição do
+    // Vercel (que devolvia 413 antes da action rodar) e acelera o envio no 4G.
+    setCompressing(true)
+    const newPhotos: File[] = []
+    const newPreviews: string[] = []
+    for (const file of files) {
+      const compressed = await compressPhoto(file)
+      if (compressed.size > 5 * 1024 * 1024) {
+        setCompressing(false)
+        setPhotoError(`${file.name} continua acima de 5 MB mesmo comprimida. Tente outra foto.`)
         return
       }
-      newPhotos.push(file)
-      newPreviews.push(URL.createObjectURL(file))
+      newPhotos.push(compressed)
+      newPreviews.push(URL.createObjectURL(compressed))
     }
+    setCompressing(false)
 
     setSelectedPhotos(prev => [...prev, ...newPhotos])
     setPhotoPreviews(prev => [...prev, ...newPreviews])
@@ -136,6 +146,15 @@ export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {
     selectedPhotos.forEach(file => {
       data.append('photos', file)
     })
+
+    // O Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL antes de enviar.
+    const totalBytes = sumBytes(selectedPhotos)
+    if (totalBytes > MAX_TOTAL_UPLOAD_BYTES) {
+      setPhotoError(
+        `As fotos somam ${formatMB(totalBytes)} e o limite por envio é ${formatMB(MAX_TOTAL_UPLOAD_BYTES)}. Remova uma foto e tente novamente.`
+      )
+      return
+    }
 
     startTransition(async () => {
       action(data)
@@ -337,7 +356,8 @@ export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {
             <ImageIcon className="w-6 h-6 text-muted-foreground" />
             <div>
               <p className="text-xs font-semibold text-foreground">Selecionar Fotos ({selectedPhotos.length}/3)</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG ou WEBP de no máximo 5MB</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG ou WEBP · a foto é comprimida automaticamente</p>
+              {compressing && <p className="text-[10px] text-sky-400 mt-0.5 animate-pulse">Comprimindo foto…</p>}
             </div>
             <input
               type="file"
@@ -356,7 +376,7 @@ export function OccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {
 
       <Button
         type="submit"
-        disabled={isPending || isMutating}
+        disabled={isPending || isMutating || compressing}
         className="h-12 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-semibold transition-all mt-4"
       >
         {isPending || isMutating ? 'Registrando ocorrência...' : 'Registrar Ocorrência'}

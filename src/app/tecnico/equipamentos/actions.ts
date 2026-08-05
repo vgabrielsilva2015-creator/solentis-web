@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
-import { saveUpload, sniffImageType } from '@/lib/storage'
+import { saveUpload, saveImageUpload } from '@/lib/storage'
 
 
 async function requireTechnicianOrManager() {
@@ -127,18 +127,17 @@ export async function criarEquipamento(
   let manual_url: string | null = null
 
   if (photoFile && photoFile.size > 0) {
-    const buffer = Buffer.from(await photoFile.arrayBuffer())
-    // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
-    const realType = sniffImageType(buffer)
-    if (!realType) {
-      return { error: 'Formato de foto inválido. Use JPG, PNG ou WEBP.' }
+    try {
+      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024)
+    } catch (err: unknown) {
+      return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
     }
-    const ext = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
-    const filename = `${crypto.randomUUID()}.${ext}`
-    photo_url = await saveUpload('equipments', filename, buffer, realType)
   }
 
   if (manualFile && manualFile.size > 0) {
+    if (manualFile.size > 10 * 1024 * 1024) {
+      return { error: 'O manual deve ter no máximo 10 MB.' }
+    }
     const buffer = Buffer.from(await manualFile.arrayBuffer())
     // Confere a assinatura "%PDF" no início do arquivo, não só o Content-Type.
     if (buffer.subarray(0, 4).toString('ascii') !== '%PDF') {
@@ -228,18 +227,17 @@ export async function editarEquipamento(
   let manual_url: string | null = equipment.manual_url
 
   if (photoFile && photoFile.size > 0) {
-    const buffer = Buffer.from(await photoFile.arrayBuffer())
-    // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
-    const realType = sniffImageType(buffer)
-    if (!realType) {
-      return { error: 'Formato de foto inválido. Use JPG, PNG ou WEBP.' }
+    try {
+      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024)
+    } catch (err: unknown) {
+      return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
     }
-    const ext = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
-    const filename = `${crypto.randomUUID()}.${ext}`
-    photo_url = await saveUpload('equipments', filename, buffer, realType)
   }
 
   if (manualFile && manualFile.size > 0) {
+    if (manualFile.size > 10 * 1024 * 1024) {
+      return { error: 'O manual deve ter no máximo 10 MB.' }
+    }
     const buffer = Buffer.from(await manualFile.arrayBuffer())
     // Confere a assinatura "%PDF" no início do arquivo, não só o Content-Type.
     if (buffer.subarray(0, 4).toString('ascii') !== '%PDF') {

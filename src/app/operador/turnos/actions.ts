@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload, sniffImageType } from '@/lib/storage'
+import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
@@ -440,7 +440,7 @@ export async function concluirTarefa(
   })
   if (!task)                                   return { error: 'Tarefa não encontrada.' }
   if (task.status !== 'PENDING')               return { error: 'Esta tarefa já foi concluída ou pulada.' }
-  if (task.shift_instance.status === 'CLOSED') return { error: 'O turno já foi encerrado.' }
+  if (task.shift_instance && task.shift_instance.status === 'CLOSED') return { error: 'O turno já foi encerrado.' }
 
   // Valida fotos (0–3 por tarefa; considera fotos já existentes)
   const files = (formData.getAll('photos') as File[]).filter((f) => f.size > 0)
@@ -460,14 +460,13 @@ export async function concluirTarefa(
   const photoRecords: { filename: string; original_name: string; mime_type: string; size_bytes: number }[] = []
   if (files.length > 0) {
     for (const file of files) {
-      const buffer   = Buffer.from(await file.arrayBuffer())
-      // Valida o conteúdo real (magic bytes), não só o Content-Type do cliente.
-      const realType = sniffImageType(buffer)
-      if (!realType) return { error: `Arquivo inválido: ${file.name}. Use JPG, PNG ou WebP.` }
-      const ext      = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
-      const filename = `${randomUUID()}.${ext}`
-      const stored   = await saveUpload('tasks', filename, buffer, realType)
-      photoRecords.push({ filename: stored, original_name: file.name, mime_type: realType, size_bytes: file.size })
+      let stored: string
+      try {
+        stored = await saveImageUpload(file, 'tasks', MAX_FILE_SIZE)
+      } catch (err: unknown) {
+        return { error: err instanceof Error ? err.message : `Erro no upload de ${file.name}` }
+      }
+      photoRecords.push({ filename: stored, original_name: file.name, mime_type: file.type, size_bytes: file.size })
     }
   }
 
@@ -512,11 +511,11 @@ export async function pularTarefa(taskId: string): Promise<void> {
     where:   { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
     include: { shift_instance: { select: { status: true } } },
   })
-  if (!task || task.shift_instance.status === 'CLOSED') return
+  if (!task || (task.shift_instance && task.shift_instance.status === 'CLOSED')) return
 
   await prisma.shiftTask.updateMany({ where: { id: taskId , tenant_id: (await getTenantId()) }, data:  { status: 'SKIPPED' },
   })
-  revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
+  if (task.shift_instance_id) revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
   revalidatePath('/operador/turnos')
 }
 
@@ -691,7 +690,7 @@ export async function repetirTarefa(
 
   // Turno de destino: o mesmo, se ainda aberto; senão, o turno ativo do operador.
   let targetInstanceId: string
-  if (original.shift_instance.status !== 'CLOSED') {
+  if (original.shift_instance && original.shift_instance.status !== 'CLOSED') {
     targetInstanceId = original.shift_instance.id
   } else {
     const active = await prisma.shiftInstance.findFirst({
@@ -720,7 +719,7 @@ export async function repetirTarefa(
   })
 
   revalidatePath(`/operador/turnos/${targetInstanceId}/tarefas`)
-  revalidatePath(`/operador/turnos/${original.shift_instance.id}/tarefas`)
+  if (original.shift_instance) revalidatePath(`/operador/turnos/${original.shift_instance.id}/tarefas`)
   revalidatePath('/operador/turnos')
   return { success: true }
 }

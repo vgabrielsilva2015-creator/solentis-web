@@ -1,9 +1,10 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { criarEquipamento, type EquipamentoFormState } from '@/app/tecnico/equipamentos/actions'
 import { Button } from '@/components/ui/button'
+import { compressFilesInInput, MAX_TOTAL_UPLOAD_BYTES, formatMB } from '@/lib/compress-image'
 
 type Category = { id: string; name: string }
 type Responsible = { id: string; name: string }
@@ -20,6 +21,8 @@ export function EquipmentForm({
   const router  = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const [state, action, isPending] = useActionState(criarEquipamento, INITIAL)
+  const [compressing, setCompressing] = useState(false)
+  const [totalError, setTotalError] = useState<string | null>(null)
 
   useEffect(() => {
     if (state.success) {
@@ -28,7 +31,22 @@ export function EquipmentForm({
   }, [state.success, router])
 
   return (
-    <form action={action} encType="multipart/form-data" className="space-y-4">
+    <form
+      action={action}
+      encType="multipart/form-data"
+      onSubmit={(e) => {
+        if (compressing) { e.preventDefault(); return }
+        // O Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL (foto + manual).
+        const fd = new FormData(e.currentTarget)
+        let total = 0
+        for (const v of fd.values()) if (v instanceof File) total += v.size
+        if (total > MAX_TOTAL_UPLOAD_BYTES) {
+          e.preventDefault()
+          setTotalError(`Os arquivos somam ${formatMB(total)} e o limite por envio é ${formatMB(MAX_TOTAL_UPLOAD_BYTES)}. Use um manual menor ou envie a foto separadamente.`)
+        }
+      }}
+      className="space-y-4"
+    >
       {state.error && (
         <p className="rounded-md border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-400">
           {state.error}
@@ -166,9 +184,20 @@ export function EquipmentForm({
           <label htmlFor="photo_file" className="text-sm font-medium text-foreground">Foto do Equipamento</label>
           <input
             id="photo_file" name="photo_file"
-            type="file" accept="image/*"
+            type="file" accept="image/jpeg,image/png,image/webp"
+            onChange={async (e) => {
+              setTotalError(null)
+              setCompressing(true)
+              await compressFilesInInput(e.target)
+              setCompressing(false)
+            }}
             className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-muted file:text-foreground hover:file:bg-muted"
           />
+          <p className="text-xs text-muted-foreground">A foto é comprimida automaticamente antes do envio</p>
+          {compressing && <p className="text-xs text-sky-400 animate-pulse">Comprimindo foto…</p>}
+          {totalError && (
+            <p className="rounded-md border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">{totalError}</p>
+          )}
         </div>
 
         {/* Upload de Manual */}
@@ -185,7 +214,7 @@ export function EquipmentForm({
       <div className="pt-4">
         <Button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || compressing}
           className="h-11 w-full bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors font-semibold"
         >
           {isPending ? 'Cadastrando...' : 'Salvar Equipamento'}

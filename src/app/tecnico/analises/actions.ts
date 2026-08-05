@@ -10,6 +10,7 @@ import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
 import { getLogger } from '@/lib/logger'
+import { handleNewOccurrence } from '@/lib/occurrences'
 
 
 async function requireTechnician() {
@@ -86,6 +87,7 @@ export async function registrarAnalise(
 
   const tenantId = await getTenantId()
 
+  let postCommitHooks: Array<() => Promise<void>> = []
   await prisma.$transaction(async (tx) => {
     await tx.analysis.create({
       data: {
@@ -125,7 +127,7 @@ export async function registrarAnalise(
       const deadline = new Date()
       deadline.setHours(deadline.getHours() + deadlineHours)
 
-      await tx.occurrence.create({
+      const occurrence = await tx.occurrence.create({
         data: {
           tenant_id:   tenantId,
           description: `Não Conformidade (${paramName?.name}): Análise registrada = ${parsed.data.value} ${param.unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${point?.name || parsed.data.collection_point_id}`,
@@ -136,23 +138,19 @@ export async function registrarAnalise(
           reported_by: userId,
         }
       })
+      
+      const hook = await handleNewOccurrence(tx, occurrence)
+      if (hook) postCommitHooks.push(hook)
     }
   })
 
-  // Enviar notificações push
-  try {
-    const tenantId = await getTenantId()
-    const payload = {
-      title: isNonConformant ? '⚠️ Análise fora do limite' : 'Nova análise registrada',
-      body: `${param.name}: ${parsed.data.value} ${param.unit ?? ''}${isNonConformant ? ' — fora do limite CONAMA' : ''}`,
-      url: '/gestor/analises'
-    }
-    await sendPushToRole(tenantId, 'MANAGER', payload)
-    await sendPushToRole(tenantId, 'OPERATOR', { ...payload, url: '/operador/dashboard' })
-  } catch (err) {
-    const log = await getLogger({ action: 'registrarAnalise' })
-    log.warn({ err }, 'Falha ao enviar push de análise')
+  for (const hook of postCommitHooks) {
+    await hook().catch(err => console.error('Error in postCommitHook:', err))
   }
+
+  // ALTO-02: push duplicado para MANAGER removido (agora handleNewOccurrence cuida disso)
+  // Mas mantemos para o operador se não for Não-Conforme (ou seja, isNonConformant === false)? 
+  // Na verdade o bloco todo foi removido por redundância.
 
   revalidatePath('/tecnico/analises')
   return { success: true }

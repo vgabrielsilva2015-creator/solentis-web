@@ -5,6 +5,7 @@ import { extractDataFromPDF, getMappingContext, saveMappedReadings, createParame
 import { UploadCloud, FileText, CheckCircle, AlertCircle, Loader2, FileCheck2, Plus, RotateCcw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import stringSimilarity from 'string-similarity'
+import { compressPhoto } from '@/lib/compress-image'
 
 type FileStatus = 'pending' | 'extracting' | 'success' | 'error'
 
@@ -39,11 +40,24 @@ export default function ImportLaudoPage() {
   }, [])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || [])
-    if (selectedFiles.length === 0) return
+    const rawFiles = Array.from(e.target.files || [])
+    if (rawFiles.length === 0) return
 
     setGlobalError(null)
     setIsProcessing(true)
+
+    // Comprime imagens (fotos de laudo); PDFs passam intactos. O Vercel
+    // rejeita requisições acima de 4,5 MB antes do código do servidor rodar.
+    const processed = await Promise.all(rawFiles.map((f) => compressPhoto(f)))
+    const tooBig = processed.filter((f) => f.size > 4 * 1024 * 1024)
+    const selectedFiles = processed.filter((f) => f.size <= 4 * 1024 * 1024)
+    if (tooBig.length > 0) {
+      setGlobalError(`Não adicionados por excederem 4 MB (limite do servidor): ${tooBig.map((f) => f.name).join(', ')}. Reduza o tamanho do PDF e tente de novo.`)
+    }
+    if (selectedFiles.length === 0) {
+      setIsProcessing(false)
+      return
+    }
 
     // Add to queue
     const newItems: FileItem[] = selectedFiles.map(f => ({

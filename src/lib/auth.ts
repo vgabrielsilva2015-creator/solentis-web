@@ -165,6 +165,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 import { redirect } from 'next/navigation'
 
 export async function requireRole(roles: string[]) {
+  // ─── NOTA SOBRE RBAC ──────────────────────────────────────────────────────────
+  // Decisão Arquitetural: O sistema de Controle de Acesso Baseado em Papéis (RBAC) 
+  // atual utiliza um modelo simples onde as roles são validadas em funções utilitárias 
+  // (`requireRole`, `requireTechnicianOrManager`, etc.) ou diretamente nas páginas.
+  // 
+  // Esta abordagem foi escolhida pois atende completamente às necessidades do MVP. 
+  // Sistemas mais complexos (como CASL, ou verificação per-entity em um middleware 
+  // centralizado) foram considerados overkill neste momento. A segurança se apoia 
+  // fortemente no Tenant Isolation (garantido no `src/lib/tenant.ts`) e na 
+  // simplicidade dos papéis (OPERATOR, TECHNICIAN, MANAGER, MAINTENANCE).
+  // ─────────────────────────────────────────────────────────────────────────────
   const session = await auth()
   if (!session || !roles.includes(session.user.role)) {
     redirect('/login')

@@ -10,15 +10,8 @@ export default async function TecnicoEstoquePage() {
   const session = await auth()
   if (!session) redirect('/login')
 
-  const products = await prisma.chemicalProduct.findMany({
-    where:   { tenant_id: (await getTenantId()), is_active: true },
-    orderBy: { name: 'asc' },
-    include: {
-      entries: { select: { quantity: true } },
-      exits:   { select: { quantity: true } },
-      counts:  { select: { counted_quantity: true }, orderBy: { counted_at: 'desc' }, take: 1 },
-    },
-  })
+  const { getProductsWithStock } = await import('@/lib/stock-queries')
+  const products = await getProductsWithStock(await getTenantId())
 
   return (
     <main className="p-6 max-w-3xl mx-auto space-y-4">
@@ -32,11 +25,8 @@ export default async function TecnicoEstoquePage() {
         ) : (
           <div className="space-y-2">
             {products.map((p) => {
-              const calculado = calcularEstoqueAtual(
-                p.entries.reduce((s, e) => s + e.quantity, 0),
-                p.exits.reduce((s, e) => s + e.quantity, 0),
-              )
-              const fisico  = p.counts[0]?.counted_quantity ?? null
+              const calculado = p.current_stock
+              const fisico  = p.last_count?.counted_quantity ?? null
               const alerta  = estaAbaixoMinimo(calculado, fisico, p.min_stock)
 
               return (

@@ -5,15 +5,9 @@ import { getTenantId } from '@/lib/tenant'
 
 
 export default async function ProdutosQuimicosPage() {
-  const products = await prisma.chemicalProduct.findMany({
-    where:   { tenant_id: (await getTenantId()) },
-    orderBy: { name: 'asc' },
-    include: {
-      entries: { select: { quantity: true } },
-      exits:   { select: { quantity: true } },
-      counts:  { select: { counted_quantity: true }, orderBy: { counted_at: 'desc' }, take: 1 },
-    },
-  })
+  const { getProductsWithStock } = await import('@/lib/stock-queries')
+  // Gestor vê todos, incluindo inativos
+  const products = await getProductsWithStock(await getTenantId(), true)
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -35,11 +29,9 @@ export default async function ProdutosQuimicosPage() {
       ) : (
         <div className="space-y-2">
           {products.map((p) => {
-            const totalEntradas = p.entries.reduce((s, e) => s + e.quantity, 0)
-            const totalSaidas   = p.exits.reduce((s, e) => s + e.quantity, 0)
-            const calculado     = calcularEstoqueAtual(totalEntradas, totalSaidas)
-            const fisico        = p.counts[0]?.counted_quantity ?? null
-            const alerta        = estaAbaixoMinimo(calculado, fisico, p.min_stock)
+            const calculado = p.current_stock
+            const fisico  = p.last_count?.counted_quantity ?? null
+            const alerta  = estaAbaixoMinimo(calculado, fisico, p.min_stock)
 
             return (
               <Link
