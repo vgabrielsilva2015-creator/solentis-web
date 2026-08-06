@@ -152,7 +152,7 @@ export function CommandMenu() {
                   <Command.Item onSelect={() => runCommand(() => router.push('/operador/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/leituras/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/operador/leituras/novo'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <Droplet className="h-4 w-4" /> Cadastrar Leitura Manual
                   </Command.Item>
                   <Command.Item onSelect={() => runCommand(() => router.push('/operador/turnos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
@@ -166,13 +166,13 @@ export function CommandMenu() {
                   <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/dashboard'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <LayoutDashboard className="h-4 w-4" /> Ir para Dashboard
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/ocorrencias/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/ocorrencias/novo'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <AlertTriangle className="h-4 w-4" /> Relatar Ocorrência
                   </Command.Item>
                   <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/equipamentos'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <Wrench className="h-4 w-4" /> Gerir Equipamentos
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/analises/nova'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/tecnico/analises/novo'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <FileText className="h-4 w-4" /> Cadastrar Análise Laboratorial
                   </Command.Item>
                 </Command.Group>

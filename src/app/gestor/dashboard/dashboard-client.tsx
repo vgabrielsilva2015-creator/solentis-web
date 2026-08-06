@@ -1348,7 +1348,7 @@ export function DashboardClient({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <Link
-              href="/gestor/ocorrencias/nova"
+              href="/gestor/ocorrencias/novo"
               style={{
                 display: 'flex',
                 alignItems: 'center',

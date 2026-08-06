@@ -73,7 +73,7 @@ export default async function AdminPlantasPage() {
             Gerencie os Tenants e seus Gestores
           </p>
         </div>
-        <Link href="/admin/plantas/nova">
+        <Link href="/admin/plantas/novo">
           <Button className="bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 transition-all hover:shadow-indigo-500/30 gap-2">
             <Plus className="w-4 h-4" />
             Nova Planta
@@ -115,7 +115,7 @@ export default async function AdminPlantasPage() {
             <p className="text-muted-foreground text-sm">
               Nenhuma planta cadastrada ainda.
             </p>
-            <Link href="/admin/plantas/nova">
+            <Link href="/admin/plantas/novo">
               <Button variant="outline" className="mt-4 border-border text-foreground hover:bg-muted">
                 Criar primeira planta
               </Button>

@@ -61,7 +61,7 @@ export default async function PreventiveMaintenancePage() {
             Exportar CSV
           </Link>
           <Link 
-            href="/gestor/manutencao/preventivas/nova" 
+            href="/gestor/manutencao/preventivas/novo" 
             className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:brightness-105 transition-all shadow-sm"
           >
             <Plus className="w-4 h-4" />

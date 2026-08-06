@@ -8,6 +8,7 @@ import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
+import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
 
 const MAX_PHOTOS_TASK = 3
 const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
@@ -27,6 +28,21 @@ function normalizarData(date: Date): Date {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+// Erro de violação de constraint única do Postgres (via Prisma).
+function isP2002(e: unknown): boolean {
+  return !!e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === 'P2002'
+}
+
+// Escolhe a mensagem conforme QUAL índice único de turno foi violado numa corrida:
+// uniq_turno_ativo_por_operador (por operador) vs. uniq_shift_instance_ativa (por período).
+function mensagemP2002Turno(e: unknown): string {
+  const target = (e as { meta?: { target?: unknown } })?.meta?.target
+  const alvo = Array.isArray(target) ? target.join(',') : String(target ?? '')
+  return alvo.includes('operador')
+    ? 'Você já tem um turno aberto. Passe o turno atual antes de abrir outro.'
+    : 'Já existe um turno aberto para este período.'
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────

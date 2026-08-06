@@ -40,6 +40,45 @@ const nextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      {
+        source: '/:role/ocorrencias/nova',
+        destination: '/:role/ocorrencias/novo',
+        permanent: true,
+      },
+      {
+        source: '/gestor/manutencao/preventivas/nova',
+        destination: '/gestor/manutencao/preventivas/novo',
+        permanent: true,
+      },
+      {
+        source: '/gestor/manutencao/corretivas/nova',
+        destination: '/gestor/manutencao/corretivas/novo',
+        permanent: true,
+      },
+      {
+        source: '/admin/plantas/nova',
+        destination: '/admin/plantas/novo',
+        permanent: true,
+      },
+      {
+        source: '/operador/leituras/nova',
+        destination: '/operador/leituras/novo',
+        permanent: true,
+      },
+      {
+        source: '/tecnico/analises/nova',
+        destination: '/tecnico/analises/novo',
+        permanent: true,
+      },
+      {
+        source: '/gestor/turnos/templates/:id',
+        destination: '/gestor/turnos/:id/tarefas-padrao',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withSerwist(nextConfig);

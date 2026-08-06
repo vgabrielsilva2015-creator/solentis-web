@@ -137,7 +137,7 @@ export default async function OcorrenciasGestorPage({
             </Link>
           </div>
 
-          <Link href="/gestor/ocorrencias/nova">
+          <Link href="/gestor/ocorrencias/novo">
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8 font-semibold">
               + Nova ocorrência
             </Button>

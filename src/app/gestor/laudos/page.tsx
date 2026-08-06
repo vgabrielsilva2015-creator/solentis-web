@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Beaker, FileCheck, Search, SlidersHorizontal, Upload, Download } from 'lucide-react'
 import Link from 'next/link'
 
-export const dynamic = 'force-dynamic'
+
 
 export default async function LaudosExternosPage() {
   // @tenant-safe: deriva o tenant da sessão (JWT), nunca hardcoded.

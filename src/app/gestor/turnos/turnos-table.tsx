@@ -57,7 +57,7 @@ export function TurnosTable({ items }: { items: Turno[] }) {
                 {
                   label: 'Tarefas padrão',
                   icon: <ClipboardList className="size-4" />,
-                  onSelect: () => router.push(`/gestor/turnos/templates/${t.id}`),
+                  onSelect: () => router.push(`/gestor/turnos/${t.id}/tarefas-padrao`),
                 },
                 {
                   label: t.is_active ? 'Desativar' : 'Reativar',

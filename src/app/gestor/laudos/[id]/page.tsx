@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-export const dynamic = 'force-dynamic'
+
 
 export default async function LaudoPontoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params

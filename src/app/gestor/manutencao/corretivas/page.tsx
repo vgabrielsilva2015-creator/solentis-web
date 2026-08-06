@@ -51,7 +51,7 @@ export default async function CorrectiveMaintenancePage() {
           description="Acompanhe as manutenções corretivas em equipamentos."
         />
         <Link 
-          href="/gestor/manutencao/corretivas/nova" 
+          href="/gestor/manutencao/corretivas/novo" 
           className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:brightness-105 transition-all shadow-sm"
         >
           <Plus className="w-4 h-4" />

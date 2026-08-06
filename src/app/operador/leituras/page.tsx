@@ -187,7 +187,7 @@ export default async function LeituraChecklistPage() {
             {pending.map((item) => (
               <Link
                 key={item.scheduleId}
-                href={`/operador/leituras/nova?point=${item.pointId}&param=${item.paramId}`}
+                href={`/operador/leituras/novo?point=${item.pointId}&param=${item.paramId}`}
                 className="flex items-center justify-between rounded-xl border border-blue-900/40 bg-blue-950/15 p-4 hover:bg-blue-900/25 active:scale-[0.98] transition-all"
               >
                 <div className="flex items-start gap-3">
@@ -271,7 +271,7 @@ export default async function LeituraChecklistPage() {
       {/* Leitura Avulsa */}
       <div className="pt-2 border-t border-border">
         <Link
-          href="/operador/leituras/nova"
+          href="/operador/leituras/novo"
           className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card p-4 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <Plus className="h-4 w-4" />

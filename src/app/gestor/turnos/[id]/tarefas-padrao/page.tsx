@@ -9,12 +9,12 @@ import { TemplateManager } from './template-manager'
 export default async function TemplatesDoTurnoPage({
   params,
 }: {
-  params: Promise<{ shiftId: string }>
+  params: Promise<{ id: string }>
 }) {
   const session = await auth()
   if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) redirect('/acesso-negado')
 
-  const { shiftId } = await params
+  const { id: shiftId } = await params
   const tenantId = await getTenantId()
 
   const [shift, templates, operators] = await Promise.all([
@@ -38,7 +38,7 @@ export default async function TemplatesDoTurnoPage({
 
   return (
     <div className="max-w-2xl space-y-4">
-      <BackButton href="/gestor/turnos/escala" label="Escala de turnos" />
+      <BackButton href="/gestor/turnos" label="Turnos" />
       <div>
         <h1 className="text-xl font-semibold">Análises/tarefas padrão — {shift.name}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">

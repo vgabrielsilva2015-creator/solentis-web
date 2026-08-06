@@ -180,7 +180,7 @@ export default async function TecnicoDashboard() {
                {pendingChecklist.map(s => (
                  <Link
                    key={s.id}
-                   href={`/tecnico/analises/nova?point=${s.collection_point_id}&param=${s.parameter_id}&type=${s.sample_type}`}
+                   href={`/tecnico/analises/novo?point=${s.collection_point_id}&param=${s.parameter_id}&type=${s.sample_type}`}
                    className="flex items-center justify-between rounded-xl border border-indigo-900/40 bg-indigo-950/20 p-4 hover:bg-indigo-900/30 transition-colors"
                  >
                    <div>

@@ -5,7 +5,7 @@ import { getTenantId } from '@/lib/tenant'
 import { deleteMonitoringSchedule, toggleMonitoringSchedule } from './actions'
 import { Trash2, Power } from 'lucide-react'
 
-export const revalidate = 60
+
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const PAGE_SIZE = 25

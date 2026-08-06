@@ -7,7 +7,7 @@ import {
   atualizarTemplate,
   desativarTemplate,
   type TemplateFormState,
-} from '../actions'
+} from './actions'
 
 const INITIAL: TemplateFormState = {}
 
