@@ -26,6 +26,62 @@ corrigido ainda** — é a base para o plano priorizado da seção final.
 
 ---
 
+## 🔁 RE-AUDITORIA — 2026-08-05 (pós-"fase 4", commit `f6b4ccc`, branch `main`)
+
+Segunda passada pelas 6 lentes sobre o código **já corrigido e commitado** pela sessão paralela.
+Working tree limpo, `tsc --noEmit` verde, 162 testes passando. Abaixo, o delta.
+
+### ✅ Resolvido e verificado (2+ lentes confirmaram)
+| Item | Como foi resolvido |
+|---|---|
+| **CRIT-01** build | null-guards `if (task.shift_instance && ...)` em `turnos/actions.ts`; shape de `relatorios/page.tsx` realinhado. |
+| **ALTO-01** push em rollback | `handleNewOccurrence` retorna closure empilhada em `postCommitHooks`, executada só após o `$transaction`. Padrão consistente nas 3 rotas. |
+| **ALTO-02** push duplicado | bloco antigo removido de `tecnico/analises/actions.ts`. |
+| **ALTO-03** `getNotifications` | filtra `opened_by: user.id` + `orderBy: opened_at desc`. |
+| **ALTO-04** estoque em JS | novo `src/lib/stock-queries.ts` (`groupBy`/`_sum`), adotado nas 4 telas. Fecha refactor #5. |
+| **ALTO-05** dashboard sem bound | `AND ${dateCol} >= ${periodoAnteriorInicio}` no `WHERE`. |
+| **MED-03** upload equipamento | `saveImageUpload(file,'equipments',5MB)` valida tamanho antes do buffer. Fecha refactor #3. |
+| **MED-06** unique nullable | `legal_reference String @default("")`. |
+| Refactors #4, #8, #9 | `calcularNaoConformidade` reusado; `catch unknown`; limpezas mortas originais. |
+
+### ❌ Continua aberto (sem mudança)
+- **CRIT-02** `email @unique` — inalterado; **precisa das 2 queries no Supabase** (decisão de produto). Maior risco real.
+- **MED-04** RBAC de leituras (OPERATOR/MANAGER/TECHNICIAN escrevem) — sem decisão documentada.
+- **MED-05** índice parcial anti-race — entrou só nota **genérica** no topo do schema; falta comentário no model `ShiftInstance` + passo no RUNBOOK.
+
+### ⚠️ Resolvido pela metade / feito errado
+- **MED-01 índices — execução equivocada.** `prisma/sql/add_indexes.sql` criou **4 índices duplicados** de `@@index` já existentes no schema (`analyses`, `external_analyses`, `stock_entry`, `stock_exit` por `tenant_id,parameter_id/product_id,data`) → só custo de escrita, zero ganho. O único útil é `idx_readings_tenant_parameter_created`. **Os índices que a query real precisa continuam faltando:**
+  ```sql
+  CREATE INDEX IF NOT EXISTS idx_readings_tenant_created       ON "readings" ("tenant_id","created_at");
+  CREATE INDEX IF NOT EXISTS idx_analyses_tenant_collected     ON "analyses" ("tenant_id","collected_at");
+  CREATE INDEX IF NOT EXISTS idx_extanalyses_tenant_collected  ON "external_analyses" ("tenant_id","collected_at");
+  CREATE INDEX IF NOT EXISTS idx_stock_exit_tenant_used        ON "chemical_stock_exits" ("tenant_id","used_at");
+  CREATE INDEX IF NOT EXISTS idx_occurrences_tenant_status_deadline ON "occurrences" ("tenant_id","status","deadline");
+  ```
+  (+ limpar os 4 duplicados; refletir no schema com `@@index`.)
+- **MED-02 `findMany` sem `take`** — só parcialmente. Seguem sem `take`: `gestor/ocorrencias/page.tsx:60-69` (`allStats`, MTTR em JS sobre histórico total — **pior pendência de escala**), `gestor/manutencao/{corretivas,preventivas}/page.tsx`, `gestor/dashboard/page.tsx:168` (`activeOccurrences`), `api/export/route.ts` branch `occurrences`.
+
+### 🆕 Novos achados desta passada (introduzidos pela sessão paralela)
+- **[MÉDIO-ALTO — bug de dados] `getReportData` com `take: 1000` SEM `orderBy`** (`gestor/relatorios/actions.ts:20-34`). Se o período tiver >1000 leituras, o subconjunto é **não-determinístico** → `min/max/avg`/contagem de não-conformidade do relatório ficam **incorretos e não-reprodutíveis** (mesmo relatório, números diferentes). Correção real: `groupBy(['parameter_id'], { _min, _max, _avg, _count })` — elimina o limite arbitrário e o não-determinismo. Também: `include: { collection_point: true }` **morto** e `parameter: true` trazendo linha inteira (usar `select`).
+- **[MÉDIO — compliance] PDF de automonitoramento trunca em silêncio** (`gestor/relatorios/page.tsx`, `take: 500`). Mês com >500 análises (interna+externa) gera "Documento oficial de Compliance" **incompleto sem aviso** na UI. Correção: avisar quando `total >= 500` (ou paginar/stream).
+- **[MÉDIO — paridade] `saveMappedReadings` não dispara plano de ação** (`gestor/laudos/importar/actions.ts:263-317`). NC vinda de laudo importado abre ocorrência **sem** `handleNewOccurrence` → sem `ShiftTask` de ação e sem push aos gestores, diferente de leitura/análise manual. Chamar `handleNewOccurrence` para paridade.
+- **[BAIXO] `console.error` nos 3 `postCommitHooks`** (`leituras`/`analises`/`ocorrencias` actions) — **pula o masking do Pino** (risco de vazar subscription/PII um dia) e é duplicação literal 3×. Extrair `runPostCommitHooks(hooks)` com `getLogger`. *(4 lentes apontaram.)*
+- **[BAIXO] `run-indexes.js` na raiz do repo** — script ad-hoc fora da convenção (`prisma db execute`); remover do versionamento após aplicar os índices.
+- **[BAIXO] import morto** de `getLogger` em `tecnico/analises/actions.ts`; `getReportData` sem Zod nas datas; `Record<string,any>` em `getReportData`; 2 botões de download de PDF quase idênticos.
+- **[NOTA] `ShiftTask.occurrence_id` `onDelete: Cascade`** dormente (não há hard-delete de `Occurrence` hoje). Se um expurgo LGPD for introduzido, a tarefa de remediação some sem rastro — considerar `Restrict`/`SetNull` se esse cenário surgir.
+
+### Refactors ainda pendentes
+#1 unificar 3 `occurrence-form.tsx` (~750 linhas dup), #2 componentes-folha de equipamento gestor↔técnico, #6 `any` nas telas de escala (27×), #7 `any` no `dashboard-client.tsx` (9×). `AutomonitoramentoDocument.tsx` está limpo (não é alvo).
+
+### 📋 Plano revisado (o que sobrou)
+- **Fase 0 — Infra/decisão (dono):** CRIT-02 rodar as 2 queries no Supabase e decidir (a)/(b); MED-04 decidir RBAC de leituras.
+- **Fase 1 — Bug de dados:** `getReportData` `orderBy`+`groupBy` (relatório de compliance com número errado); paridade de `saveMappedReadings`; aviso de truncamento do PDF.
+- **Fase 2 — Índices corretos:** aplicar os 5 índices reais via SQL aditivo, limpar os 4 duplicados, refletir no schema, remover `run-indexes.js`.
+- **Fase 3 — Escala:** `take`/`groupBy` em `allStats`, manutenções, `activeOccurrences`, export de ocorrências.
+- **Fase 4 — Consistência/qualidade:** `runPostCommitHooks` + logger; imports mortos; MED-05 (comentário no schema + RUNBOOK); depois refactors #1/#2/#6/#7 (mostrar diff).
+
+---
+
 ## 🔴 CRÍTICO
 
 ### CRIT-01 — Build quebrado (`tsc --noEmit`, 11 erros) [code-review]
