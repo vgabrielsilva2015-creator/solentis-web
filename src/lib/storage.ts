@@ -18,7 +18,9 @@ import crypto from 'crypto'
  */
 
 function hasBlob() {
-  return !!process.env.BLOB_READ_WRITE_TOKEN
+  // Na Vercel o Blob autentica por OIDC (projeto conectado recebe BLOB_STORE_ID,
+  // sem BLOB_READ_WRITE_TOKEN). Fora da Vercel, só com token explícito.
+  return !!process.env.VERCEL || !!process.env.BLOB_READ_WRITE_TOKEN
 }
 
 /**
