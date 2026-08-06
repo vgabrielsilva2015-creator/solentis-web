@@ -58,6 +58,14 @@ export async function saveUpload(
     return blob.url
   }
 
+  // Em produção (Vercel) o filesystem da função é somente-leitura: sem Blob
+  // configurado, o `mkdir` abaixo estouraria com ENOENT cru na tela do operador.
+  // Falha explícita e legível (o call site transforma em mensagem amigável).
+  if (process.env.VERCEL) {
+    throw new Error('Storage de arquivos não configurado (BLOB_READ_WRITE_TOKEN ausente).')
+  }
+
+  // Fallback de disco local — apenas em desenvolvimento.
   const dir = path.join(process.cwd(), 'uploads', folder)
   await fs.mkdir(dir, { recursive: true })
   await fs.writeFile(path.join(dir, filename), data)
