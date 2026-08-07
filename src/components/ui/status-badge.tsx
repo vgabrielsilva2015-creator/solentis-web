@@ -85,7 +85,7 @@ export function StatusBadge({
       data-slot="status-badge"
       className={cn(
         "inline-flex h-[22px] w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-[9px] text-xs font-semibold leading-none",
-        solid ? cn(SOLID_BG[status], "text-[var(--c-on-brand)]") : cn(m.softBg, m.fg),
+        solid ? cn(SOLID_BG[status], `text-on-${m.dotBg.replace('bg-', '')}`) : cn(m.softBg, m.fg),
         className
       )}
       {...props}
@@ -94,7 +94,7 @@ export function StatusBadge({
         <span
           className={cn(
             "size-[7px] shrink-0 rounded-full",
-            solid ? "bg-[var(--c-on-brand)]" : m.dotBg
+            solid ? `bg-on-${m.dotBg.replace('bg-', '')}` : m.dotBg
           )}
         />
       ) : null}

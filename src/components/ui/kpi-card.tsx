@@ -28,8 +28,8 @@ export function KpiCard({
 
   // Corrente de cores para o SVG da sparkline (verde se positivo, senão red, ou cinza)
   let strokeColor = 'var(--color-slate-500)'
-  if (isPositive) strokeColor = 'var(--color-status-ok)'
-  if (isNegative) strokeColor = 'var(--color-status-danger)'
+  if (isPositive) strokeColor = 'var(--ok)'
+  if (isNegative) strokeColor = 'var(--danger)'
 
   // Renderização simples de path SVG
   const renderSparkline = () => {
@@ -59,7 +59,7 @@ export function KpiCard({
       <div>
         <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
         <div className="flex items-baseline justify-between">
-          <p className={`text-3xl font-semibold tabular-nums tracking-tight ${alert ? 'text-status-danger' : 'text-foreground'}`}>
+          <p className={`text-3xl font-semibold tabular-nums tracking-tight ${alert ? 'text-danger' : 'text-foreground'}`}>
             {value}
           </p>
           
@@ -69,11 +69,11 @@ export function KpiCard({
                 <Minus className="w-3 h-3 mr-0.5" /> —
               </span>
             ) : isPositive ? (
-              <span className="flex items-center text-status-ok font-mono">
+              <span className="flex items-center text-ok font-mono">
                 <ArrowUpRight className="w-3 h-3 mr-0.5" /> {delta}%
               </span>
             ) : isNegative ? (
-              <span className="flex items-center text-status-danger font-mono">
+              <span className="flex items-center text-danger font-mono">
                 <ArrowDownRight className="w-3 h-3 mr-0.5" /> {Math.abs(delta)}%
               </span>
             ) : (
