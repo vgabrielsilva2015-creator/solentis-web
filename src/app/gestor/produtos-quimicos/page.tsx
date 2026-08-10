@@ -4,24 +4,32 @@ import Link from 'next/link'
 import { getTenantId } from '@/lib/tenant'
 
 
-export default async function ProdutosQuimicosPage() {
+import { SearchInput } from '@/components/ui/search-input'
+
+export default async function ProdutosQuimicosPage(props: { searchParams: Promise<{ q?: string }> }) {
+  const searchParams = await props.searchParams
+  const q = searchParams.q
+
   const { getProductsWithStock } = await import('@/lib/stock-queries')
   // Gestor vê todos, incluindo inativos
-  const products = await getProductsWithStock(await getTenantId(), true)
+  const products = await getProductsWithStock(await getTenantId(), true, q)
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Produtos Químicos</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Estoque e movimentação de reagentes</p>
         </div>
-        <Link
-          href="/gestor/produtos-quimicos/novo"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
-        >
-          + Novo produto
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <SearchInput placeholder="Buscar por nome ou descrição..." />
+          <Link
+            href="/gestor/produtos-quimicos/novo"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors flex items-center justify-center whitespace-nowrap"
+          >
+            + Novo produto
+          </Link>
+        </div>
       </div>
 
       {products.length === 0 ? (
