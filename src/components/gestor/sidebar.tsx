@@ -21,8 +21,8 @@ export function GestorSidebar() {
           )
         }
         const isActive =
-          (pathname === item.href || pathname.startsWith(item.href + '/')) &&
-          (!item.excludePrefix || !pathname.startsWith(item.excludePrefix))
+          (pathname === item.href || pathname.startsWith(item.href + '/')) ||
+          (item.activePrefixes?.some(prefix => pathname.startsWith(prefix)))
         return (
           <Link
             key={item.href}
