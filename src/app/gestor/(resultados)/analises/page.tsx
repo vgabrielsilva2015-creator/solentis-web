@@ -1,153 +1,133 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { PageHeader } from '@/components/ui/page-header'
-import { formatDateDisplay } from '@/lib/date-utils'
-import { getTenantId } from '@/lib/tenant'
 import Link from 'next/link'
-import { Pencil, Trash2, Download } from 'lucide-react'
+import { getTenantId } from '@/lib/tenant'
 import { Button } from '@/components/ui/button'
+import { Download } from 'lucide-react'
+import { ResultsDataTable, UnifiedResult } from '@/components/gestor/resultados/results-data-table'
+import { ResultsFilters } from '@/components/gestor/resultados/results-filters'
 
-export const metadata = {
-  title: 'Análises Registradas | Solentis',
+const PAGE_SIZE = 20
+
+function formatDatetime(d: Date): string {
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
 }
 
 export default async function GestorAnalisesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>
+  searchParams: Promise<{ page?: string; q?: string; status?: string }>
 }) {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/acesso-negado')
+  if (!session) redirect('/login')
 
+  const { page: pageParam, q, status } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+  const skip = (page - 1) * PAGE_SIZE
   const tenant_id = await getTenantId()
-  const { page } = await searchParams
-  const currentPage = Math.max(1, parseInt(page ?? '1', 10))
-  const take = 20
-  const skip = (currentPage - 1) * take
+
+  const where: any = { tenant_id }
+
+  if (q) {
+    where.OR = [
+      { collection_point: { name: { contains: q, mode: 'insensitive' } } },
+      { parameter: { name: { contains: q, mode: 'insensitive' } } }
+    ]
+  }
+
+  if (status === 'conforme') {
+    where.is_non_conformant = false
+  } else if (status === 'fora') {
+    where.is_non_conformant = true
+  }
 
   const [analises, total] = await Promise.all([
     prisma.analysis.findMany({
-      where: { tenant_id },
+      where,
       include: {
-        parameter: true,
-        collection_point: true,
-        recorder: { select: { name: true } },
+        collection_point: { select: { name: true } },
+        parameter:        { select: { name: true, unit: true } },
+        recorder:         { select: { name: true } },
       },
       orderBy: { collected_at: 'desc' },
-      take,
+      take:    PAGE_SIZE,
       skip,
     }),
-    prisma.analysis.count({ where: { tenant_id } }),
+    prisma.analysis.count({ where }),
   ])
 
-  const totalPages = Math.ceil(total / take)
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  const data: UnifiedResult[] = analises.map(a => ({
+    id: a.id,
+    date: formatDatetime(a.collected_at),
+    pointName: a.collection_point.name,
+    parameterName: a.parameter.name,
+    valueDisplay: a.value !== null ? (
+      <span className="font-mono text-foreground">
+        {a.value} {a.parameter.unit}
+      </span>
+    ) : '—',
+    originDisplay: (
+      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+        INTERNA
+      </span>
+    ),
+    recorderName: a.recorder?.name || 'Sistema',
+    isNonConformant: a.is_non_conformant,
+  }))
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader 
-          title="Histórico de Análises" 
-          description="Visualize e edite as análises registradas pelos técnicos."
-        />
-        <Link href={`/api/export?type=analyses`} target="_blank">
-          <Button variant="outline" className="border-border bg-muted text-foreground hover:bg-secondary text-xs h-8">
-            <Download className="w-4 h-4 mr-1.5" />
-            Exportar CSV
-          </Button>
-        </Link>
-      </div>
-
-      <div className="rounded-md border border-border bg-card overflow-x-auto">
-        <table className="w-full text-left text-sm text-foreground">
-          <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Data / Hora</th>
-              <th className="px-4 py-3 font-medium">Parâmetro</th>
-              <th className="px-4 py-3 font-medium">Ponto de Coleta</th>
-              <th className="px-4 py-3 font-medium">Valor</th>
-              <th className="px-4 py-3 font-medium">Lab</th>
-              <th className="px-4 py-3 font-medium">Registrado por</th>
-              <th className="px-4 py-3 text-right font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {analises.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                  Nenhuma análise registrada até o momento.
-                </td>
-              </tr>
-            ) : (
-              analises.map((a) => (
-                <tr key={a.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {formatDateDisplay(a.collected_at)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {a.parameter.name}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {a.collection_point?.name ?? '-'}
-                  </td>
-                  <td className="px-4 py-3 font-medium">
-                    <span className={a.is_non_conformant ? 'text-red-400' : 'text-emerald-400'}>
-                      {a.value} {a.parameter.unit}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {a.laboratory_type === 'EXTERNAL' ? 'Externo' : 'Interno'}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {a.recorder?.name ?? '-'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/gestor/analises/${a.id}/editar`}
-                        className="text-muted-foreground hover:text-blue-400 transition-colors"
-                        title="Editar"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {skip + 1} a {Math.min(skip + take, total)} de {total} análises
-          </p>
-          <div className="flex gap-2">
-            <Link
-              href={`/gestor/analises?page=${currentPage - 1}`}
-              className={`px-3 py-1.5 text-sm rounded-md border border-border ${
-                currentPage <= 1 
-                  ? 'pointer-events-none opacity-50 text-muted-foreground' 
-                  : 'text-foreground hover:bg-muted'
-              }`}
-            >
-              Anterior
-            </Link>
-            <Link
-              href={`/gestor/analises?page=${currentPage + 1}`}
-              className={`px-3 py-1.5 text-sm rounded-md border border-border ${
-                currentPage >= totalPages 
-                  ? 'pointer-events-none opacity-50 text-muted-foreground' 
-                  : 'text-foreground hover:bg-muted'
-              }`}
-            >
-              Próxima
-            </Link>
+    <main className="mx-auto max-w-5xl px-6 py-8 space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Análises Internas</h1>
+            <p className="text-sm text-muted-foreground">Histórico de análises realizadas no laboratório interno. ({total} registros)</p>
           </div>
+          <Link href={`/api/export?type=analyses`} target="_blank">
+            <Button variant="outline" className="border-border bg-muted text-foreground hover:bg-secondary text-xs h-8">
+              <Download className="w-4 h-4 mr-1.5" />
+              Exportar CSV
+            </Button>
+          </Link>
         </div>
-      )}
-    </div>
+
+        <ResultsFilters />
+
+        <ResultsDataTable data={data} />
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 text-sm">
+            {page > 1 ? (
+              <Link
+                href={`?page=${page - 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}`}
+                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
+              >
+                ← Anterior
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span className="text-xs text-muted-foreground font-medium">
+              Página {page} de {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link
+                href={`?page=${page + 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}`}
+                className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
+              >
+                Próxima →
+              </Link>
+            ) : (
+              <span />
+            )}
+          </div>
+        )}
+    </main>
   )
 }
