@@ -105,7 +105,7 @@ export async function criarTemplate(
     },
   })
 
-  revalidatePath(`/gestor/turnos/templates/${shiftId}`)
+  revalidatePath(`/gestor/turnos/${shiftId}/tarefas-padrao`)
   return { success: true }
 }
 
@@ -152,7 +152,7 @@ export async function atualizarTemplate(
     },
   })
 
-  revalidatePath(`/gestor/turnos/templates/${template.shift_id}`)
+  revalidatePath(`/gestor/turnos/${template.shift_id}/tarefas-padrao`)
   return { success: true }
 }
 
@@ -175,5 +175,5 @@ export async function desativarTemplate(templateId: string): Promise<void> {
     data:  { is_active: false },
   })
 
-  revalidatePath(`/gestor/turnos/templates/${template.shift_id}`)
+  revalidatePath(`/gestor/turnos/${template.shift_id}/tarefas-padrao`)
 }

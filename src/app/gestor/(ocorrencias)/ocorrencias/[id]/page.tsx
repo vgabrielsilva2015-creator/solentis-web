@@ -6,6 +6,7 @@ import { BackButton } from '@/components/back-button'
 import { ResolveForm } from './resolve-form'
 import { getTenantId } from '@/lib/tenant'
 import { OccurrenceTimeline } from '@/components/occurrence-timeline'
+import { PhotoGallery } from '@/components/ui/photo-gallery'
 
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -127,17 +128,11 @@ export default async function OcorrenciaDetailPage({
 
           {/* Fotos */}
           {hasPhoto && (
-            <div className="pt-2 flex flex-wrap gap-2">
-              {occurrence.photos.map((photo, i) => (
-                <Link
-                  key={photo.id}
-                  href={`/api/occurrences/${occurrence.id}/photo?index=${i}`}
-                  target="_blank"
-                  className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 border border-border bg-background px-2 py-1 rounded"
-                >
-                  Ver foto {i + 1} anexada →
-                </Link>
-              ))}
+            <div className="pt-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+                Fotos em Anexo
+              </span>
+              <PhotoGallery occurrenceId={occurrence.id} photos={occurrence.photos} />
             </div>
           )}
 
