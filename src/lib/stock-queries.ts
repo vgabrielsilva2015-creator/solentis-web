@@ -17,18 +17,18 @@ export type ProductWithStock = {
  * via agregação nativa (_sum), sem carregar todo o histórico em memória.
  */
 export async function getProductsWithStock(tenantId: string, includeInactive = false, search?: string): Promise<ProductWithStock[]> {
-  const whereClause: any = includeInactive ? { tenant_id: tenantId } : { tenant_id: tenantId, is_active: true }
-  
-  if (search) {
-    whereClause.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } }
-    ]
-  }
-
   const products = await prisma.chemicalProduct.findMany({
-    where: whereClause,
-    select: { 
+    where: {
+      tenant_id: tenantId,
+      ...(includeInactive ? {} : { is_active: true }),
+      ...(search ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
+      } : {}),
+    },
+    select: {
       id: true, 
       name: true, 
       unit: true, 
