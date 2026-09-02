@@ -48,6 +48,31 @@ Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0
 - **Backup Supabase** confirmar PITR e **testar restore**.
 - Testar push em produção após o fix · acompanhar advisories do `next-auth@5-beta`.
 
+## 🚀 Preparação FENASAN — Super Admin + Escala (2026-09-02)
+
+Sessão focada em deixar o app pronto para apresentação (estabilidade, escala, controle do dono). Branch `feat/super-admin-e-hardening` (commits `955aba3` fix + `a54896d` feat). **Não mergeada ainda** — depende de QA de clique + push/PR.
+
+### Super Admin completo (`/admin/plantas/[id]`)
+Os botões antes decorativos viraram ações reais. Todas com guard `SUPER_ADMIN` + Zod + `logAudit` + queries cross-tenant marcadas `// @tenant-safe` (guardião de isolamento permanece verde). Actions em `src/app/admin/plantas/actions.ts`:
+- **`resetarSenhaUsuario`** — senha provisória CSPRNG + `must_change_password` para qualquer usuário de qualquer planta.
+- **`toggleAtivoUsuario`** — ativa/desativa usuário; trava anti-auto-desativação.
+- **`criarUsuarioPlanta`** — cria usuário dentro da planta (tenantId "bindado") + convite por e-mail (reusa `createSetPasswordToken`/`sendEmail`), fallback senha provisória. E-mail é **único global** (`@unique` na linha 72 do schema).
+- **`toggleAtivoPlanta`** — ativa/desativa a planta inteira; trava anti-auto-desativação.
+- **`editarPlanta`** — edita nome/slug (slug é só exibição, não roteia).
+- UI: 5 Client Components em `src/app/admin/plantas/[id]/` (modais de confirmação/senha), padrão de senha provisória com botão copiar.
+
+### Login blinda planta desativada (`src/lib/auth.ts`)
+O `authorize` agora traz `tenant.is_active` (via `include`) e **bloqueia login de usuário cuja planta está desativada** — exceto `SUPER_ADMIN` (não pode se trancar fora). Antes só checava `user.is_active`. Sessões JWT já ativas duram até expirar (30–60 min); corte instantâneo exigiria mudança maior.
+
+### Hardening de escala
+- **`stock-queries.ts`**: `tenant_id` inline (era montado em variável `any`, cegando o guardião — alarme falso mas teste vermelho). Comportamento idêntico, guardião verde.
+- **`.env.example`**: documenta `connection_limit=1&pool_timeout=20` na `DATABASE_URL` (pooler 6543). **Pendente:** aplicar na env var da Vercel.
+- **Varredura de `findMany` sem `take`**: base é disciplinada — nenhuma query unbounded perigosa (as 45 suspeitas são limitadas por status/FK/data). O gargalo real de escala é o **plano Supabase Free** (~60 conexões), não o código — ver memória `solentis-supabase-free-teto`.
+- **`scripts/load/`**: teste de carga k6 (rampa 50→200→500) + guia de staging. **Pendente:** montar 2º projeto Supabase + rodar.
+
+### Pendências desta frente
+- QA de clique do super admin · aplicar `connection_limit` na Vercel · rodar k6 no staging · ligar **RLS no Supabase** (defesa em profundidade) · push + PR.
+
 ## 🔧 Sessão de Hardening — 2026-06-26
 
 Análise crítica + correção dos problemas que impediam virar produto. Todos os itens abaixo estão commitados e no `main`/Vercel.
