@@ -14,6 +14,11 @@ import {
   KeyRound,
   Power,
 } from 'lucide-react'
+import { ResetPasswordButton } from './reset-password-button'
+import { ToggleActiveButton } from './toggle-active-button'
+import { AddUserButton } from './add-user-button'
+import { TogglePlantButton } from './toggle-plant-button'
+import { EditPlantButton } from './edit-plant-button'
 
 export default async function AdminPlantaDetalhePage({
   params,
@@ -143,6 +148,19 @@ export default async function AdminPlantaDetalhePage({
               </div>
             </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <EditPlantButton
+              tenantId={tenant.id}
+              tenantName={tenant.name}
+              tenantSlug={tenant.slug}
+            />
+            <TogglePlantButton
+              tenantId={tenant.id}
+              tenantName={tenant.name}
+              isActive={tenant.is_active}
+            />
+          </div>
         </div>
       </div>
 
@@ -171,6 +189,7 @@ export default async function AdminPlantaDetalhePage({
             <UserCog className="w-4 h-4" />
             Equipe ({tenant.users.length})
           </h2>
+          <AddUserButton tenantId={tenant.id} tenantName={tenant.name} />
         </div>
 
         <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -183,6 +202,7 @@ export default async function AdminPlantaDetalhePage({
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Último Login</th>
                 <th className="px-4 py-3 font-medium">Senha</th>
+                <th className="px-4 py-3 font-medium text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -217,6 +237,12 @@ export default async function AdminPlantaDetalhePage({
                         Provisória
                       </span>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <ResetPasswordButton userId={u.id} userName={u.name} />
+                      <ToggleActiveButton userId={u.id} userName={u.name} isActive={u.is_active} />
+                    </div>
                   </td>
                 </tr>
               ))}

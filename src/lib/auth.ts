@@ -63,6 +63,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // O email é globalmente único no schema Prisma, portanto findUnique é seguro.
         const user = await prisma.user.findUnique({
           where: { email },
+          include: { tenant: { select: { is_active: true } } },
         })
 
         // Hash bcrypt REAL (custo 12) de uma senha aleatória descartada. Precisa
@@ -132,6 +133,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           log.warn(
             { tenantId: tenantIdForLog, userId: user.id },
             'Login bloqueado: conta desativada',
+          )
+          return null
+        }
+
+        // Planta (tenant) desativada bloqueia TODOS os seus usuários — exceto o
+        // SUPER_ADMIN, que gerencia o sistema e não pode ficar trancado para fora.
+        // Garante que "desativar planta" (no super admin) revogue o acesso de fato.
+        if (user.role !== 'SUPER_ADMIN' && user.tenant && !user.tenant.is_active) {
+          log.warn(
+            { tenantId: tenantIdForLog, userId: user.id },
+            'Login bloqueado: planta desativada',
           )
           return null
         }
