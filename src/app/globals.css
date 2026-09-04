@@ -14,12 +14,16 @@
   /* Vocabulário fixo de status do design system (StatusBadge / severidade).
      Expostos como utilitários Tailwind: bg-ok / text-danger / border-warn … */
   --color-ok: var(--ok);
+  --color-on-ok: var(--on-ok);
   --color-ok-soft: var(--ok-soft);
   --color-warn: var(--warn);
+  --color-on-warn: var(--on-warn);
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
   --color-danger-soft: var(--danger-soft);
   --color-critical: var(--critical);
+  --color-on-critical: var(--on-critical);
   --color-critical-soft: var(--critical-soft);
 
   /* Camada semântica --c-* (surface-aware: claro no dashboard, escuro no .op-shell) */
@@ -162,12 +166,16 @@
   /* ---- STATUS (vocabulário fixo do design system) --------- */
   --ok: oklch(0.50 0.15 150);               /* Conforme / dentro do limite */
   --ok-soft: oklch(0.50 0.15 150 / 14%);
+  --on-ok: oklch(1 0 0);
   --warn: oklch(0.60 0.14 70);              /* Atenção / próximo do limite */
   --warn-soft: oklch(0.60 0.14 70 / 14%);
+  --on-warn: oklch(0.145 0.02 250);         /* dark slate for better contrast */
   --danger: oklch(0.55 0.21 25);            /* Fora / não-conformidade */
   --danger-soft: oklch(0.55 0.21 25 / 14%);
+  --on-danger: oklch(1 0 0);
   --critical: oklch(0.44 0.20 27);          /* Crítica — severidade máxima */
   --critical-soft: oklch(0.44 0.20 27 / 14%);
+  --on-critical: oklch(1 0 0);
 
   /* Severidade de ocorrência (Baixa / Média / Alta / Crítica) */
   --sev-baixa: var(--ok);

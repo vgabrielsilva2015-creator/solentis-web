@@ -8,6 +8,7 @@ import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
+import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
 
 const MAX_PHOTOS_TASK = 3
 const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
@@ -27,6 +28,21 @@ function normalizarData(date: Date): Date {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+// Erro de violação de constraint única do Postgres (via Prisma).
+function isP2002(e: unknown): boolean {
+  return !!e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === 'P2002'
+}
+
+// Escolhe a mensagem conforme QUAL índice único de turno foi violado numa corrida:
+// uniq_turno_ativo_por_operador (por operador) vs. uniq_shift_instance_ativa (por período).
+function mensagemP2002Turno(e: unknown): string {
+  const target = (e as { meta?: { target?: unknown } })?.meta?.target
+  const alvo = Array.isArray(target) ? target.join(',') : String(target ?? '')
+  return alvo.includes('operador')
+    ? 'Você já tem um turno aberto. Passe o turno atual antes de abrir outro.'
+    : 'Já existe um turno aberto para este período.'
 }
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -111,11 +127,27 @@ export async function abrirTurno(
   // Verifica que o turno configurado existe e pertence ao tenant
   const shift = await prisma.shift.findFirst({
     where:  { id: parsed.data.shift_id, tenant_id: (await getTenantId()), is_active: true },
-    select: { id: true },
+    select: { id: true, name: true, start_time: true, end_time: true, crosses_midnight: true },
   })
   if (!shift) return { error: 'Turno não encontrado.' }
 
+  // Só se abre turno dentro da janela dele (tolerância de 60 min antes do início).
+  // Evita o bug do piloto: abrir a Noite (22:00–06:00) às 15:38.
+  if (!podeAbrirTurnoAgora(shift, new Date())) {
+    return { error: `O turno da ${shift.name} começa às ${shift.start_time}. Você pode abrir a partir das ${horaAberturaPermitida(shift.start_time)}.` }
+  }
+
   const tenant_id = await getTenantId()
+
+  // Um operador só pode ter 1 turno ativo. Checagem amigável aqui; a garantia
+  // atômica vem do índice uniq_turno_ativo_por_operador (tratado no catch P2002).
+  const jaAtivo = await prisma.shiftInstance.findFirst({
+    where:  { tenant_id, opened_by: userId, status: { in: ['OPEN', 'HANDOVER_PENDING'] } },
+    select: { id: true },
+  })
+  if (jaAtivo) {
+    return { error: 'Você já tem um turno aberto. Passe o turno atual antes de abrir outro.' }
+  }
 
   // Verificação de duplicado em transação. A garantia atômica REAL vem do índice
   // único parcial uniq_shift_instance_ativa (prisma/sql/add_unique_open_shift.sql):
@@ -203,8 +235,8 @@ export async function abrirTurno(
     })
   } catch (e: unknown) {
     // Corrida perdida: o índice único parcial rejeitou a 2ª criação concorrente.
-    if (e && typeof e === 'object' && 'code' in e && (e as { code?: string }).code === 'P2002') {
-      return { error: 'Já existe um turno aberto para este período.' }
+    if (isP2002(e)) {
+      return { error: mensagemP2002Turno(e) }
     }
     throw e
   }
@@ -329,8 +361,18 @@ export async function confirmarPassagem(
     return { error: 'Quem iniciou a passagem não pode confirmá-la.' }
   }
 
+  // O entrante não pode receber um turno se já tem o seu próprio aberto.
+  const jaAtivo = await prisma.shiftInstance.findFirst({
+    where:  { tenant_id: await getTenantId(), opened_by: userId, status: { in: ['OPEN', 'HANDOVER_PENDING'] } },
+    select: { id: true },
+  })
+  if (jaAtivo) {
+    return { error: 'Você já tem um turno aberto. Passe o seu turno antes de receber este.' }
+  }
+
   const now = new Date()
 
+  try {
   await prisma.$transaction(async (tx) => {
     // Confirma a passagem
     await tx.shiftHandover.updateMany({ where: { id: handoverId , tenant_id: (await getTenantId()) }, data: {
@@ -406,6 +448,10 @@ export async function confirmarPassagem(
       }
     }
   })
+  } catch (e: unknown) {
+    if (isP2002(e)) return { error: 'Você já tem um turno aberto. Passe o seu turno antes de receber este.' }
+    throw e
+  }
 
   revalidatePath('/operador/turnos')
   return { success: true }
@@ -556,10 +602,21 @@ export async function assumirPosto(
   if (!oldInstance) return { error: 'Turno anterior não encontrado ou já fechado.' }
   if (oldInstance.opened_by === userId) return { error: 'Você não pode assumir seu próprio turno.' }
 
+  // O operador não pode assumir um posto se já tem o seu próprio turno aberto.
+  const jaAtivo = await prisma.shiftInstance.findFirst({
+    where:  { tenant_id: tenantId, opened_by: userId, status: { in: ['OPEN', 'HANDOVER_PENDING'] } },
+    select: { id: true },
+  })
+  if (jaAtivo) {
+    return { error: 'Você já tem um turno aberto. Passe o turno atual antes de abrir outro.' }
+  }
+
   const now = new Date()
   const today = normalizarData(new Date())
 
-  const result = await prisma.$transaction(async (tx) => {
+  let result: TurnoFormState | null = null
+  try {
+  result = await prisma.$transaction(async (tx) => {
     // Cria registro de handover automático/compulsório
     const timeoutAt = new Date(now.getTime() + 1)
     await tx.shiftHandover.create({
@@ -649,6 +706,10 @@ export async function assumirPosto(
 
     return null
   })
+  } catch (e: unknown) {
+    if (isP2002(e)) return { error: mensagemP2002Turno(e) }
+    throw e
+  }
 
   if (result?.error) return result
   revalidatePath('/operador/turnos')

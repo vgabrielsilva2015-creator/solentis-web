@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { handleNewOccurrence } from '@/lib/occurrences'
+import { getLogger } from '@/lib/logger'
 
 const MAX_IMG_BYTES = 5 * 1024 * 1024
 
@@ -53,6 +54,7 @@ export type LeituraFormState = {
   error?: string
   fieldErrors?: Record<string, string[]>
   success?: boolean
+  warning?: string
 }
 
 // ─── Registrar leitura ────────────────────────────────────────────────────────
@@ -131,13 +133,23 @@ export async function registrarLeitura(
     orderBy: { opened_at: 'desc' },
   })
 
+  // A foto é OPCIONAL: se o upload falhar (Blob fora do ar/não configurado,
+  // arquivo inválido), a leitura NÃO se perde — salva sem foto e avisa que dá
+  // para anexar depois. Nenhum erro cru (ENOENT/stack) chega ao formulário.
   let photoFilename: string | null = null
+  let photoWarning: string | null = null
   const photoFile = formData.get('photo') as File | null
   if (photoFile && photoFile.size > 0) {
     try {
       photoFilename = await saveImageUpload(photoFile, 'readings', MAX_IMG_BYTES)
     } catch (err: unknown) {
-      return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
+      photoFilename = null
+      photoWarning = 'Não deu para enviar a foto. A leitura foi salva; você pode anexar depois pelo histórico.'
+      const log = await getLogger({ action: 'registrarLeitura' })
+      log.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        'Falha no upload da foto da leitura (leitura salva sem foto)',
+      )
     }
   }
 
@@ -198,5 +210,5 @@ export async function registrarLeitura(
   revalidatePath('/operador/dashboard')
   revalidatePath('/tecnico/dashboard')
   revalidatePath('/gestor/dashboard')
-  return { success: true }
+  return { success: true, warning: photoWarning ?? undefined }
 }

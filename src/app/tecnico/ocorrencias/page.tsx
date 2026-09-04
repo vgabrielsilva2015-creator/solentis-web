@@ -90,7 +90,7 @@ export default async function OcorrenciasTecnicoPage({
           </div>
 
           <Link
-            href="/tecnico/ocorrencias/nova"
+            href="/tecnico/ocorrencias/novo"
             className="rounded-md border border-green-700 bg-green-900/40 px-3 py-1.5 text-xs text-green-400 hover:bg-green-900/60 font-semibold flex items-center h-8"
           >
             + Nova

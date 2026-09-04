@@ -66,7 +66,7 @@ describe('RBAC — matriz completa de acesso por área × perfil', () => {
   it('Sub-rotas profundas respeitam o prefixo da área', () => {
     expect(isRouteAllowedForRole('/manutencao/equipamentos/abc', 'OPERATOR')).toBe(false)
     expect(isRouteAllowedForRole('/manutencao/equipamentos/abc', 'MAINTENANCE')).toBe(true)
-    expect(isRouteAllowedForRole('/gestor/manutencao/corretivas/nova', 'TECHNICIAN')).toBe(false)
+    expect(isRouteAllowedForRole('/gestor/manutencao/corretivas/novo', 'TECHNICIAN')).toBe(false)
   })
 })
 

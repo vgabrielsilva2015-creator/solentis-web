@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { SEVERITY_LABEL, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
 import { resolverOcorrencia } from '../actions'
 import { OccurrenceTimeline } from '@/components/occurrence-timeline'
+import { PhotoGallery } from '@/components/ui/photo-gallery'
 
 export default async function OperadorOcorrenciaDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -79,17 +80,11 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
             <p className="text-foreground leading-relaxed whitespace-pre-wrap">{occurrence.description}</p>
             
             {occurrence.photos.length > 0 && (
-              <div className="pt-2 flex flex-wrap gap-2">
-                {occurrence.photos.map((photo, i) => (
-                  <Link
-                    key={photo.id}
-                    href={`/api/occurrences/${occurrence.id}/photo?index=${i}`}
-                    target="_blank"
-                    className="inline-flex items-center gap-1.5 text-xs text-brand hover:text-brand-soft border border-border bg-card px-2 py-1 rounded"
-                  >
-                    Ver foto {i + 1} anexada →
-                  </Link>
-                ))}
+              <div className="pt-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+                  Fotos em Anexo
+                </span>
+                <PhotoGallery occurrenceId={occurrence.id} photos={occurrence.photos} />
               </div>
             )}
 

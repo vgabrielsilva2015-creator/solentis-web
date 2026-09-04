@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solentis · Proposta de UI do operador</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d1520; --bg2:#0a1119; --card:#141f2b; --card2:#1a2733; --line:#243543;
+    --text:#eef4f9; --sub:#a3b6c6; --mut:#7c92a4;
+    --teal:#3fd6cb; --teal-soft:rgba(63,214,203,.12);
+    --amber:#f2b63c; --amber-fg:#141c26;
+    --green:#3ddc97; --green-bg:rgba(61,220,151,.10); --green-line:rgba(61,220,151,.4);
+    --red:#f2707a; --red-bg:rgba(242,112,122,.12); --red-line:rgba(242,112,122,.4);
+    --orange:#f2984a;
+    --r:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    background:var(--bg2); color:var(--text);
+    font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
+    font-size:16px; line-height:1.45; padding-bottom:56px;
+  }
+  h1,h2,.sora{font-family:'Sora','IBM Plex Sans',sans-serif}
+
+  /* ===== casca da página de proposta ===== */
+  .top{max-width:480px;margin:0 auto;padding:22px 18px 8px}
+  .top h1{font-size:19px;font-weight:700}
+  .top p{color:var(--sub);font-size:13.5px;margin-top:4px}
+  .tag{display:inline-block;background:var(--teal-soft);color:var(--teal);border:1px solid rgba(63,214,203,.35);
+    border-radius:999px;font-size:11.5px;font-weight:600;padding:3px 10px;margin-bottom:8px}
+
+  .tabs{position:sticky;top:0;z-index:50;background:var(--bg2);border-bottom:1px solid var(--line);
+    display:flex;gap:6px;overflow-x:auto;padding:10px 14px;max-width:480px;margin:0 auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--sub);
+    border-radius:999px;padding:9px 15px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .tab.on{background:var(--teal-soft);border-color:rgba(63,214,203,.5);color:var(--teal)}
+
+  .screen{display:none;max-width:480px;margin:0 auto;padding:16px 14px 8px}
+  .screen.on{display:block}
+
+  /* anotações do que mudou */
+  .notes{margin:14px 2px 6px}
+  .notes h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+  .notes ul{list-style:none}
+  .notes li{color:var(--sub);font-size:13.5px;padding:3px 0 3px 22px;position:relative}
+  .notes li::before{content:"✓";color:var(--teal);position:absolute;left:2px;font-weight:700}
+
+  /* ===== moldura do celular ===== */
+  .phone{background:var(--bg);border:1px solid var(--line);border-radius:30px;overflow:hidden;
+    display:flex;flex-direction:column;min-height:740px;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+  .statusbar{display:flex;justify-content:space-between;align-items:center;padding:12px 22px 6px;
+    font-size:14px;font-weight:600}
+  .statusbar span:last-child{color:var(--sub);font-size:12px;letter-spacing:.05em}
+  .appbar{display:flex;align-items:center;gap:9px;padding:10px 16px 12px;border-bottom:1px solid var(--line)}
+  .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(150deg,#57e0d4,#1a8f9e);position:relative}
+  .logo::after{content:"";position:absolute;left:5px;right:5px;top:12px;height:3px;border-radius:2px;background:rgba(10,20,30,.55)}
+  .appbar b{font-family:'Sora';font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .role{background:rgba(63,214,203,.12);color:var(--teal);border:1px solid rgba(63,214,203,.3);
+    font-size:11px;font-weight:600;border-radius:999px;padding:2.5px 9px}
+  .appbar .sp{flex:1}
+  .appbar .sair{color:var(--sub);font-size:14px}
+
+  .body{flex:1;padding:18px 16px 22px;display:flex;flex-direction:column;gap:14px}
+  .h-title{font-size:23px;font-weight:700}
+  .h-sub{color:var(--sub);font-size:14px;margin-top:2px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px}
+  .muted{color:var(--sub);font-size:14px}
+  .tiny{color:var(--mut);font-size:12.5px}
+
+  /* botões: alvo mínimo 52px */
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:54px;
+    border-radius:14px;border:0;font-family:inherit;font-size:16.5px;font-weight:700;cursor:pointer}
+  .btn.primary{background:var(--amber);color:var(--amber-fg)}
+  .btn.ghost{background:transparent;border:1.5px dashed var(--line);color:var(--sub);font-weight:600}
+  .btn.line{background:var(--card2);border:1px solid var(--line);color:var(--text);font-weight:600}
+  .btn:active{transform:scale(.985)}
+
+  .links{display:flex;gap:18px;justify-content:center;padding-top:2px}
+  .links a{color:var(--sub);font-size:14px;text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+
+  /* card de turno */
+  .shift{border-radius:var(--r);padding:16px;border:1px solid var(--green-line);background:var(--green-bg)}
+  .shift .lab{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--green)}
+  .shift h2{font-size:21px;margin:3px 0 2px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;
+    padding:5px 11px;font-size:12.5px;color:var(--sub)}
+  .chip b{color:var(--text)}
+
+  /* item de lista acionável (card inteiro é o botão) */
+  .act{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:15px 16px;cursor:pointer;min-height:64px}
+  .act:active{background:var(--card2)}
+  .act .ic{width:38px;height:38px;border-radius:11px;background:var(--teal-soft);color:var(--teal);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 38px}
+  .act .tx{flex:1}
+  .act .tx b{font-size:16.5px}
+  .act .tx small{display:block;color:var(--sub);font-size:13.5px;margin-top:1px}
+  .act .go{color:var(--teal);font-weight:700;font-size:18px}
+  .act.done{opacity:.62}
+  .act.done .ic{background:var(--green-bg);color:var(--green)}
+
+  .alertrow{display:flex;align-items:center;gap:10px;background:transparent;border:1px solid var(--line);
+    border-radius:14px;padding:12px 14px;cursor:pointer}
+  .alertrow .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);flex:0 0 9px}
+  .alertrow span{flex:1;color:var(--sub);font-size:14px}
+  .alertrow span b{color:var(--text)}
+  .alertrow i{color:var(--teal);font-style:normal;font-weight:700}
+
+  /* bottom nav */
+  .nav{display:flex;border-top:1px solid var(--line);background:var(--bg);padding:8px 4px 14px}
+  .nav div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--mut);font-size:11px}
+  .nav div.on{color:var(--teal)}
+  .nav svg{width:22px;height:22px}
+
+  /* segmented (estados) */
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;margin:2px 0 12px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--sub);border-radius:9px;
+    padding:9px 4px;font-size:12.8px;font-weight:600;font-family:inherit;cursor:pointer}
+  .seg button.on{background:var(--teal-soft);color:var(--teal)}
+
+  /* wizard */
+  .steps{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .steps .s{flex:1;height:4px;border-radius:2px;background:var(--line)}
+  .steps .s.on{background:var(--teal)}
+  .rowr{display:flex;align-items:center;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line)}
+  .rowr:last-child{border-bottom:0}
+  .rowr .st{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:800;flex:0 0 26px}
+  .st.ok{background:var(--green-bg);color:var(--green)}
+  .st.warn{background:rgba(242,182,60,.14);color:var(--amber)}
+  .rowr span{flex:1;font-size:15px}
+  .rowr em{font-style:normal;color:var(--sub);font-size:13.5px}
+
+  textarea,input[type=text]{width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    color:var(--text);font-family:inherit;font-size:16px;padding:13px 14px;resize:none}
+  textarea::placeholder,input::placeholder{color:var(--mut)}
+  textarea:focus,input:focus{outline:none;border-color:rgba(63,214,203,.55)}
+  label.f{display:block;font-size:14.5px;font-weight:600;margin:4px 0 7px}
+  label.f small{color:var(--mut);font-weight:400}
+
+  .people{display:flex;gap:8px;flex-wrap:wrap}
+  .p-chip{border:1.5px solid var(--line);background:var(--card);color:var(--sub);border-radius:999px;
+    padding:10px 15px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;min-height:44px}
+  .p-chip.on{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+  .p-chip small{display:block;font-size:10.5px;font-weight:500;color:var(--mut)}
+
+  /* leitura: valor gigante */
+  .bigval{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--line);
+    border-radius:18px;padding:8px 18px}
+  .bigval input{border:0;background:transparent;font-size:42px;font-weight:700;width:100%;color:var(--text);
+    font-family:'Sora';padding:6px 0}
+  .bigval input:focus{outline:none}
+  .bigval.ok{border-color:var(--green-line)} .bigval.bad{border-color:var(--red-line)}
+  .feed{display:flex;align-items:center;gap:7px;font-size:14.5px;font-weight:600;min-height:22px}
+  .feed.ok{color:var(--green)} .feed.bad{color:var(--red)} .feed.idle{color:var(--mut);font-weight:400}
+
+  .opt{display:flex;align-items:center;gap:10px;border:1px dashed var(--line);border-radius:14px;
+    padding:13px 14px;color:var(--sub);font-size:14.5px;cursor:pointer;min-height:52px}
+  .opt i{font-style:normal;color:var(--teal);font-weight:700}
+
+  /* ocorrência: tipo e severidade */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .t-card{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:13px 12px;
+    cursor:pointer;font-family:inherit;color:var(--text);text-align:left;min-height:64px}
+  .t-card b{display:block;font-size:15px}
+  .t-card small{color:var(--mut);font-size:12px}
+  .t-card.on{border-color:var(--teal);background:var(--teal-soft)}
+  .sev{display:flex;flex-direction:column;gap:8px}
+  .sev button{display:flex;align-items:center;gap:11px;border-radius:13px;padding:12px 14px;cursor:pointer;
+    font-family:inherit;text-align:left;background:var(--card);border:1.5px solid var(--line);min-height:54px}
+  .sev .sd{width:12px;height:12px;border-radius:50%;flex:0 0 12px}
+  .sev b{color:var(--text);font-size:15px}
+  .sev small{display:block;color:var(--mut);font-size:12.5px}
+  .sev button.on{border-color:currentColor}
+  .sev .s1{color:var(--teal)} .sev .s2{color:var(--amber)} .sev .s3{color:var(--orange)} .sev .s4{color:var(--red)}
+  .sev .s1 .sd{background:var(--teal)} .sev .s2 .sd{background:var(--amber)}
+  .sev .s3 .sd{background:var(--orange)} .sev .s4 .sd{background:var(--red)}
+
+  .success{border:1px solid var(--green-line);background:var(--green-bg);border-radius:var(--r);
+    padding:22px 18px;text-align:center}
+  .success .em{font-size:34px}
+  .success h2{font-size:19px;margin:8px 0 4px}
+  .success p{color:var(--sub);font-size:14.5px}
+
+  .back{color:var(--sub);font-size:14.5px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .progressbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+  .progressbar i{display:block;height:100%;background:var(--teal);width:0%;transition:width .3s}
+  .sect{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="tag">Protótipo navegável · v1</span>
+  <h1>Nova visão do operador</h1>
+  <p>Proposta de UX/UI das Fases 2–5 do plano. Tudo aqui é clicável: navegue pelas abas e teste os fluxos antes de implementarmos. Tokens reais do app (Sora + IBM Plex, CTA âmbar, teal da marca).</p>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-s="home">Home</button>
+  <button class="tab" data-s="turnos">Turnos</button>
+  <button class="tab" data-s="passagem">Passar turno</button>
+  <button class="tab" data-s="leituras">Leituras</button>
+  <button class="tab" data-s="ocorrencias">Ocorrências</button>
+</div>
+
+<!-- ============================= HOME ============================= -->
+<section class="screen on" id="s-home">
+  <div class="phone">
+    <div class="statusbar"><span>15:42</span><span>●●● ᯤ 44</span></div>
+    <div class="appbar"><div class="logo"></div><b>solentis</b><span class="role">Operador</span><span class="sp"></span><span class="sair">Sair</span></div>
+    <div class="body">
+      <div>
+        <div class="h-title">Olá, Vitor</div>
+        <div class="h-sub">quarta-feira, 5 de agosto</div>
+      </div>
+
+      <div class="shift">
+        <div class="lab">Seu turno · em andamento</div>
+        <h2>Tarde</h2>
+        <div class="muted">14:00 – 22:00 · aberto há 1h 42min</div>
+        <div class="chips">
+          <span class="chip">Coletas <b>0/2</b></span>
+          <span class="chip">Ocorrências <b>0</b></span>
+          <span class="chip">Tarefas <b>—</b></span>
+        </div>
+      </div>
+
+      <div class="sect">Agora</div>
+      <div class="act" onclick="go('leituras')">
+        <div class="ic">pH</div>
+        <div class="tx"><b>Coleta · Entrada ETE</b><small>Esperado: entre 5 e 12</small></div>
+        <div class="go">→</div>
+      </div>
+      <div class="act" onclick="go('leituras')">
+        <div class="ic">pH</div>
+        <div class="tx"><b>Coleta · FLOTADOR 1</b><small>Esperado: entre 5 e 12</small></div>
+        <div class="go">→</div>
+      </div>
+      <div class="tiny" style="padding:0 4px">Sem tarefas neste turno.</div>
+
+      <div style="flex:1"></div>
+      <div class="alertrow">
+        <div class="dot"></div>
+        <span><b>5 produtos</b> abaixo do estoque mínimo</span>
+        <i>Registrar contagem →</i>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Painel</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Leituras</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Turnos</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>Ocorrências</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>Estoque</div>
+    </div>
+  </div>
+  <div class="notes">
+    <h3>O que mudou</h3>
+    <ul>
+      <li>O turno vira um card só, com estado claro; era a caixa verde + a de tarefa vazia + duas zeradas.</li>
+      <li>"Agora" é a lista de trabalho: tocar na coleta já abre o registro.</li>
+      <li>Morreram a seção Atalhos (repetia a nav), os cards de zero e o card gigante de tarefa vazia.</li>
+      <li>Estoque virou uma linha discreta com ação, no fim da tela.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================= TURNOS ============================= -->
+<section class="screen" id="s-turnos">
+  <div class="seg">
+    <button class="on" data-t="t0">Sem turno</button>
+    <button data-t="t1">Meu turno</button>
+    <button data-t="t2">Receber turno</button>
+  </div>
+
+  <div class="phone">
+    <div class="statusbar"><span>15:40</span><span>●●● ᯤ 45</span></div>
+    <div class="appbar"><div class="logo"></div><b>solentis</b><span class="role">Operador</span><span class="sp"></span><span class="sair">Sair</span></div>
+    <div class="body">
+      <div>
+        <div class="h-title">Turnos</div>
+        <div class="h-sub">São 15:40 · período da <b style="color:var(--text)">Tarde</b></div>
+      </div>
+
+      <!-- estado 0: sem turno -->
+      <div class="tstate" id="t0">
+        <div class="card" style="text-align:center;padding:26px 16px">
+          <div style="font-size:30px">🕒</div>
+          <h2 class="sora" style="font-size:19px;margin:8px 0 4px">Você não tem turno aberto</h2>
+          <p class="muted">O período da Tarde (14:00 – 22:00) está em andamento.</p>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn primary">Assumir turno da Tarde</button>
+        <div style="height:10px"></div>
+        <div class="tiny" style="text-align:center">O turno da Noite abre a partir das 21:00.</div>
+        <div style="height:14px"></div>
+        <div class="links"><a>Ver escala</a><a>Histórico</a></div>
+      </div>
+
+      <!-- estado 1: meu turno -->
+      <div class="tstate" id="t1" style="display:none">
+        <div class="shift">
+          <div class="lab">Seu turno · em andamento</div>
+          <h2>Tarde</h2>
+          <div class="muted">14:00 – 22:00 · aberto às 14:02 · há 1h 38min</div>
+          <div class="chips">
+            <span class="chip">Leituras <b>1/2</b></span>
+            <span class="chip">Ocorrências <b>0</b></span>
+            <span class="chip">Estoque <b>2 saídas</b></span>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn primary" onclick="go('passagem')">Passar turno</button>
+        <div style="height:14px"></div>
+        <div class="links"><a>Ver escala</a><a>Histórico</a></div>
+      </div>
+
+      <!-- estado 2: receber -->
+      <div class="tstate" id="t2" style="display:none">
+        <div class="card" style="border-color:rgba(242,182,60,.45)">
+          <div class="lab" style="font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--amber)">Passagem aguardando você</div>
+          <h2 class="sora" style="font-size:20px;margin:4px 0 2px">Adenilson está passando a Tarde</h2>
+          <div class="muted">Enviada às 15:38 · expira em 1h 42min</div>
+          <div class="chips">
+            <span class="chip">Leituras <b>1/2</b></span>
+            <span class="chip">Ocorrências <b>0</b></span>
+            <span class="chip">Observações <b>sim</b></span>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn primary">Receber turno</button>
+        <div style="height:8px"></div>
+        <button class="btn line">Ver resumo da passagem</button>
+        <div style="height:14px"></div>
+        <div class="links"><a>Ver escala</a><a>Histórico</a></div>
+      </div>
+
+    </div>
+    <div class="nav">
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Painel</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Leituras</div>
+      <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Turnos</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>Ocorrências</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>Estoque</div>
+    </div>
+  </div>
+  <div class="notes">
+    <h3>O que mudou</h3>
+    <ul>
+      <li>A tela responde uma pergunta: qual é a minha situação agora. Um card, uma ação.</li>
+      <li>Os 3 cards iguais com "Iniciar passagem…" morreram; "+ Abrir turno" livre também.</li>
+      <li>A janela de horário aparece ("Noite abre a partir das 21:00") e o servidor recusa fora dela.</li>
+      <li>Alterne os estados no controle acima para ver as três situações possíveis.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================= PASSAGEM ============================= -->
+<section class="screen" id="s-passagem">
+  <div class="phone">
+    <div class="statusbar"><span>21:54</span><span>●●● ᯤ 38</span></div>
+    <div class="appbar"><div class="logo"></div><b>solentis</b><span class="role">Operador</span><span class="sp"></span><span class="sair">Sair</span></div>
+    <div class="body" id="wizbody">
+
+      <div class="back" onclick="go('turnos')">← Turnos</div>
+      <div class="steps"><div class="s on" id="st1"></div><div class="s" id="st2"></div><div class="s" id="st3"></div></div>
+
+      <!-- passo 1 -->
+      <div class="wstep" id="w1">
+        <div class="h-title" style="font-size:20px">Confira o resumo do turno</div>
+        <div class="h-sub">O app montou sozinho. Só confira antes de passar.</div>
+        <div style="height:12px"></div>
+        <div class="card">
+          <div class="rowr"><div class="st warn">!</div><span>Leituras</span><em>1 de 2 · pendente: pH FLOTADOR 1</em></div>
+          <div class="rowr"><div class="st ok">✓</div><span>Ocorrências abertas</span><em>nenhuma</em></div>
+          <div class="rowr"><div class="st ok">✓</div><span>Saídas de estoque</span><em>2 registradas</em></div>
+          <div class="rowr"><div class="st ok">✓</div><span>Tarefas do turno</span><em>sem tarefas</em></div>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn primary" onclick="wiz(2)">Continuar</button>
+      </div>
+
+      <!-- passo 2 -->
+      <div class="wstep" id="w2" style="display:none">
+        <div class="h-title" style="font-size:20px">Observações e destinatário</div>
+        <div style="height:12px"></div>
+        <label class="f">Observações da passagem <small>(opcional)</small></label>
+        <textarea rows="4" placeholder="Ex.: bomba dosadora 2 com ruído, acompanhar no início do turno"></textarea>
+        <div style="height:14px"></div>
+        <label class="f">Quem recebe o turno da Noite</label>
+        <div class="people">
+          <button class="p-chip on">Adenilson R.<small>escalado · Noite</small></button>
+          <button class="p-chip">João P.</button>
+          <button class="p-chip">Maria S.</button>
+        </div>
+        <div style="height:16px"></div>
+        <button class="btn primary" onclick="wiz(3)">Continuar</button>
+        <div style="height:8px"></div>
+        <button class="btn line" onclick="wiz(1)">Voltar</button>
+      </div>
+
+      <!-- passo 3 -->
+      <div class="wstep" id="w3" style="display:none">
+        <div class="h-title" style="font-size:20px">Confirmar passagem</div>
+        <div style="height:12px"></div>
+        <div class="card">
+          <div class="rowr"><div class="st ok">→</div><span>Para</span><em>Adenilson Rosario</em></div>
+          <div class="rowr"><div class="st warn">!</div><span>Fica pendente</span><em>1 leitura (pH FLOTADOR 1)</em></div>
+          <div class="rowr"><div class="st ok">✓</div><span>Observações</span><em>1 anotação</em></div>
+        </div>
+        <div class="tiny" style="margin-top:10px">Adenilson recebe uma notificação e tem até as 23:54 para aceitar. Se não aceitar, o turno volta para você.</div>
+        <div style="height:14px"></div>
+        <button class="btn primary" onclick="wiz(4)">Passar turno</button>
+        <div style="height:8px"></div>
+        <button class="btn line" onclick="wiz(2)">Voltar</button>
+      </div>
+
+      <!-- concluído -->
+      <div class="wstep" id="w4" style="display:none">
+        <div class="success">
+          <div class="em">✓</div>
+          <h2>Turno passado</h2>
+          <p>Aguardando Adenilson receber.<br>Expira às 23:54.</p>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn line" onclick="wiz(1)">Rever protótipo do fluxo</button>
+      </div>
+
+    </div>
+    <div class="nav">
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Painel</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Leituras</div>
+      <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Turnos</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>Ocorrências</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>Estoque</div>
+    </div>
+  </div>
+  <div class="notes">
+    <h3>O que mudou</h3>
+    <ul>
+      <li>Passagem virou um assistente de 3 passos; o resumo o app monta sozinho a partir do turno.</li>
+      <li>A escala pré-seleciona quem recebe; dá para trocar com um toque.</li>
+      <li>O timeout que já existe no modelo aparece para o operador em linguagem simples.</li>
+      <li>Quem recebe vê o mesmo resumo na tela "Receber turno" (aba Turnos, 3º estado).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================= LEITURAS ============================= -->
+<section class="screen" id="s-leituras">
+  <div class="phone">
+    <div class="statusbar"><span>15:42</span><span>●●● ᯤ 44</span></div>
+    <div class="appbar"><div class="logo"></div><b>solentis</b><span class="role">Operador</span><span class="sp"></span><span class="sair">Sair</span></div>
+    <div class="body">
+
+      <!-- lista -->
+      <div class="lstep" id="l-list">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between">
+          <div>
+            <div class="h-title" style="font-size:22px">Leituras do dia</div>
+            <div class="h-sub">quarta-feira, 5 de agosto</div>
+          </div>
+          <a style="color:var(--sub);font-size:14px;border-bottom:1px solid var(--line)">Histórico</a>
+        </div>
+        <div style="height:12px"></div>
+        <div class="muted" style="display:flex;justify-content:space-between;margin-bottom:7px">
+          <span id="l-count">0 de 2 coletas feitas</span><b id="l-pct" style="color:var(--text)">0%</b>
+        </div>
+        <div class="progressbar"><i id="l-bar"></i></div>
+        <div style="height:16px"></div>
+
+        <div class="act" id="l-item1" onclick="openReg()">
+          <div class="ic">pH</div>
+          <div class="tx"><b>Entrada ETE</b><small>Esperado: entre 5 e 12</small></div>
+          <div class="go">→</div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="act" onclick="openReg()">
+          <div class="ic">pH</div>
+          <div class="tx"><b>FLOTADOR 1</b><small>Esperado: entre 5 e 12</small></div>
+          <div class="go">→</div>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn ghost">+ Registrar outra leitura</button>
+      </div>
+
+      <!-- registro -->
+      <div class="lstep" id="l-reg" style="display:none">
+        <div class="back" onclick="closeReg()">← Leituras do dia</div>
+        <div style="height:8px"></div>
+        <div class="h-title" style="font-size:21px">pH · Entrada ETE</div>
+        <div class="h-sub">Esperado: entre 5 e 12</div>
+        <div style="height:14px"></div>
+
+        <div class="bigval" id="bv">
+          <input inputmode="decimal" placeholder="0,0" id="phval" oninput="checkPH()">
+        </div>
+        <div style="height:8px"></div>
+        <div class="feed idle" id="phfeed">Digite o valor medido</div>
+        <div style="height:12px"></div>
+
+        <div class="opt">📷 Adicionar foto <span class="tiny" style="margin-left:auto">opcional</span></div>
+        <div style="height:8px"></div>
+        <div class="opt">✏️ Observação <span class="tiny" style="margin-left:auto">opcional</span></div>
+        <div class="tiny" style="margin-top:10px">Se a foto falhar, a leitura é salva mesmo assim; você pode anexar depois pelo histórico.</div>
+
+        <div style="flex:1;min-height:16px"></div>
+        <button class="btn primary" onclick="saveReading()">Salvar leitura</button>
+      </div>
+
+      <!-- salvo -->
+      <div class="lstep" id="l-done" style="display:none">
+        <div class="success">
+          <div class="em">✓</div>
+          <h2>Leitura salva</h2>
+          <p>pH 7,2 · Entrada ETE · dentro do limite<br>15:42 · por Vitor</p>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn primary" onclick="backToList()">Próxima coleta: FLOTADOR 1</button>
+        <div style="height:8px"></div>
+        <button class="btn line" onclick="backToList()">Voltar para a lista</button>
+      </div>
+
+    </div>
+    <div class="nav">
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Painel</div>
+      <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Leituras</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Turnos</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>Ocorrências</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>Estoque</div>
+    </div>
+  </div>
+  <div class="notes">
+    <h3>O que mudou</h3>
+    <ul>
+      <li>O card inteiro da coleta é o botão; sumiu o link pequeno "Registrar".</li>
+      <li>Caso feliz em 2 toques: valor (teclado numérico, aceita vírgula) → Salvar. Teste digitar 7,2 e depois 3.</li>
+      <li>"Limite: 5 – 12 adimensional" em fonte mono virou "Esperado: entre 5 e 12".</li>
+      <li>Foto e observação são visivelmente secundárias; falha de foto não derruba a leitura.</li>
+      <li>"Leitura Avulsa (fora do cronograma)" virou "Registrar outra leitura".</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================= OCORRÊNCIAS ============================= -->
+<section class="screen" id="s-ocorrencias">
+  <div class="phone">
+    <div class="statusbar"><span>15:40</span><span>●●● ᯤ 45</span></div>
+    <div class="appbar"><div class="logo"></div><b>solentis</b><span class="role">Operador</span><span class="sp"></span><span class="sair">Sair</span></div>
+    <div class="body">
+
+      <div class="ostep" id="o1">
+        <div class="h-title" style="font-size:21px">Nova ocorrência</div>
+        <div class="h-sub">Passo 1 de 2 · o que aconteceu</div>
+        <div style="height:12px"></div>
+        <label class="f">Descreva o que aconteceu</label>
+        <textarea rows="3" placeholder="Ex.: espuma em excesso no flotador 1 após dosagem"></textarea>
+        <div style="height:14px"></div>
+        <label class="f">Tipo</label>
+        <div class="grid2">
+          <button class="t-card" onclick="pick(this)"><b>💧 Vazamento</b><small>líquido ou químico</small></button>
+          <button class="t-card" onclick="pick(this)"><b>⚙️ Equipamento</b><small>falha ou ruído</small></button>
+          <button class="t-card on" onclick="pick(this)"><b>📈 Parâmetro</b><small>fora do esperado</small></button>
+          <button class="t-card" onclick="pick(this)"><b>📋 Outro</b><small>demais situações</small></button>
+        </div>
+        <div style="height:14px"></div>
+        <label class="f">Severidade</label>
+        <div class="sev">
+          <button class="s1" onclick="pickSev(this)"><span class="sd"></span><span><b>Baixa</b><small>sem impacto imediato</small></span></button>
+          <button class="s2 on" onclick="pickSev(this)"><span class="sd"></span><span><b>Média</b><small>acompanhar durante o turno</small></span></button>
+          <button class="s3" onclick="pickSev(this)"><span class="sd"></span><span><b>Alta</b><small>afeta o tratamento</small></span></button>
+          <button class="s4" onclick="pickSev(this)"><span class="sd"></span><span><b>Crítica</b><small>parada ou risco de não conformidade</small></span></button>
+        </div>
+        <div style="height:16px"></div>
+        <button class="btn primary" onclick="ostep(2)">Continuar</button>
+      </div>
+
+      <div class="ostep" id="o2" style="display:none">
+        <div class="back" onclick="ostep(1)">← Voltar</div>
+        <div style="height:6px"></div>
+        <div class="h-title" style="font-size:21px">Detalhes</div>
+        <div class="h-sub">Passo 2 de 2 · tudo aqui é opcional</div>
+        <div style="height:12px"></div>
+        <label class="f">Ponto de coleta</label>
+        <div class="people">
+          <button class="p-chip">Nenhum</button>
+          <button class="p-chip">Entrada ETE</button>
+          <button class="p-chip on">FLOTADOR 1</button>
+          <button class="p-chip">FLOTADOR 2</button>
+        </div>
+        <div style="height:14px"></div>
+        <label class="f">Ação imediata executada</label>
+        <textarea rows="3" placeholder="Ex.: reduzi a dosagem de polímero e isolei a linha"></textarea>
+        <div style="height:14px"></div>
+        <div class="opt">📷 Adicionar fotos (0/3) <span class="tiny" style="margin-left:auto">opcional</span></div>
+        <div style="height:16px"></div>
+        <button class="btn primary" onclick="ostep(3)">Registrar ocorrência</button>
+      </div>
+
+      <div class="ostep" id="o3" style="display:none">
+        <div class="success">
+          <div class="em">✓</div>
+          <h2>Ocorrência registrada</h2>
+          <p>Parâmetro fora do esperado · Média · FLOTADOR 1<br>O gestor foi notificado.</p>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn line" onclick="ostep(1)">Registrar outra</button>
+      </div>
+
+    </div>
+    <div class="nav">
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Painel</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>Leituras</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Turnos</div>
+      <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>Ocorrências</div>
+      <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>Estoque</div>
+    </div>
+  </div>
+  <div class="notes">
+    <h3>O que mudou</h3>
+    <ul>
+      <li>Os 3 selects nativos viraram botões grandes: tipo em cards, severidade com cor e descrição de 1 linha.</li>
+      <li>Formulário dividido em 2 passos: primeiro o essencial, depois os opcionais.</li>
+      <li>Dá para registrar tudo só com o polegar, sem abrir dropdown.</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+  // navegação entre abas
+  function go(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+    document.getElementById('s-'+name).classList.add('on');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.s===name));
+    window.scrollTo({top:0});
+  }
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>go(t.dataset.s)));
+
+  // estados da tela Turnos
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    ['t0','t1','t2'].forEach(id=>document.getElementById(id).style.display = (id===b.dataset.t?'block':'none'));
+  }));
+
+  // wizard de passagem
+  function wiz(n){
+    for(let i=1;i<=4;i++) document.getElementById('w'+i).style.display = (i===n?'block':'none');
+    for(let i=1;i<=3;i++) document.getElementById('st'+i).classList.toggle('on', i<=Math.min(n,3));
+  }
+
+  // leituras
+  function openReg(){ show('l-reg') }
+  function closeReg(){ show('l-list') }
+  function show(id){ ['l-list','l-reg','l-done'].forEach(x=>document.getElementById(x).style.display=(x===id?'block':'none')) }
+  function checkPH(){
+    const raw = document.getElementById('phval').value.replace(',','.');
+    const bv = document.getElementById('bv'), f = document.getElementById('phfeed');
+    if(raw===''){ bv.className='bigval'; f.className='feed idle'; f.textContent='Digite o valor medido'; return }
+    const v = parseFloat(raw);
+    if(isNaN(v)){ bv.className='bigval'; f.className='feed idle'; f.textContent='Use números (vírgula vale: 7,2)'; return }
+    if(v>=5 && v<=12){ bv.className='bigval ok'; f.className='feed ok'; f.textContent='✓ Dentro do limite' }
+    else { bv.className='bigval bad'; f.className='feed bad'; f.textContent='Fora do limite (5 a 12). Uma ocorrência será sugerida.' }
+  }
+  function saveReading(){ show('l-done') }
+  function backToList(){
+    show('l-list');
+    const it = document.getElementById('l-item1');
+    it.classList.add('done'); it.onclick=null;
+    it.querySelector('.ic').textContent='✓';
+    it.querySelector('.tx small').textContent='7,2 · dentro do limite · 15:42';
+    it.querySelector('.go').textContent='';
+    document.getElementById('l-count').textContent='1 de 2 coletas feitas';
+    document.getElementById('l-pct').textContent='50%';
+    document.getElementById('l-bar').style.width='50%';
+  }
+
+  // ocorrências
+  function ostep(n){ ['o1','o2','o3'].forEach((x,i)=>document.getElementById(x).style.display=(i===n-1?'block':'none')) }
+  function pick(el){ el.parentElement.querySelectorAll('.t-card').forEach(x=>x.classList.remove('on')); el.classList.add('on') }
+  function pickSev(el){ el.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on')); el.classList.add('on') }
+</script>
+</body>
+</html>

@@ -87,7 +87,7 @@ export default async function OcorrenciasOperadorPage({
             </Link>
           </div>
 
-          <Link href="/operador/ocorrencias/nova">
+          <Link href="/operador/ocorrencias/novo">
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8 font-semibold">
               + Nova
             </Button>

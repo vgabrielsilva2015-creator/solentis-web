@@ -4,7 +4,7 @@ import { getTenantId } from '@/lib/tenant'
 import { APP_TIMEZONE } from '@/lib/date-utils'
 import { DashboardClient } from './dashboard-client'
 
-export const dynamic = 'force-dynamic'
+
 
 // COUNT retorna bigint no $queryRaw — normaliza para number
 const num = (v: unknown): number => Number(v as bigint)

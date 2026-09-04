@@ -68,7 +68,7 @@ export default async function AnalisesPage({
               </Link>
             )}
             {session.user.role === 'TECHNICIAN' && (
-              <Link href="/tecnico/analises/nova">
+              <Link href="/tecnico/analises/novo">
                 <Button className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-8">
                   + Nova
                 </Button>
