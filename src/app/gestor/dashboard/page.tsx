@@ -125,11 +125,12 @@ export default async function GestorDashboard({
     measCounts(Prisma.raw('external_analyses'), Prisma.raw('collected_at')),
     prisma.$queryRaw<Array<{ open_total: bigint; open_critical: bigint; open_other: bigint }>>(Prisma.sql`
       SELECT
-        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') ${pointSql}) AS open_total,
+        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS')) AS open_total,
         COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') AND severity = 'CRITICAL') AS open_critical,
         COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') AND severity IN ('HIGH','MEDIUM','LOW')) AS open_other
       FROM occurrences
       WHERE tenant_id = ${tenant_id}
+        ${pointSql}
     `),
     // Sparkline
     prisma.reading.findMany({ where: { tenant_id, created_at: { gte: sevenDaysAgo }, ...pointCond }, select: { created_at: true } }),
