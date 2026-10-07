@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { registrarAnalise, type AnaliseFormState } from '../actions'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
+import { numeroOuNaN } from '@/lib/number-ptbr'
 
 const DRAFT_KEY = 'analysis_draft'
 
@@ -105,7 +106,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
   // Verificação de não-conformidade em tempo real
   const nonConformant: boolean | null = (() => {
     if (!selectedParam || valueStr === '') return null
-    const v = parseFloat(valueStr)
+    const v = numeroOuNaN(valueStr)
     if (isNaN(v)) return null
     return calcularNaoConformidade(v, selectedParam.min_limit, selectedParam.max_limit) ?? null
   })()
@@ -191,7 +192,7 @@ export function AnalysisForm({ collectionPoints, parameters, methods }: Props) {
           <div className="relative">
             <Input
               id="value" name="value"
-              type="number" step="0.001" inputMode="decimal"
+              type="text" autoComplete="off" inputMode="decimal"
               placeholder="0,000"
               value={valueStr}
               onChange={(e) => setValueStr(e.target.value)}

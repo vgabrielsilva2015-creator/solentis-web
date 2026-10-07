@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
@@ -35,10 +36,8 @@ const LeituraSchema = z
       (v) => (v === '' || v == null ? null : String(v)),
       z.string().nullable(),
     ),
-    value: z.preprocess(
-      (v) => (v === '' || v == null ? null : Number(v)),
-      z.number().nullable(),
-    ),
+    // T-16: aceita 7,2 e 7.2; mensagens em português
+    value: numeroBROpcional({ rotulo: 'O valor medido' }),
     unit: z.preprocess(
       (v) => (v === '' || v == null ? null : String(v)),
       z.string().nullable(),

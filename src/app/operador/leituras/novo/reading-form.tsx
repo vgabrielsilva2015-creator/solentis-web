@@ -12,6 +12,7 @@ import { compressFilesInInput, sumBytes, MAX_TOTAL_UPLOAD_BYTES, formatMB } from
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { newClientId, type QueuedReading } from '@/lib/offline-queue/core'
 import { idbAvailable, idbStore } from '@/lib/offline-queue/idb-store'
+import { numeroOuNaN } from '@/lib/number-ptbr'
 
 const DRAFT_KEY = 'reading_draft'
 
@@ -212,7 +213,7 @@ export function ReadingForm({
   const nonConformant: boolean | null = (() => {
     if (!selectedParam || valueStr === '') return null
     // Aceita vírgula decimal (padrão brasileiro): "7,2" → 7.2
-    const v = parseFloat(valueStr.replace(',', '.'))
+    const v = numeroOuNaN(valueStr)
     if (isNaN(v)) return null
     return calcularNaoConformidade(v, selectedParam.min_limit, selectedParam.max_limit) ?? null
   })()

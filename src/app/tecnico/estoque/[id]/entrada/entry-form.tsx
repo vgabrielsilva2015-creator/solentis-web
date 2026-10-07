@@ -36,10 +36,8 @@ export function TecnicoEntryForm({ productId, productName, unit }: Props) {
         <label className="text-sm text-foreground">Quantidade recebida ({unit}) *</label>
         <input
           name="quantity"
-          type="number"
+          type="text" autoComplete="off"
           inputMode="decimal"
-          min="0.01"
-          step="0.01"
           required
           className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="0"

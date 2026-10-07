@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
@@ -37,14 +38,8 @@ export async function carregarParametro(id: string) {
 const ParametroSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   unit: z.string().min(1, 'Informe a unidade'),
-  min_limit: z.preprocess(
-    (v) => (v === '' || v == null ? null : Number(v)),
-    z.number().nullable(),
-  ),
-  max_limit: z.preprocess(
-    (v) => (v === '' || v == null ? null : Number(v)),
-    z.number().nullable(),
-  ),
+  min_limit: numeroBROpcional({ rotulo: 'O limite mínimo' }),
+  max_limit: numeroBROpcional({ rotulo: 'O limite máximo' }),
   legal_reference: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),

@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
@@ -32,13 +33,7 @@ const TemplateSchema = z.object({
     z.string().nullable(),
   ),
   requires_photo: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
-  sort_order: z.preprocess(
-    (v) => {
-      const n = parseInt(String(v ?? ''), 10)
-      return isNaN(n) ? 0 : n
-    },
-    z.number().int().min(0).max(999),
-  ),
+  sort_order: numeroBROpcional({ inteiro: true, min: 0, max: 999, rotulo: 'A ordem' }).transform((n) => n ?? 0),
 })
 
 // ─── Form state ───────────────────────────────────────────────────────────────

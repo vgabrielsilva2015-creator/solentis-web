@@ -85,7 +85,7 @@ function ParametroSheetForm({ parametro, onSaved }: { parametro: Parametro; onSa
           <label htmlFor="min_limit" className="text-sm font-medium text-foreground">
             Limite mínimo <span className="text-muted-foreground font-normal">(opcional)</span>
           </label>
-          <Input id="min_limit" name="min_limit" type="number" step="0.01" inputMode="decimal"
+          <Input id="min_limit" name="min_limit" type="text" autoComplete="off" inputMode="decimal"
             defaultValue={parametro.min_limit ?? ''} disabled={isPending}
             className="border-border bg-muted text-foreground focus-visible:ring-ring" />
         </div>
@@ -93,7 +93,7 @@ function ParametroSheetForm({ parametro, onSaved }: { parametro: Parametro; onSa
           <label htmlFor="max_limit" className="text-sm font-medium text-foreground">
             Limite máximo <span className="text-muted-foreground font-normal">(opcional)</span>
           </label>
-          <Input id="max_limit" name="max_limit" type="number" step="0.01" inputMode="decimal"
+          <Input id="max_limit" name="max_limit" type="text" autoComplete="off" inputMode="decimal"
             defaultValue={parametro.max_limit ?? ''} disabled={isPending}
             className="border-border bg-muted text-foreground focus-visible:ring-ring" />
           {state.fieldErrors?.max_limit && <p className="text-xs text-red-400">{state.fieldErrors.max_limit[0]}</p>}

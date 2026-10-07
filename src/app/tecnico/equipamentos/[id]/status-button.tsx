@@ -135,8 +135,7 @@ export function StatusButton({
                 Custo Real (R$)
               </label>
               <Input
-                type="number"
-                step="0.01"
+                type="text" autoComplete="off" inputMode="decimal"
                 placeholder="0.00"
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}

@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { registrarContagem } from '../../actions'
 import { calcularDivergencia, formatarQuantidade } from '@/lib/stock-utils'
+import { numeroOuNaN } from '@/lib/number-ptbr'
 
 type Props = {
   productId:        string
@@ -25,7 +26,7 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
     return result
   }, null)
 
-  const qtyNum      = parseFloat(qty)
+  const qtyNum      = numeroOuNaN(qty)
   const divergencia = !isNaN(qtyNum) && qty !== '' ? calcularDivergencia(estoqueCalculado, qtyNum) : null
 
   return (
@@ -42,10 +43,8 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
         <label className="text-sm text-foreground">Quantidade contada ({unit}) *</label>
         <input
           name="counted_quantity"
-          type="number"
+          type="text" autoComplete="off"
           inputMode="decimal"
-          min="0"
-          step="0.01"
           required
           value={qty}
           onChange={(e) => setQty(e.target.value)}

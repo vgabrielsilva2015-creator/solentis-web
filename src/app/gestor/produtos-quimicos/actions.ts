@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
@@ -39,10 +40,7 @@ const ProdutoSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(20).nullable(),
   ),
-  min_stock: z.preprocess(
-    (v) => parseFloat(String(v)),
-    z.number({ error: 'Estoque mínimo inválido' }).min(0, { error: 'Deve ser maior ou igual a 0' }),
-  ),
+  min_stock: numeroBR({ min: 0, rotulo: 'O estoque mínimo', obrigatorio: 'Informe o estoque mínimo.' }),
   description: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
@@ -51,10 +49,7 @@ const ProdutoSchema = z.object({
 
 const EntradaSchema = z.object({
   product_id:     z.string().min(1, { error: 'Produto obrigatório' }),
-  quantity:       z.preprocess(
-    (v) => parseFloat(String(v)),
-    z.number({ error: 'Quantidade inválida' }).positive({ error: 'Quantidade deve ser maior que 0' }),
-  ),
+  quantity:       numeroBR({ positivo: true, rotulo: 'A quantidade', obrigatorio: 'Informe a quantidade.' }),
   supplier:       z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),

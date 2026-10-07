@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getTenantId } from '@/lib/tenant'
@@ -19,10 +20,7 @@ const TurnoSchema = z.object({
   start_time:               z.string().regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
   end_time:                 z.string().regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
   crosses_midnight:         z.preprocess((v) => v === 'on', z.boolean()),
-  handover_timeout_minutes: z.preprocess(
-    (v) => parseInt(String(v), 10),
-    z.number().int().min(30, 'Mínimo 30 minutos').max(480, 'Máximo 480 minutos (8h)'),
-  ),
+  handover_timeout_minutes: numeroBR({ inteiro: true, min: 30, max: 480, rotulo: 'O tempo de passagem (min)', obrigatorio: 'Informe o tempo de passagem em minutos' }),
 })
 
 export type TurnoFormState = {

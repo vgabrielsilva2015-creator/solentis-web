@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { lockProduct, saldoAtual } from '@/lib/stock-lock'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
@@ -23,10 +24,8 @@ async function requireOperator() {
 
 const SaidaSchema = z.object({
   product_id: z.string().min(1, { error: 'Produto obrigatório' }),
-  quantity:   z.preprocess(
-    (v) => parseFloat(String(v)),
-    z.number({ error: 'Quantidade inválida' }).positive({ error: 'Quantidade deve ser maior que 0' }),
-  ),
+  // T-16: antes parseFloat('2,5') gravava 2
+  quantity:   numeroBR({ positivo: true, rotulo: 'A quantidade', obrigatorio: 'Informe a quantidade.' }),
   notes:   z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
@@ -36,10 +35,7 @@ const SaidaSchema = z.object({
 
 const ContagemSchema = z.object({
   product_id:       z.string().min(1, { error: 'Produto obrigatório' }),
-  counted_quantity: z.preprocess(
-    (v) => parseFloat(String(v)),
-    z.number({ error: 'Quantidade inválida' }).min(0, { error: 'Deve ser maior ou igual a 0' }),
-  ),
+  counted_quantity: numeroBR({ min: 0, rotulo: 'A quantidade contada', obrigatorio: 'Informe a quantidade contada.' }),
   notes:      z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),

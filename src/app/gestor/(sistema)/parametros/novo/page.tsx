@@ -61,7 +61,7 @@ export default function NovoParametroPage() {
                   Limite mínimo <span className="font-normal text-muted-foreground">(opcional)</span>
                 </label>
                 <Input
-                  id="min_limit" name="min_limit" type="number" step="0.01"
+                  id="min_limit" name="min_limit" type="text" autoComplete="off" inputMode="decimal"
                   placeholder="—"
                   disabled={isPending}
                   className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
@@ -73,7 +73,7 @@ export default function NovoParametroPage() {
                   Limite máximo <span className="font-normal text-muted-foreground">(opcional)</span>
                 </label>
                 <Input
-                  id="max_limit" name="max_limit" type="number" step="0.01"
+                  id="max_limit" name="max_limit" type="text" autoComplete="off" inputMode="decimal"
                   placeholder="—"
                   disabled={isPending}
                   className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"

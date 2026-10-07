@@ -80,7 +80,7 @@ export function CorrectiveForm({ equipamentoId }: { equipamentoId: string }) {
         </label>
         <input
           id="estimated_cost" name="estimated_cost"
-          type="number" step="0.01" min="0"
+          type="text" autoComplete="off" inputMode="decimal"
           className="w-full rounded-md border border-border bg-muted text-foreground px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           placeholder="0,00"
         />

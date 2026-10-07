@@ -3,6 +3,8 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR, numeroBROpcional } from '@/lib/zod-ptbr'
+import { INVALIDO, parseNumeroBR } from '@/lib/number-ptbr'
 import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
@@ -36,14 +38,7 @@ const EquipamentoSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
   ),
-  preventive_frequency_days: z.preprocess(
-    (v) => {
-      if (v === '' || v == null) return null
-      const n = parseInt(String(v), 10)
-      return isNaN(n) ? null : n
-    },
-    z.number({ error: 'Informe a frequência em dias' }).int().min(1, 'Mínimo de 1 dia'),
-  ),
+  preventive_frequency_days: numeroBR({ inteiro: true, min: 1, rotulo: 'A frequência', obrigatorio: 'Informe a frequência em dias' }),
   manufacturer: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().nullable(),
@@ -69,14 +64,8 @@ const CorretivaSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(2000).nullable(),
   ),
-  estimated_cost: z.preprocess(
-    (v) => {
-      if (v === '' || v == null) return null
-      const n = parseFloat(String(v))
-      return isNaN(n) ? null : String(n)
-    },
-    z.string().nullable(),
-  ),
+  // T-16: antes "1.500,00" virava 1,5 (e texto inválido era ignorado em silêncio)
+  estimated_cost: numeroBROpcional({ min: 0, rotulo: 'O custo estimado' }).transform((n) => (n == null ? null : String(n))),
 })
 
 // ─── Form state types ─────────────────────────────────────────────────────────
@@ -435,6 +424,14 @@ export async function atualizarStatusCorretiva(
 
   const tenantId = await getTenantId()
 
+  // T-16: custo digitado em português ("1.500,00"); antes ia cru para o Decimal e quebrava
+  let actualCost: string | undefined
+  if (payload?.actual_cost) {
+    const n = parseNumeroBR(payload.actual_cost)
+    if (n === INVALIDO || (n !== null && n < 0)) return { error: 'Custo inválido. Use, por exemplo, 1.500,00 ou 1500.00.' }
+    actualCost = n === null ? undefined : String(n)
+  }
+
   const corretiva = await prisma.correctiveMaintenance.findFirst({
     where: { id: corretivaId, tenant_id: tenantId },
     select: { status: true, equipment_id: true, description: true, estimated_cost: true, responsible_id: true },
@@ -453,7 +450,7 @@ export async function atualizarStatusCorretiva(
       data: {
         status,
         end_date: (status === 'COMPLETED' || status === 'VALIDATED') ? new Date() : undefined,
-        actual_cost: payload?.actual_cost ? payload.actual_cost : undefined,
+        actual_cost: actualCost,
         notes: payload?.notes ? payload.notes : undefined,
       },
     })
@@ -470,7 +467,7 @@ export async function atualizarStatusCorretiva(
           equipment_id:   corretiva.equipment_id,
           type:           'CORRECTIVE',
           description:    `OS Concluída: ${corretiva.description}` + (payload?.notes ? ` (Resolução: ${payload.notes})` : ''),
-          cost:           payload?.actual_cost ? payload.actual_cost : (corretiva.estimated_cost ? String(corretiva.estimated_cost) : null),
+          cost:           actualCost ?? (corretiva.estimated_cost ? String(corretiva.estimated_cost) : null),
           performed_by:   respUser?.name || 'Responsável',
         }
       })

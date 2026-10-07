@@ -13,6 +13,7 @@ import { TrendBlock } from './components/trend-block'
 import { HeatmapBlock } from './components/heatmap-block'
 import { FeedBlock } from './components/feed-block'
 import { StatusBlock } from './components/status-block'
+import { numeroOuNaN } from '@/lib/number-ptbr'
 
 interface DashboardClientProps {
   dbTotalRegistersToday: number
@@ -441,8 +442,8 @@ export function DashboardClient({
 
     const selectedParamObj = dbParameters.find(p => p.id === modalParameterId)
     const isModalValueNonConformant = selectedParamObj && modalValue !== '' && (
-      (selectedParamObj.min_limit !== undefined && selectedParamObj.min_limit !== null && Number(modalValue) < selectedParamObj.min_limit) ||
-      (selectedParamObj.max_limit !== undefined && selectedParamObj.max_limit !== null && Number(modalValue) > selectedParamObj.max_limit)
+      (selectedParamObj.min_limit !== undefined && selectedParamObj.min_limit !== null && numeroOuNaN(modalValue) < selectedParamObj.min_limit) ||
+      (selectedParamObj.max_limit !== undefined && selectedParamObj.max_limit !== null && numeroOuNaN(modalValue) > selectedParamObj.max_limit)
     )
 
     return (
@@ -569,8 +570,7 @@ export function DashboardClient({
                       Valor Medido
                     </label>
                     <input
-                      type="number"
-                      step="any"
+                      type="text" autoComplete="off"
                       required
                       inputMode="decimal"
                       value={modalValue}

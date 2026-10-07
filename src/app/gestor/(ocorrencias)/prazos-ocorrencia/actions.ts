@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
@@ -16,10 +17,10 @@ async function requireManager() {
 }
 
 const PrazosSchema = z.object({
-  CRITICAL: z.preprocess((v) => parseInt(String(v), 10), z.number().int().min(1, 'Mínimo 1 hora')),
-  HIGH:     z.preprocess((v) => parseInt(String(v), 10), z.number().int().min(1, 'Mínimo 1 hora')),
-  MEDIUM:   z.preprocess((v) => parseInt(String(v), 10), z.number().int().min(1, 'Mínimo 1 hora')),
-  LOW:      z.preprocess((v) => parseInt(String(v), 10), z.number().int().min(1, 'Mínimo 1 hora')),
+  CRITICAL: numeroBR({ inteiro: true, min: 1, rotulo: 'O prazo (horas)', obrigatorio: 'Informe o prazo em horas' }),
+  HIGH:     numeroBR({ inteiro: true, min: 1, rotulo: 'O prazo (horas)', obrigatorio: 'Informe o prazo em horas' }),
+  MEDIUM:   numeroBR({ inteiro: true, min: 1, rotulo: 'O prazo (horas)', obrigatorio: 'Informe o prazo em horas' }),
+  LOW:      numeroBR({ inteiro: true, min: 1, rotulo: 'O prazo (horas)', obrigatorio: 'Informe o prazo em horas' }),
 })
 
 export type PrazosFormState = {

@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
@@ -33,14 +34,7 @@ async function requireTechnicianOrManager() {
 const AnaliseSchema = z.object({
   collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
   parameter_id:        z.string().min(1, 'Selecione o parâmetro'),
-  value: z.preprocess(
-    (v) => {
-      if (v === '' || v == null) return null
-      const n = Number(v)
-      return isNaN(n) ? null : n
-    },
-    z.number({ error: 'Informe o valor medido' }),
-  ),
+  value: numeroBR({ rotulo: 'O valor medido', obrigatorio: 'Informe o valor medido' }),
   report_text: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(5000, 'Laudo deve ter no máximo 5000 caracteres').nullable(),
