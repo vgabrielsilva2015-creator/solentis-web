@@ -481,6 +481,8 @@ model Reading {
   origin              String   @default("MANUAL")
   metadata_origin     String?
   photo_filename      String?
+  // T-15: id gerado no aparelho; reenvio da fila offline não duplica a leitura
+  client_id           String?
   recorded_by         String
   recorded_at         DateTime
   created_at          DateTime @default(now())
@@ -496,6 +498,7 @@ model Reading {
   @@index([parameter_id])
   @@index([shift_instance_id])
   @@index([tenant_id, is_non_conformant, created_at])
+  @@unique([tenant_id, client_id])
   @@map("readings")
 }
 

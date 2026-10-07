@@ -16,6 +16,10 @@ import { getLogger } from '@/lib/logger'
 const MAX_IMG_BYTES = 5 * 1024 * 1024
 
 
+function isUniqueViolation(err: unknown): boolean {
+  return !!err && typeof err === 'object' && (err as { code?: string }).code === 'P2002'
+}
+
 async function requireOperator() {
   const session = await auth()
   if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
@@ -44,6 +48,11 @@ const LeituraSchema = z
       z.string().max(1000, 'Observação deve ter no máximo 1000 caracteres').nullable(),
     ),
     recorded_at: z.string().min(1, 'Informe a data/hora da leitura'),
+    // T-15: id gerado no aparelho; o mesmo id enviado de novo não duplica a leitura
+    client_id: z.preprocess(
+      (v) => (v === '' || v == null ? null : String(v)),
+      z.string().regex(/^[A-Za-z0-9-]{8,64}$/, 'Identificador inválido').nullable(),
+    ),
   })
   .refine((d) => d.parameter_id === null || d.value !== null, {
     message: 'Informe o valor medido',
@@ -55,6 +64,8 @@ export type LeituraFormState = {
   fieldErrors?: Record<string, string[]>
   success?: boolean
   warning?: string
+  /** T-15: a leitura com este client_id já tinha sido registrada (reenvio). */
+  duplicate?: boolean
 }
 
 // ─── Registrar leitura ────────────────────────────────────────────────────────
@@ -72,6 +83,7 @@ export async function registrarLeitura(
     unit:                formData.get('unit'),
     notes:               formData.get('notes'),
     recorded_at:         formData.get('recorded_at'),
+    client_id:           formData.get('client_id'),
   })
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
@@ -79,6 +91,16 @@ export async function registrarLeitura(
 
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
+
+  // T-15: reenvio (fila offline, duplo toque, resposta perdida) → não duplica
+  const clientId = parsed.data.client_id
+  if (clientId) {
+    const existente = await prisma.reading.findUnique({
+      where: { tenant_id_client_id: { tenant_id: await getTenantId(), client_id: clientId } },
+      select: { id: true },
+    })
+    if (existente) return { success: true, duplicate: true }
+  }
 
   let isNonConformant: boolean | null = null
   let unit = parsed.data.unit
@@ -154,50 +176,58 @@ export async function registrarLeitura(
   }
 
   let postCommitHooks: Array<() => Promise<void>> = []
-  await prisma.$transaction(async (tx) => {
-    const reading = await tx.reading.create({
-      data: {
-        tenant_id:           (await getTenantId()),
-        collection_point_id: parsed.data.collection_point_id,
-        parameter_id:        parsed.data.parameter_id,
-        shift_instance_id:   activeInstance?.id ?? null,
-        value:               parsed.data.value,
-        unit,
-        notes:               parsed.data.notes,
-        is_non_conformant:   isNonConformant,
-        origin:              'MANUAL',
-        photo_filename:      photoFilename,
-        recorded_by:         userId,
-        recorded_at:         localInputToUTC(parsed.data.recorded_at),
-      },
-    })
-
-    // Se estiver fora da faixa, abre automaticamente uma ocorrência
-    if (isNonConformant && parsed.data.parameter_id) {
-      const tenantId = await getTenantId()
-      const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-        where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
-      })
-      const deadlineHours = defaultSeverity?.deadline_hours || 24
-      const deadline = new Date()
-      deadline.setHours(deadline.getHours() + deadlineHours)
-
-      const occurrence = await tx.occurrence.create({
+  try {
+    await prisma.$transaction(async (tx) => {
+      const reading = await tx.reading.create({
         data: {
-          tenant_id:   tenantId,
-          description: `Não Conformidade (${paramName}): Leitura registrada = ${parsed.data.value} ${unit ?? ''}. O valor está fora dos limites aceitáveis.`,
-          severity:    'HIGH',
-          status:      'OPEN',
-          type:        'OPERATIONAL',
-          deadline,
-          reported_by: userId,
+          tenant_id:           (await getTenantId()),
           collection_point_id: parsed.data.collection_point_id,
-        }
+          parameter_id:        parsed.data.parameter_id,
+          shift_instance_id:   activeInstance?.id ?? null,
+          value:               parsed.data.value,
+          unit,
+          notes:               parsed.data.notes,
+          is_non_conformant:   isNonConformant,
+          origin:              'MANUAL',
+          photo_filename:      photoFilename,
+          client_id:           clientId,
+          recorded_by:         userId,
+          recorded_at:         localInputToUTC(parsed.data.recorded_at),
+        },
       })
-      const hook = await handleNewOccurrence(tx, occurrence)
-      if (hook) postCommitHooks.push(hook)
-    }
-  })
+
+      // Se estiver fora da faixa, abre automaticamente uma ocorrência
+      if (isNonConformant && parsed.data.parameter_id) {
+        const tenantId = await getTenantId()
+        const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
+          where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
+        })
+        const deadlineHours = defaultSeverity?.deadline_hours || 24
+        const deadline = new Date()
+        deadline.setHours(deadline.getHours() + deadlineHours)
+
+        const occurrence = await tx.occurrence.create({
+          data: {
+            tenant_id:   tenantId,
+            description: `Não Conformidade (${paramName}): Leitura registrada = ${parsed.data.value} ${unit ?? ''}. O valor está fora dos limites aceitáveis.`,
+            severity:    'HIGH',
+            status:      'OPEN',
+            type:        'OPERATIONAL',
+            deadline,
+            reported_by: userId,
+            collection_point_id: parsed.data.collection_point_id,
+          }
+        })
+        const hook = await handleNewOccurrence(tx, occurrence)
+        if (hook) postCommitHooks.push(hook)
+      }
+    })
+  } catch (err) {
+    // T-15: dois envios simultâneos do mesmo client_id — o índice único barra o
+    // segundo; a leitura já existe, então para o aparelho isso é sucesso.
+    if (clientId && isUniqueViolation(err)) return { success: true, duplicate: true }
+    throw err
+  }
 
   for (const hook of postCommitHooks) {
     await hook().catch(err => console.error('Error in postCommitHook:', err))
