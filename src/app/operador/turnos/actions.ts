@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { randomUUID } from 'crypto'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
 
@@ -370,6 +371,11 @@ export async function confirmarPassagem(
     return { error: 'Você já tem um turno aberto. Passe o seu turno antes de receber este.' }
   }
 
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'shift', id: parsed.data.shift_id, optional: true, where: { is_active: true }, message: 'Turno não encontrado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
+
   const now = new Date()
 
   try {
@@ -610,6 +616,11 @@ export async function assumirPosto(
   if (jaAtivo) {
     return { error: 'Você já tem um turno aberto. Passe o turno atual antes de abrir outro.' }
   }
+
+  const erroPosse = await checkOwnership(tenantId, [
+    { model: 'shift', id: parsed.data.new_shift_id, where: { is_active: true }, message: 'Turno não encontrado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   const now = new Date()
   const today = normalizarData(new Date())

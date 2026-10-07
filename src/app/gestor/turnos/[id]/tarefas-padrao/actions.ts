@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 
 
@@ -48,16 +49,6 @@ export type TemplateFormState = {
   success?: boolean
 }
 
-// Valida que o operador designado pertence ao tenant e é OPERATOR ativo
-async function validarAssignee(assigneeId: string | null, tenantId: string): Promise<boolean> {
-  if (!assigneeId) return true
-  const assignee = await prisma.user.findFirst({
-    where:  { id: assigneeId, tenant_id: tenantId, is_active: true, role: 'OPERATOR' },
-    select: { id: true },
-  })
-  return !!assignee
-}
-
 // ─── Criar template ─────────────────────────────────────────────────────────
 
 export async function criarTemplate(
@@ -88,9 +79,12 @@ export async function criarTemplate(
   })
   if (!shift) return { error: 'Turno não encontrado.' }
 
-  if (!(await validarAssignee(parsed.data.assigned_to_id, tenantId))) {
-    return { error: 'Operador selecionado não encontrado ou inativo.' }
-  }
+  const erroPosse = await checkOwnership(tenantId, [{
+    model: 'user', id: parsed.data.assigned_to_id, optional: true,
+    where: { is_active: true, role: 'OPERATOR' },
+    message: 'Operador selecionado não encontrado ou inativo.',
+  }])
+  if (erroPosse) return { error: erroPosse }
 
   await prisma.shiftTaskTemplate.create({
     data: {
@@ -137,9 +131,12 @@ export async function atualizarTemplate(
   })
   if (!template) return { error: 'Template não encontrado.' }
 
-  if (!(await validarAssignee(parsed.data.assigned_to_id, tenantId))) {
-    return { error: 'Operador selecionado não encontrado ou inativo.' }
-  }
+  const erroPosse = await checkOwnership(tenantId, [{
+    model: 'user', id: parsed.data.assigned_to_id, optional: true,
+    where: { is_active: true, role: 'OPERATOR' },
+    message: 'Operador selecionado não encontrado ou inativo.',
+  }])
+  if (erroPosse) return { error: erroPosse }
 
   await prisma.shiftTaskTemplate.updateMany({
     where: { id: templateId, tenant_id: tenantId },

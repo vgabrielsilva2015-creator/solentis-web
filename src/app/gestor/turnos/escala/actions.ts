@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
+import { assertOwned } from '@/lib/ownership'
 import { normalizarData } from '@/lib/shift-utils'
 
 async function requireManager() {
@@ -34,6 +35,8 @@ export async function saveShiftScale(
       },
     })
   } else {
+    await assertOwned(tenantId, { model: 'shift', id: shiftId, message: 'Turno não encontrado.' })
+
     // Check if operator exists and is active
     const operator = await prisma.user.findFirst({
       where: { id: operatorId, tenant_id: tenantId, is_active: true }
@@ -111,6 +114,12 @@ export async function addShiftTask(
     where: { email: session.user.email!, tenant_id: tenantId }
   })
   if (!managerUser) throw new Error('Usuário gerente não encontrado.')
+
+  // Turno e operador vêm do cliente: precisam ser desta planta (T-05)
+  await assertOwned(tenantId, [
+    { model: 'shift', id: shiftId, message: 'Turno não encontrado.' },
+    { model: 'user', id: assignedToId, optional: true, where: { is_active: true }, message: 'Operador não encontrado ou inativo.' },
+  ])
 
   // Find or create ShiftInstance with SCHEDULED status
   let instance = await prisma.shiftInstance.findFirst({

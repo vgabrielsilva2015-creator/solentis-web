@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularEstoqueAtual } from '@/lib/stock-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
@@ -58,6 +59,9 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   }
 
   const { product_id, quantity, notes, used_at } = parsed.data
+
+  const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
+  if (erroPosse) return { error: erroPosse }
 
   // Calcula estoque atual para verificar se ficará negativo
   const [entries, exits] = await Promise.all([
@@ -121,6 +125,9 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
 
   const tenantId = await getTenantId()
   const countedAtUTC = localInputToUTC(counted_at)
+
+  const erroPosse = await checkOwnership(tenantId, [{ model: 'chemicalProduct', id: product_id }])
+  if (erroPosse) return { error: erroPosse }
 
   // Saldo calculado atual (entradas - saídas) antes do ajuste
   const [entradas, saidas] = await Promise.all([

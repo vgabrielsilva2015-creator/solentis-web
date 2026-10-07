@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { logAudit } from '@/lib/audit'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
 import { logger } from '@/lib/logger'
@@ -79,6 +80,11 @@ export async function registrarOcorrencia(
 
   // Prazo calculado a partir da configuração de severidade
   const tenantId = await getTenantId()
+
+  const erroPosse = await checkOwnership(tenantId, [
+    { model: 'collectionPoint', id: parsed.data.collection_point_id, optional: true },
+  ])
+  if (erroPosse) return { error: erroPosse }
   const severityDefault = await prisma.occurrenceSeverityDefault.findUnique({
     where: { tenant_id_severity: { tenant_id: tenantId, severity: parsed.data.severity } },
   })

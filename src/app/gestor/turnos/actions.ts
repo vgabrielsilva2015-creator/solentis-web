@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getTenantId } from '@/lib/tenant'
+import { assertOwned } from '@/lib/ownership'
 
 
 async function requireManager() {
@@ -139,6 +140,7 @@ export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> 
 export async function toggleDaySchedule(shiftId: string, days_of_week: number[]) {
   await requireManager()
   const tenant_id = await getTenantId()
+  await assertOwned(tenant_id, { model: 'shift', id: shiftId, message: 'Turno não encontrado.' })
 
   const schedule = await prisma.shiftSchedule.findFirst({
     where: { shift_id: shiftId, tenant_id }

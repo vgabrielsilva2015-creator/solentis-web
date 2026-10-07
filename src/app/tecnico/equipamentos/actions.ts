@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
 
@@ -119,6 +120,12 @@ export async function criarEquipamento(
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
 
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'equipmentCategory', id: parsed.data.category_id },
+    { model: 'user', id: parsed.data.responsible_id, optional: true, message: 'Responsável inválido ou não autorizado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
+
   // Trata upload de arquivos
   const photoFile = formData.get('photo_file') as File | null
   const manualFile = formData.get('manual_file') as File | null
@@ -218,6 +225,12 @@ export async function editarEquipamento(
     select: { id: true, photo_url: true, manual_url: true },
   })
   if (!equipment) return { error: 'Equipamento não encontrado.' }
+
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'equipmentCategory', id: parsed.data.category_id },
+    { model: 'user', id: parsed.data.responsible_id, optional: true, message: 'Responsável inválido ou não autorizado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   // Trata upload de arquivos
   const photoFile = formData.get('photo_file') as File | null
@@ -373,6 +386,11 @@ export async function registrarCorretiva(
 
   const userId = await resolveUserId(session.user.email!)
   if (!userId) return { error: 'Sessão inválida.' }
+
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'equipment', id: equipamentoId, message: 'Equipamento não encontrado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   // Calcular data limite da OS baseada na prioridade
   const hoursMap = { LOW: 72, MEDIUM: 48, HIGH: 24, CRITICAL: 12 }

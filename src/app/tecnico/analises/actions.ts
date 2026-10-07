@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 import { sendPushToRole } from '@/lib/push-actions'
@@ -81,6 +82,11 @@ export async function registrarAnalise(
     select: { name: true, min_limit: true, max_limit: true, unit: true, default_method_id: true },
   })
   if (!param) return { error: 'Parâmetro não encontrado.' }
+
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'collectionPoint', id: parsed.data.collection_point_id },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   const isNonConformant =
     calcularNaoConformidade(parsed.data.value, param.min_limit, param.max_limit) ?? false

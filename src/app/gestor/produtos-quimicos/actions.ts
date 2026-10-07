@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
@@ -148,6 +149,9 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
   const { product_id, quantity, supplier, invoice_number, notes, received_at } = parsed.data
   const recorded_by = await resolveUserId(session.user.email!)
   if (!recorded_by) return { error: 'Sessão inválida.' }
+
+  const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
+  if (erroPosse) return { error: erroPosse }
 
   await prisma.chemicalStockEntry.create({
     data: {
