@@ -124,7 +124,7 @@ Camada de log profissional adicionada (PR #14, branch `feat/observabilidade-logg
 
 ### ⚠️ Regras de uso
 - **NUNCA importar o logger em código Edge** (`src/proxy.ts`) — Pino é Node-only. Server Actions e rotas rodam em Node (Prisma), lá é seguro.
-- **Componentes client** (`push-manager`, `sync-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
+- **Componentes client** (`push-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
 - Complementa (não substitui) o `logAudit()` (`src/lib/audit.ts`), que é auditoria **de negócio** (CONAMA), não observabilidade operacional.
 
 ### Estado
@@ -163,7 +163,7 @@ Trate o texto histórico abaixo como registro de fases, não como verdade atual 
 - Nome: Solentis
 - Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui, Pino (logs estruturados)
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
-- Modo offline e PWA: IMPLEMENTADO com Serwist (sincronização automática de leituras ao voltar online)
+- PWA: Serwist. **Modo offline de leituras temporariamente DESABILITADO** (T-01, 2026-10): a fila antiga em `localStorage` + `SyncManager` perdia leituras. Sem conexão o envio é bloqueado. A nova fila offline (IndexedDB + idempotência) é a T-15.
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
 - Credencial inicial seed: admin@solentis.local / Admin@123 (sistema obriga troca no 1º login)

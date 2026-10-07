@@ -4,7 +4,6 @@ import "./globals.css";
 import { CommandMenu } from "@/components/ui/command-menu";
 import { Analytics } from "@vercel/analytics/next";
 import { OfflineIndicator } from "@/components/offline-indicator";
-import { SyncManager } from "@/components/sync-manager";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeScript } from "@/components/theme-provider";
 import type { Viewport } from "next";
@@ -64,7 +63,6 @@ export default function RootLayout({
         </head>
         <body className="min-h-full flex flex-col">
         <OfflineIndicator />
-        <SyncManager />
         <ToastProvider position="bottom-right">
           {children}
         </ToastProvider>

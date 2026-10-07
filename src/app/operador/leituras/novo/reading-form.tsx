@@ -82,6 +82,7 @@ export function ReadingForm({
   const [recordedAt, setRecordedAt]               = useState('')
   const [compressing, setCompressing]             = useState(false)
   const [totalError, setTotalError]               = useState<string | null>(null)
+  const [offlineError, setOfflineError]           = useState(false)
 
   // ── Carregar rascunho do localStorage na montagem ──────────────────────────
   useEffect(() => {
@@ -190,27 +191,14 @@ export function ReadingForm({
         action={formAction}
         onSubmit={(e) => {
           if (compressing) { e.preventDefault(); return }
+          // Modo offline desabilitado até a nova fila offline (T-15): sem conexão,
+          // o envio é bloqueado e o formulário continua preenchido.
           if (!navigator.onLine) {
             e.preventDefault()
-            const offlineQueueRaw = localStorage.getItem('solentis_offline_leituras')
-            const queue = offlineQueueRaw ? JSON.parse(offlineQueueRaw) : []
-            
-            queue.push({
-              collection_point_id: collectionPointId,
-              parameter_id: parameterId,
-              value: valueStr,
-              unit: selectedParam?.unit,
-              notes,
-              recorded_at: recordedAt
-            })
-            
-            localStorage.setItem('solentis_offline_leituras', JSON.stringify(queue))
-            localStorage.removeItem(DRAFT_KEY)
-            
-            alert('Você está offline. Leitura salva localmente e será sincronizada assim que a internet voltar.')
-            router.push('/operador/leituras')
+            setOfflineError(true)
             return
           }
+          setOfflineError(false)
           // Online: o Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL antes de enviar.
           const input = e.currentTarget.elements.namedItem('photo') as HTMLInputElement | null
           const files = input?.files ? Array.from(input.files) : []
@@ -439,6 +427,12 @@ export function ReadingForm({
             <p className="rounded-md border border-red-800/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">{totalError}</p>
           )}
         </div>
+
+        {offlineError && (
+          <p aria-live="polite" className="rounded-md border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-400">
+            Sem conexão com a internet. A leitura não foi enviada. Os dados continuam preenchidos: envie de novo quando a conexão voltar.
+          </p>
+        )}
 
         {/* ── Submit ─────────────────────────────────────────────────────── */}
         <Button
