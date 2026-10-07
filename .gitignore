@@ -22,6 +22,12 @@
 .env*
 !.env.example
 
+# Segredos locais que NUNCA podem ir para o Git (T-08)
+docs/recovery-codes.txt
+*recovery-codes*
+*.pem
+*.key
+
 # Banco de dados
 *.db
 *.db-journal
