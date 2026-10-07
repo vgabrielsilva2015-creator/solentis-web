@@ -19,6 +19,7 @@ export default function TrocarSenhaPage() {
   const [state, formAction, isPending] = useActionState(trocarSenhaAction, initialState)
   const [password, setPassword]         = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showCurrent, setShowCurrent]   = useState(false)
   const [showConfirm, setShowConfirm]   = useState(false)
 
   return (
@@ -39,6 +40,38 @@ export default function TrocarSenhaPage() {
         </div>
 
         <form action={formAction} className="space-y-4">
+          {/* Senha atual (T-11): a provisória recebida ou a que você usa hoje */}
+          <div className="space-y-1.5">
+            <label htmlFor="currentPassword" className="text-sm font-medium text-foreground">
+              Senha atual
+            </label>
+            <div className="relative">
+              <Input
+                id="currentPassword"
+                name="currentPassword"
+                type={showCurrent ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="••••••••"
+                required
+                disabled={isPending}
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent((v) => !v)}
+                tabIndex={-1}
+                aria-label={showCurrent ? 'Ocultar senha atual' : 'Mostrar senha atual'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">Se você recebeu uma senha provisória, digite ela aqui.</p>
+            {state.fieldErrors?.currentPassword && (
+              <p className="text-xs text-red-400">{state.fieldErrors.currentPassword[0]}</p>
+            )}
+          </div>
+
           {/* Nova senha */}
           <div className="space-y-1.5">
             <label htmlFor="newPassword" className="text-sm font-medium text-foreground">

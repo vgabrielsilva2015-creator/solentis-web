@@ -3,24 +3,30 @@
 import { auth, signIn } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BUMP_SESSION_VERSION } from '@/lib/session-version'
-import { hashPassword, passwordSchema } from '@/lib/password'
+import { hashPassword, passwordSchema, verifyPassword } from '@/lib/password'
+import { buckets, countRecent, recordEvents, PWCHANGE_FAIL_LIMIT, PWCHANGE_WINDOW_MS } from '@/lib/rate-limit'
+import { GENERIC_ERROR_MESSAGE } from '@/lib/user-errors'
+import { unstable_rethrow } from 'next/navigation'
 import { getLogger } from '@/lib/logger'
 import { z } from 'zod'
 import { AuthError } from 'next-auth'
 
+// Política de senha única: passwordSchema (src/lib/password.ts), a mesma que a tela
+// mostra. Antes este arquivo tinha uma segunda regra (8 caracteres + maiúscula +
+// minúscula) que a tela não mostrava.
 const Schema = z
   .object({
-    newPassword: z
-      .string()
-      .min(8, 'Mínimo 8 caracteres')
-      .regex(/[A-Z]/, 'Deve conter letra maiúscula')
-      .regex(/[a-z]/, 'Deve conter letra minúscula')
-      .regex(/[0-9]/, 'Deve conter número'),
+    currentPassword: z.string().min(1, 'Informe a senha atual'),
+    newPassword: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     message: 'As senhas não coincidem',
     path: ['confirmPassword'],
+  })
+  .refine((d) => d.newPassword !== d.currentPassword, {
+    message: 'A nova senha precisa ser diferente da atual',
+    path: ['newPassword'],
   })
 
 export type TrocarSenhaState = {
@@ -28,19 +34,28 @@ export type TrocarSenhaState = {
   fieldErrors?: Record<string, string[]>
 }
 
+/**
+ * Troca a senha do próprio usuário (T-11).
+ * - Exige a senha ATUAL (ou a provisória recebida), conferida no servidor. Antes,
+ *   quem tivesse a sessão aberta (aparelho compartilhado, cookie roubado) trocava
+ *   a senha e tomava a conta.
+ * - Limite de 5 erros de senha atual por usuário em 15 min.
+ * - Incrementa session_version: as outras sessões caem; esta é reemitida pelo signIn.
+ */
 export async function trocarSenhaAction(
   _prev: TrocarSenhaState,
   formData: FormData,
 ): Promise<TrocarSenhaState> {
   const session = await auth()
 
-  if (!session?.user?.email) {
+  if (!session?.user?.id || !session.user.tenantId) {
     return { error: 'Sessão inválida. Faça login novamente.' }
   }
 
   const parsed = Schema.safeParse({
-    newPassword:     formData.get('newPassword'),
-    confirmPassword: formData.get('confirmPassword'),
+    currentPassword: formData.get('currentPassword') ?? '',
+    newPassword:     formData.get('newPassword') ?? '',
+    confirmPassword: formData.get('confirmPassword') ?? '',
   })
 
   if (!parsed.success) {
@@ -48,27 +63,33 @@ export async function trocarSenhaAction(
     return { fieldErrors: flat.fieldErrors as Record<string, string[]> }
   }
 
-  const pw = passwordSchema.safeParse(parsed.data.newPassword)
-  if (!pw.success) {
-    return { error: pw.error.issues[0].message }
-  }
+  const log = await getLogger({ userId: session.user.id, tenantId: session.user.tenantId, action: 'trocarSenha' })
 
   try {
-    const passwordHash = await hashPassword(parsed.data.newPassword)
-
-    // Busca o usuário usando findFirst (case-insensitive) em vez de where unico (case-sensitive)
+    // Usuário da sessão, pelo id do JWT e dentro do tenant da sessão.
     const userToUpdate = await prisma.user.findFirst({
-      where: {
-        tenant_id: session.user.tenantId,
-        email: { equals: session.user.email, mode: 'insensitive' }
-      }
+      where: { id: session.user.id, tenant_id: session.user.tenantId, is_active: true },
+      select: { id: true, email: true, password_hash: true },
     })
-
     if (!userToUpdate) {
-      return { error: 'Usuário não encontrado no banco.' }
+      return { error: 'Sessão inválida. Faça login novamente.' }
     }
 
-    // @tenant-checked: userToUpdate foi buscado com tenant_id da sessão acima.
+    const bucket = buckets.passwordChange(userToUpdate.id)
+    if ((await countRecent(bucket, PWCHANGE_WINDOW_MS)) >= PWCHANGE_FAIL_LIMIT) {
+      return { error: 'Muitas tentativas com a senha atual errada. Aguarde 15 minutos e tente de novo.' }
+    }
+
+    const atualOk = await verifyPassword(parsed.data.currentPassword, userToUpdate.password_hash)
+    if (!atualOk) {
+      await recordEvents([bucket])
+      log.warn('Troca de senha recusada: senha atual incorreta')
+      return { fieldErrors: { currentPassword: ['Senha atual incorreta'] } }
+    }
+
+    const passwordHash = await hashPassword(parsed.data.newPassword)
+
+    // @tenant-checked: userToUpdate foi buscado com id e tenant_id da sessão acima.
     await prisma.user.update({
       where: { id: userToUpdate.id },
       data: {
@@ -88,11 +109,12 @@ export async function trocarSenhaAction(
 
   } catch (err) {
     if (err instanceof AuthError) {
-      const log = await getLogger({ action: 'trocarSenha' })
       log.error({ err }, 'AuthError na action de trocar senha')
-      return { error: 'Ocorreu um erro de autenticação ao trocar a senha.' }
+      return { error: 'A senha foi trocada, mas não foi possível entrar de novo. Entre com a nova senha.' }
     }
-    throw err // Deixa NEXT_REDIRECT e outros erros subirem
+    unstable_rethrow(err) // NEXT_REDIRECT do signIn (sucesso) segue adiante
+    log.error({ err }, 'Falha ao trocar senha')
+    return { error: GENERIC_ERROR_MESSAGE }
   }
 
   return {}

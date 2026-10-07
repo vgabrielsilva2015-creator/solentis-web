@@ -32,6 +32,9 @@ export const RESET_WINDOW_MS = 60 * 60 * 1000
 export const RESET_EMAIL_LIMIT = 3
 export const RESET_IP_LIMIT = 10
 
+export const PWCHANGE_WINDOW_MS = 15 * 60 * 1000
+export const PWCHANGE_FAIL_LIMIT = 5
+
 const RETENTION_MS = 24 * 60 * 60 * 1000
 
 export function emailKey(email: string): string {
@@ -44,6 +47,7 @@ export const buckets = {
   loginEmail: (email: string) => `login:email:${emailKey(email)}`,
   resetIp: (ip: string) => `reset:ip:${ip}`,
   resetEmail: (email: string) => `reset:email:${emailKey(email)}`,
+  passwordChange: (userId: string) => `pwchange:user:${userId}`,
 }
 
 // ─── Política (pura, testável) ─────────────────────────────────────────────
@@ -78,7 +82,7 @@ export function clientIp(h: Pick<Headers, 'get'> | undefined | null): string {
 
 // ─── Persistência ──────────────────────────────────────────────────────────
 
-async function countSince(bucket: string, windowMs: number): Promise<number> {
+export async function countRecent(bucket: string, windowMs: number): Promise<number> {
   return prisma.authRateEvent.count({
     where: { bucket, created_at: { gte: new Date(Date.now() - windowMs) } },
   })
@@ -94,9 +98,9 @@ export async function recordEvents(bucketNames: string[]): Promise<void> {
 
 export async function loginCounts(email: string, ip: string): Promise<LoginCounts> {
   const [ipN, pairN, emailN] = await Promise.all([
-    countSince(buckets.loginIp(ip), LOGIN_WINDOW_MS),
-    countSince(buckets.loginPair(email, ip), LOGIN_WINDOW_MS),
-    countSince(buckets.loginEmail(email), LOGIN_WINDOW_MS),
+    countRecent(buckets.loginIp(ip), LOGIN_WINDOW_MS),
+    countRecent(buckets.loginPair(email, ip), LOGIN_WINDOW_MS),
+    countRecent(buckets.loginEmail(email), LOGIN_WINDOW_MS),
   ])
   return { ip: ipN, pair: pairN, email: emailN }
 }
@@ -108,8 +112,8 @@ export function recordLoginFailure(email: string, ip: string): Promise<void> {
 /** Conta e registra o pedido de reset; devolve se ele pode seguir. */
 export async function takeResetSlot(email: string, ip: string): Promise<boolean> {
   const [ipN, emailN] = await Promise.all([
-    countSince(buckets.resetIp(ip), RESET_WINDOW_MS),
-    countSince(buckets.resetEmail(email), RESET_WINDOW_MS),
+    countRecent(buckets.resetIp(ip), RESET_WINDOW_MS),
+    countRecent(buckets.resetEmail(email), RESET_WINDOW_MS),
   ])
   await recordEvents([buckets.resetIp(ip), buckets.resetEmail(email)])
   return resetAllowed({ ip: ipN, email: emailN })
