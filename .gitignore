@@ -39,6 +39,8 @@ uploads/
 
 # Backups locais
 backups/
+# dumps de banco (pg_dump) — contêm dados pessoais, nunca versionar
+*.dump
 
 # Debug
 npm-debug.log*

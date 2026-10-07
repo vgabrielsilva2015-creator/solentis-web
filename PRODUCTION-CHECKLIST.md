@@ -2,6 +2,8 @@
 
 Checklist da T-04 (verificação de produção). **Nada aqui foi verificado por quem escreveu**: não houve acesso ao painel da Vercel, ao painel do Supabase nem ao banco de produção. O domínio `solentis.app` estava bloqueado pela rede usada na auditoria. Cada item está marcado como **NÃO VERIFICADO**, com o passo exato para conferir.
 
+O que cada item deveria ser e por quê: `docs/INFRA.md` (T-07).
+
 Legenda: ✅ ok · ❌ problema · ⚠️ ok com ressalva · ❓ NÃO VERIFICADO
 
 > Regra: só consultas de leitura. Nada de `prisma migrate reset`, `db push` ou alteração de dados ao preencher este checklist.

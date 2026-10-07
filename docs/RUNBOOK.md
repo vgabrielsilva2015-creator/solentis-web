@@ -38,57 +38,31 @@ Regenera os tipos TypeScript em `src/generated/prisma/`.
 
 ## 2. Banco de dados
 
-### 2.1 Resetar banco (apagar tudo e recriar do zero)
+> Produção é **PostgreSQL (Supabase)**. Os procedimentos antigos desta seção eram do
+> SQLite (`dev.db`, `Copy-Item`) e foram removidos (estão no histórico do Git).
+> Planos, conexões, backup e restore de produção: **`docs/INFRA.md`**.
+
+### 2.1 Resetar banco — SÓ banco local de desenvolvimento
 ```bash
 npx prisma migrate reset
 ```
-⚠️ **DESTRUTIVO** — apaga todos os dados e recria o banco do zero com seed.
-Use apenas em desenvolvimento. Nunca em produção.
+⚠️ **DESTRUTIVO** — apaga todos os dados. **Nunca** com `DATABASE_URL`/`DIRECT_URL`
+de produção no `.env`. Confira a URL antes (`echo $DATABASE_URL | cut -d@ -f2`).
+Também nunca `prisma db push` contra produção.
 
-### 2.2 Fazer backup (script automatizado)
+### 2.2 Backup de produção
 ```bash
-npx tsx scripts/backup.ts
+pg_dump "$DIRECT_URL" -Fc --no-owner --no-privileges -f solentis-$(date +%F).dump
 ```
-Cria `backups/solentis-AAAA-MM-DD.db` (pasta ignorada pelo Git).
-O script verifica a existência do banco de origem e imprime o tamanho do arquivo gerado.
+Somente leitura. Guardar fora do Supabase e fora do Git (ver `docs/INFRA.md` §3).
 
-**Recomendação de agendamento (produção):** configure um cron diário:
-```
-# Exemplo crontab (Linux/macOS) — 02:00 todo dia
-0 2 * * * cd /caminho/do/projeto && npx tsx scripts/backup.ts >> logs/backup.log 2>&1
-```
-No Windows, use o **Agendador de Tarefas** ou o Windows Task Scheduler.
-
-**Recomendação de infraestrutura:** use um **no-break (UPS)** no servidor que hospeda o banco.
-Quedas de energia durante uma escrita SQLite podem corromper o arquivo `dev.db`.
-O backup diário protege apenas contra corrupção silenciosa descoberta depois — não substitui UPS.
-
-### 2.3 Restaurar backup (com teste de integridade)
+### 2.3 Teste de restore
+Restaurar em um projeto **separado** e comparar contagens:
 ```bash
-# 1. Pare o servidor de desenvolvimento antes de restaurar
-# 2. Substitua o banco atual pelo backup desejado (Windows PowerShell):
-Copy-Item "backups\solentis-AAAA-MM-DD.db" "prisma\dev.db"
-
-# 3. Verifique a integridade do banco restaurado:
-npx prisma migrate status
-
-# 4. Abra o Prisma Studio e confirme que os dados estão lá:
-npx prisma studio
-
-# 5. Suba o servidor e teste manualmente um fluxo crítico:
-npm run dev
+pg_restore --no-owner --no-privileges -d "$STAGING_DIRECT_URL" solentis-AAAA-MM-DD.dump
+scripts/ops/compare-row-counts.sh "$DIRECT_URL" "$STAGING_DIRECT_URL"
 ```
-**Princípio:** backup não testado não é backup. Sempre confirme o restore antes de confiar.
-
-### 2.4 Checklist de teste de restore
-Execute este procedimento ao validar um backup antes de colocá-lo em uso:
-- [ ] Servidor parado (`Ctrl+C`)
-- [ ] `Copy-Item backups\solentis-AAAA-MM-DD.db prisma\dev.db` executado
-- [ ] `npx prisma migrate status` — mostra "All migrations have been applied"
-- [ ] `npx prisma studio` — tabelas `users`, `readings`, `shift_handovers` visíveis com dados
-- [ ] `npm run dev` — servidor sobe sem erro na porta 3000
-- [ ] Login com `tecnico@solentis.local` funciona
-- [ ] Página `/tecnico/equipamentos` lista pelo menos um equipamento
+**Princípio:** backup não testado não é backup. Registrar cada teste em `docs/INFRA.md` §4.3.
 
 ---
 
