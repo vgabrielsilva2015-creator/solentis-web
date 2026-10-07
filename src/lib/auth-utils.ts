@@ -1,5 +1,4 @@
-export const RATE_LIMIT_MAX_ATTEMPTS  = 5
-export const RATE_LIMIT_WINDOW_MS     = 15 * 60 * 1000 // 15 minutos
+// Limite de tentativas de login: src/lib/rate-limit.ts (T-10)
 export const SESSION_MAX_AGE_OPERATOR = 30 * 60         // 30 min em segundos
 export const SESSION_MAX_AGE_DEFAULT  = 60 * 60         // 60 min em segundos
 
@@ -9,10 +8,6 @@ export const ROUTE_ACCESS: Record<string, string[]> = {
   '/operador':   ['OPERATOR', 'TECHNICIAN', 'MANAGER'],
   '/manutencao': ['MAINTENANCE', 'MANAGER'],
   '/admin':      ['SUPER_ADMIN'],
-}
-
-export function isRateLimited(recentFailures: number): boolean {
-  return recentFailures >= RATE_LIMIT_MAX_ATTEMPTS
 }
 
 export function getSessionMaxAge(role: string): number {

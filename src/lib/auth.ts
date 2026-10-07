@@ -4,11 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
 import { getLogger } from '@/lib/logger'
-import {
-  RATE_LIMIT_WINDOW_MS,
-  RATE_LIMIT_MAX_ATTEMPTS,
-  isRateLimited,
-} from '@/lib/auth-utils'
+import { clientIp, decideLogin, loginCounts, recordLoginFailure, sleep } from '@/lib/rate-limit'
 import { authConfig } from '@/lib/auth.config'
 import { LOGIN_RATE_LIMITED_CODE, LOGIN_UNAVAILABLE_CODE } from '@/lib/user-errors'
 
@@ -57,12 +53,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email:    { label: 'Email', type: 'email' },
         password: { label: 'Senha', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
         const { email, password } = parsed.data
         const log = await getLogger({ action: 'login' })
+        const ip = clientIp(request?.headers)
+
+        // T-10: limite ANTES de qualquer consulta ao usuário, igual para e-mail
+        // existente ou não. Bloqueia IP e par e-mail+IP; o e-mail sozinho só
+        // atrasa (sem lockout que um terceiro possa provocar na conta alheia).
+        try {
+          const decision = decideLogin(await loginCounts(email, ip))
+          if (decision.blocked) throw new Error(LOGIN_RATE_LIMITED_CODE)
+          if (decision.delayMs > 0) await sleep(decision.delayMs)
+        } catch (error) {
+          if (error instanceof Error && error.message === LOGIN_RATE_LIMITED_CODE) throw error
+          // ⚠️ FAIL-OPEN (decisão mantida): sem banco, o login segue sem limite.
+          log.warn({ err: error, ip }, 'Falha ao checar limite de tentativas — login prosseguindo sem limite')
+        }
+
+        // Toda falha (senha errada, e-mail inexistente, conta/planta inativa) conta.
+        const falhou = async () => {
+          await recordLoginFailure(email, ip).catch((err) =>
+            log.warn({ err, ip }, 'Falha ao registrar tentativa no limitador'))
+          return null
+        }
 
         // Para evitar timing attacks, consultamos o usuário primeiro,
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
@@ -89,37 +106,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Usuário não existe: gastamos o MESMO tempo de um bcrypt custo 12 para
           // que a resposta seja indistinguível de um e-mail existente (anti-timing).
           await verifyPassword(password, dummyHash).catch(() => {})
-          return null
+          return falhou()
         }
 
         const tenantIdForLog = user.tenant_id
-
-        const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
-        try {
-          const recentFailures = await prisma.loginAttempt.count({
-            where: {
-              tenant_id: tenantIdForLog,
-              email,
-              success: false,
-              attempted_at: { gte: windowStart },
-            },
-          })
-
-          if (isRateLimited(recentFailures)) {
-            throw new Error(LOGIN_RATE_LIMITED_CODE)
-          }
-        } catch (error) {
-          if (error instanceof Error && error.message === LOGIN_RATE_LIMITED_CODE) {
-            throw error // Propaga apenas o bloqueio
-          }
-          // ⚠️ FAIL-OPEN: se a checagem falhar, o login segue SEM proteção de brute-force.
-          // Mantido de propósito (não travar todos os logins num soluço do banco),
-          // mas registrado em WARN para ficar visível caso vire recorrente.
-          log.warn(
-            { err: error, tenantId: tenantIdForLog, attemptedEmail: email },
-            'Falha ao checar rate limit — login prosseguindo sem proteção de brute-force',
-          )
-        }
 
         const isValid = await verifyPassword(password, user.password_hash)
 
@@ -129,6 +119,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             data: {
               tenant_id: tenantIdForLog,
               email,
+              ip_address: ip,
               success: isValid,
             },
           })
@@ -139,7 +130,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           )
         }
 
-        if (!isValid) return null
+        if (!isValid) return falhou()
 
         // Conta desativada (soft-delete) não autentica, mesmo com senha correta.
         // Garante que "desativar usuário" revogue o acesso de fato.
@@ -148,7 +139,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             { tenantId: tenantIdForLog, userId: user.id },
             'Login bloqueado: conta desativada',
           )
-          return null
+          return falhou()
         }
 
         // Planta (tenant) desativada bloqueia TODOS os seus usuários — exceto o
@@ -159,7 +150,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             { tenantId: tenantIdForLog, userId: user.id },
             'Login bloqueado: planta desativada',
           )
-          return null
+          return falhou()
         }
 
         try {

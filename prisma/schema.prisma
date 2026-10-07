@@ -153,6 +153,19 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+// T-10: contadores de tentativa de login/reset. Sem tenant_id de propósito: a
+// checagem acontece antes de o e-mail ser resolvido para uma planta. O bucket
+// guarda IP e hash do e-mail, nunca o e-mail em texto. Linhas > 24 h são apagadas.
+model AuthRateEvent {
+  id         String   @id @default(cuid())
+  bucket     String
+  created_at DateTime @default(now())
+
+  @@index([bucket, created_at])
+  @@index([created_at])
+  @@map("auth_rate_events")
+}
+
 model LoginAttempt {
   id           String   @id @default(cuid())
   tenant_id    String

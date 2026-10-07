@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { hashPassword, verifyPassword } from '@/lib/password'
-import {
-  isRateLimited,
-  isRouteAllowedForRole,
-  RATE_LIMIT_MAX_ATTEMPTS,
-} from '@/lib/auth-utils'
+import { isRouteAllowedForRole } from '@/lib/auth-utils'
+import { decideLogin, LOGIN_PAIR_FAIL_LIMIT } from '@/lib/rate-limit'
 
 // ─── Cenário 1: senha correta autentica ──────────────────────────────────────
 describe('verifyPassword — senha correta', () => {
@@ -25,15 +22,16 @@ describe('verifyPassword — senha errada', () => {
 })
 
 // ─── Cenário 3: rate limit bloqueia após MAX tentativas ──────────────────────
-describe('isRateLimited — controle de tentativas', () => {
-  it(`bloqueia com ${RATE_LIMIT_MAX_ATTEMPTS} ou mais falhas recentes`, () => {
-    expect(isRateLimited(RATE_LIMIT_MAX_ATTEMPTS)).toBe(true)
-    expect(isRateLimited(RATE_LIMIT_MAX_ATTEMPTS + 1)).toBe(true)
+// T-10: o bloqueio passou a ser por e-mail+IP (e por IP); detalhes em rate-limit.test.ts
+describe('limite de tentativas — controle de tentativas', () => {
+  it(`bloqueia com ${LOGIN_PAIR_FAIL_LIMIT} ou mais falhas do mesmo aparelho para o mesmo e-mail`, () => {
+    expect(decideLogin({ ip: LOGIN_PAIR_FAIL_LIMIT, pair: LOGIN_PAIR_FAIL_LIMIT, email: LOGIN_PAIR_FAIL_LIMIT }).blocked).toBe(true)
+    expect(decideLogin({ ip: 9, pair: LOGIN_PAIR_FAIL_LIMIT + 1, email: 9 }).blocked).toBe(true)
   })
 
-  it(`libera com menos de ${RATE_LIMIT_MAX_ATTEMPTS} falhas`, () => {
-    expect(isRateLimited(RATE_LIMIT_MAX_ATTEMPTS - 1)).toBe(false)
-    expect(isRateLimited(0)).toBe(false)
+  it(`libera com menos de ${LOGIN_PAIR_FAIL_LIMIT} falhas`, () => {
+    expect(decideLogin({ ip: 4, pair: LOGIN_PAIR_FAIL_LIMIT - 1, email: 4 }).blocked).toBe(false)
+    expect(decideLogin({ ip: 0, pair: 0, email: 0 }).blocked).toBe(false)
   })
 })
 
