@@ -6,29 +6,33 @@ import { assertOwned, OwnershipError } from '@/lib/ownership'
 import { requireRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { executorFor, parseMonitoringScheduleForm, primeiraMensagem } from '@/lib/monitoring-schedule'
+
+/** Volta ao formulário com a mensagem (o formulário é um <form action> simples). */
+function voltarComErro(msg: string): never {
+  redirect(`/gestor/cronograma/novo?erro=${encodeURIComponent(msg)}`)
+}
 
 export async function createMonitoringSchedule(formData: FormData) {
   const session = await requireRole(['MANAGER'])
   const tenant_id = await getTenantId()
-  const collection_point_id = String(formData.get('collection_point_id') ?? '')
-  const parameter_id = String(formData.get('parameter_id') ?? '')
+
+  // T-18 (B-07): tipo, frequência e dias validados; nada de texto livre ou NaN
+  const parsed = parseMonitoringScheduleForm(formData)
+  if (!parsed.success) voltarComErro(primeiraMensagem(parsed.error))
+  const d = parsed.data
 
   // Ponto e parâmetro vêm do formulário: precisam ser desta planta (T-05)
-  await assertOwned(tenant_id, [
-    { model: 'collectionPoint', id: collection_point_id },
-    { model: 'qualityParameter', id: parameter_id },
-  ])
-  const sample_type = formData.get('sample_type') as string
-  
-  let executor_role = 'TECHNICIAN'
-  if (sample_type === 'FIELD') {
-    executor_role = 'OPERATOR'
+  try {
+    await assertOwned(tenant_id, [
+      { model: 'collectionPoint', id: d.collection_point_id },
+      { model: 'qualityParameter', id: d.parameter_id },
+    ])
+  } catch (e) {
+    if (e instanceof OwnershipError) voltarComErro('Ponto de coleta ou parâmetro não encontrado.')
+    throw e
   }
 
-  const frequency = formData.get('frequency') as string // PER_SHIFT, DAILY, WEEKLY, MONTHLY
-  const days_of_week = formData.getAll('days_of_week').map(Number)
-  const days_of_month = formData.getAll('days_of_month').map(Number)
-  
   // Autor = usuário logado (antes era o primeiro usuário qualquer da planta)
   const created_by = await resolveUserId(session.user.email!)
   if (!created_by) throw new OwnershipError('Sessão inválida.')
@@ -36,16 +40,17 @@ export async function createMonitoringSchedule(formData: FormData) {
   await prisma.monitoringSchedule.create({
     data: {
       tenant_id,
-      collection_point_id,
-      parameter_id,
-      executor_role,
-      sample_type,
-      frequency,
-      days_of_week,
-      days_of_month,
+      collection_point_id: d.collection_point_id,
+      parameter_id: d.parameter_id,
+      executor_role: executorFor(d.sample_type),
+      sample_type: d.sample_type,
+      frequency: d.frequency,
+      days_of_week: d.days_of_week,
+      // dias do mês só fazem sentido na frequência mensal
+      days_of_month: d.frequency === 'MONTHLY' ? d.days_of_month : [],
       created_by,
-      is_active: true
-    }
+      is_active: true,
+    },
   })
 
   revalidatePath('/gestor/cronograma')
