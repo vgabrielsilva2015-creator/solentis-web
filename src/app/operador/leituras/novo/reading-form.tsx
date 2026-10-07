@@ -228,10 +228,6 @@ export function ReadingForm({
 
   return (
     <div className="space-y-5">
-      <Link href="/operador/leituras" className="inline-block text-sm text-muted-foreground hover:text-foreground">
-        ← Voltar para leituras
-      </Link>
-
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">
           {lockedMode ? 'Registrar Leitura' : 'Nova leitura'}
