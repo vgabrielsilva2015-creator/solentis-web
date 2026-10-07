@@ -166,6 +166,18 @@ model AuthRateEvent {
   @@map("auth_rate_events")
 }
 
+// Sessões encerradas pelo "Sair" (sid do JWT). A revalidação periódica (T-06)
+// derruba cópias desse cookie. Linhas expiradas podem ser apagadas.
+model RevokedSession {
+  sid        String   @id
+  user_id    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([expires_at])
+  @@map("revoked_sessions")
+}
+
 model LoginAttempt {
   id           String   @id @default(cuid())
   tenant_id    String

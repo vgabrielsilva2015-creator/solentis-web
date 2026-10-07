@@ -30,6 +30,8 @@ export interface GuardedToken {
   role?: string
   tenantId?: string
   mustChangePassword?: boolean
+  /** id aleatório desta sessão (estável entre renovações); usado pelo "Sair" */
+  sid?: string
   /** session_version do usuário no momento do login */
   sv?: number
   /** epoch (s) do login */
@@ -50,9 +52,11 @@ export interface UserAccessState {
   session_version: number
   must_change_password: boolean
   tenant_active: boolean
+  /** esta sessão (sid) foi encerrada pelo "Sair" */
+  session_revoked: boolean
 }
 
-export type AccessLoader = (userId: string) => Promise<UserAccessState | null>
+export type AccessLoader = (userId: string, sid: string) => Promise<UserAccessState | null>
 
 export type RevokeReason =
   | 'idle'
@@ -64,14 +68,19 @@ export type RevokeReason =
   | 'role_changed'
   | 'tenant_changed'
   | 'version_changed'
+  | 'logged_out'
 
 export type GuardResult =
   | { ok: true; token: GuardedToken; dbError?: unknown }
   | { ok: false; reason: RevokeReason }
 
 /** Campos iniciais no login. */
-export function initialGuardFields(sessionVersion: number, nowSec: number) {
-  return { sv: sessionVersion, loginAt: nowSec, lastSeen: nowSec, checkedAt: nowSec }
+export function initialGuardFields(sessionVersion: number, nowSec: number, sid: string = newSid()) {
+  return { sid, sv: sessionVersion, loginAt: nowSec, lastSeen: nowSec, checkedAt: nowSec }
+}
+
+export function newSid(): string {
+  return globalThis.crypto.randomUUID()
 }
 
 export async function guardSession(
@@ -80,7 +89,7 @@ export async function guardSession(
   loadAccess: AccessLoader,
 ): Promise<GuardResult> {
   // Token emitido antes da T-06 (sem versão): força novo login uma única vez.
-  if (typeof token.sv !== 'number' || typeof token.loginAt !== 'number' || !token.sub) {
+  if (typeof token.sv !== 'number' || typeof token.loginAt !== 'number' || !token.sub || !token.sid) {
     return { ok: false, reason: 'legacy' }
   }
 
@@ -95,7 +104,7 @@ export async function guardSession(
 
   let state: UserAccessState | null
   try {
-    state = await loadAccess(token.sub)
+    state = await loadAccess(token.sub, token.sid)
   } catch (dbError) {
     // fail-open: mantém a sessão e tenta de novo na próxima requisição
     return { ok: true, token: next, dbError }
@@ -107,6 +116,7 @@ export async function guardSession(
   if (state.role !== token.role) return { ok: false, reason: 'role_changed' }
   if (state.tenant_id !== token.tenantId) return { ok: false, reason: 'tenant_changed' }
   if (state.session_version !== token.sv) return { ok: false, reason: 'version_changed' }
+  if (state.session_revoked) return { ok: false, reason: 'logged_out' }
 
   return {
     ok: true,

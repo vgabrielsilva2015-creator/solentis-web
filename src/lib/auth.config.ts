@@ -50,6 +50,7 @@ export const authConfig = {
       // token.sub carrega o id do usuário (setado pelo NextAuth no sign-in).
       // Sem esta linha, session.user.id fica undefined e quebra o push-actions.
       if (token.sub) session.user.id = token.sub
+      session.sid = token.sid as string | undefined
       session.user.role               = token.role as string
       session.user.mustChangePassword = token.mustChangePassword as boolean
       session.user.tenantId           = token.tenantId as string

@@ -17,6 +17,8 @@ declare module 'next-auth' {
     sessionVersion: number
   }
   interface Session {
+    /** id da sessão (estável entre renovações), usado pelo "Sair" */
+    sid?: string
     user: {
       role: string
       mustChangePassword: boolean
@@ -30,6 +32,7 @@ declare module '@auth/core/jwt' {
     role: string
     mustChangePassword: boolean
     tenantId: string
+    sid?: string
     sv?: number
     loginAt?: number
     lastSeen?: number

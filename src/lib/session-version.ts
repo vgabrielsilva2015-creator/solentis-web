@@ -12,10 +12,10 @@ import type { UserAccessState } from '@/lib/session-guard'
  */
 export const BUMP_SESSION_VERSION = { session_version: { increment: 1 } } as const
 
-export async function loadUserAccess(userId: string): Promise<UserAccessState | null> {
+export async function loadUserAccess(userId: string, sid: string): Promise<UserAccessState | null> {
   // @tenant-safe: userId vem do `sub` de um JWT assinado pelo servidor; a checagem
   // compara justamente o tenant atual do usuário com o tenant gravado no token.
-  const user = await prisma.user.findUnique({
+  const [user, revogada] = await Promise.all([prisma.user.findUnique({
     where: { id: userId },
     select: {
       is_active: true,
@@ -26,7 +26,7 @@ export async function loadUserAccess(userId: string): Promise<UserAccessState | 
       must_change_password: true,
       tenant: { select: { is_active: true } },
     },
-  })
+  }), prisma.revokedSession.findUnique({ where: { sid }, select: { sid: true } })])
   if (!user) return null
   return {
     is_active: user.is_active,
@@ -36,5 +36,18 @@ export async function loadUserAccess(userId: string): Promise<UserAccessState | 
     session_version: user.session_version,
     must_change_password: user.must_change_password,
     tenant_active: user.tenant?.is_active ?? false,
+    session_revoked: !!revogada,
   }
+}
+
+/** "Sair": registra o sid encerrado até a idade máxima da sessão (12 h + folga). */
+export async function revokeSession(sid: string, userId: string): Promise<void> {
+  const expires_at = new Date(Date.now() + 13 * 60 * 60 * 1000)
+  await prisma.revokedSession.upsert({
+    where: { sid },
+    create: { sid, user_id: userId, expires_at },
+    update: {},
+  })
+  // limpeza oportunista do que já expirou
+  if (Math.random() < 0.05) await prisma.revokedSession.deleteMany({ where: { expires_at: { lt: new Date() } } })
 }

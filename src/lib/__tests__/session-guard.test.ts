@@ -23,7 +23,7 @@ function token(over: Partial<GuardedToken> = {}): GuardedToken {
 function state(over: Partial<UserAccessState> = {}): UserAccessState {
   return {
     is_active: true, deleted_at: null, role: 'MANAGER', tenant_id: 'A',
-    session_version: 3, must_change_password: false, tenant_active: true, ...over,
+    session_version: 3, must_change_password: false, tenant_active: true, session_revoked: false, ...over,
   }
 }
 
@@ -40,14 +40,17 @@ describe('guardSession', () => {
 
   it(`passado o intervalo (${SESSION_REVALIDATE_SECONDS}s) consulta o banco e marca checkedAt`, async () => {
     const now = T0 + SESSION_REVALIDATE_SECONDS
-    const r = await guardSession(token(), now, load)
-    expect(load).toHaveBeenCalledWith('u1')
+    const t = token()
+    const r = await guardSession(t, now, load)
+    expect(load).toHaveBeenCalledWith('u1', t.sid)
     expect(r.ok && r.token.checkedAt).toBe(now)
   })
 
   it('token anterior à T-06 (sem versão) é encerrado', async () => {
     const legacy: GuardedToken = { sub: 'u1', role: 'MANAGER', tenantId: 'A' }
     expect(await guardSession(legacy, T0, load)).toEqual({ ok: false, reason: 'legacy' })
+    const semSid: GuardedToken = { ...token(), sid: undefined }
+    expect(await guardSession(semSid, T0, load)).toEqual({ ok: false, reason: 'legacy' })
   })
 
   describe('inatividade por perfil (antes não funcionava: o Auth.js sobrescrevia token.exp)', () => {
@@ -87,6 +90,7 @@ describe('guardSession', () => {
       ['papel trocado', state({ role: 'OPERATOR' }), 'role_changed'],
       ['planta trocada', state({ tenant_id: 'B' }), 'tenant_changed'],
       ['senha resetada/trocada (versão)', state({ session_version: 4 }), 'version_changed'],
+      ['"Sair" nesta sessão (cópia do cookie em outro aparelho)', state({ session_revoked: true }), 'logged_out'],
     ]
     for (const [nome, st, reason] of casos) {
       it(nome, async () => {
@@ -140,14 +144,35 @@ describe('callback jwt do Auth.js', async () => {
   it('no login grava versão, horário do login e conferência', async () => {
     const t = await jwt({ token: { sub: 'u1' }, user: { role: 'OPERATOR', mustChangePassword: false, tenantId: 'A', email: 'o@a', sessionVersion: 7 } })
     expect(t).toMatchObject({ sv: 7, role: 'OPERATOR', tenantId: 'A' })
+    expect(typeof t?.sid).toBe('string')
     expect(typeof t?.loginAt).toBe('number')
   })
 
   it('devolve null (Auth.js apaga o cookie) quando a versão mudou', async () => {
     const now = Math.floor(Date.now() / 1000)
     loadMock.mockResolvedValueOnce(state({ session_version: 8, role: 'OPERATOR' }))
-    const t = await jwt({ token: { sub: 'u1', role: 'OPERATOR', tenantId: 'A', sv: 7, loginAt: now - 100, lastSeen: now - 10, checkedAt: now - 120 } })
+    const t = await jwt({ token: { sub: 'u1', sid: 'sid-0001-abcd', role: 'OPERATOR', tenantId: 'A', sv: 7, loginAt: now - 100, lastSeen: now - 10, checkedAt: now - 120 } })
     expect(t).toBeNull()
+  })
+})
+
+// ─── Marcador de logout (resposta atrasada não ressuscita a sessão) ─────────
+describe('marcador de logout', async () => {
+  const { appendToMarker, isLoggedOut, parseMarker, sessionCookieNames, LOGOUT_MARKER_MAX } = await import('@/lib/logout-marker')
+  it('guarda as últimas sessões encerradas neste navegador', () => {
+    let v = ''
+    for (let i = 0; i < LOGOUT_MARKER_MAX + 2; i++) v = appendToMarker(v, `sessao-000${i}`)
+    expect(parseMarker(v)).toHaveLength(LOGOUT_MARKER_MAX)
+    expect(isLoggedOut(v, `sessao-000${LOGOUT_MARKER_MAX + 1}`)).toBe(true)
+    expect(isLoggedOut(v, 'sessao-0000')).toBe(false) // a mais antiga saiu da lista
+  })
+  it('não aceita lixo nem sid vazio', () => {
+    expect(parseMarker('a.b;c')).toEqual([])
+    expect(isLoggedOut('sessao-0001', undefined)).toBe(false)
+  })
+  it('reconhece os cookies de sessão do Auth.js (http, https e em pedaços)', () => {
+    expect(sessionCookieNames(['authjs.session-token', '__Secure-authjs.session-token.0', 'authjs.csrf-token', 'theme']))
+      .toEqual(['authjs.session-token', '__Secure-authjs.session-token.0'])
   })
 })
 

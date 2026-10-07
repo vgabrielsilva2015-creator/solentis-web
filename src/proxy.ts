@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 import { NextRequest, NextResponse } from 'next/server'
 import { isRouteAllowedForRole, getDashboardRoute } from '@/lib/auth-utils'
+import { isLoggedOut, LOGOUT_MARKER_COOKIE, sessionCookieNames } from '@/lib/logout-marker'
 
 const { auth } = NextAuth(authConfig)
 
@@ -12,18 +13,30 @@ const PUBLIC_AUTH_PATHS = ['/forgot', '/reset', '/signup', '/verify-email', '/in
 
 export default auth((req) => {
   const { pathname } = req.nextUrl
-  const session = req.auth
+  let session = req.auth
+
+  // Sessão encerrada pelo "Sair" neste navegador e ressuscitada por uma resposta
+  // atrasada: ignora e apaga o cookie (ver src/lib/logout-marker.ts).
+  let apagarSessao = false
+  if (session && isLoggedOut(req.cookies.get(LOGOUT_MARKER_COOKIE)?.value, session.sid)) {
+    session = null
+    apagarSessao = true
+  }
+  const finalizar = (res: NextResponse) => {
+    if (apagarSessao) for (const n of sessionCookieNames(req.cookies.getAll().map((c) => c.name))) res.cookies.delete(n)
+    return res
+  }
 
   // Rotas de debug/diagnóstico: bloqueadas permanentemente (404) para evitar
   // reintrodução acidental de endpoints de diagnóstico em produção. Já houve uma
   // `/api/debug/email` no histórico; este guard fecha a porta de vez.
   if (pathname === '/api/debug' || pathname.startsWith('/api/debug/')) {
-    return new NextResponse('Not found', { status: 404 })
+    return finalizar(new NextResponse('Not found', { status: 404 }))
   }
 
   // Rotas públicas de auth: liberadas independentemente de sessão
   if (PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
-    return NextResponse.next()
+    return finalizar(NextResponse.next())
   }
 
   // Rotas públicas: login e troca de senha não exigem sessão
@@ -35,17 +48,17 @@ export default auth((req) => {
         : getDashboardRoute(session.user.role)
       return NextResponse.redirect(new URL(dest, req.url))
     }
-    return NextResponse.next()
+    return finalizar(NextResponse.next())
   }
 
   // Rota de troca de senha: exige sessão (qualquer perfil)
   if (pathname.startsWith('/trocar-senha')) {
-    if (!session || !session.user) return redirectToLogin(req)
+    if (!session || !session.user) return finalizar(redirectToLogin(req))
     return NextResponse.next()
   }
 
   // Todas as demais rotas protegidas exigem sessão
-  if (!session || !session.user) return redirectToLogin(req)
+  if (!session || !session.user) return finalizar(redirectToLogin(req))
 
   // Usuário com senha provisória só pode acessar /trocar-senha
   if (session.user.mustChangePassword) {
