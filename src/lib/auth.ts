@@ -10,6 +10,7 @@ import {
   isRateLimited,
 } from '@/lib/auth-utils'
 import { authConfig } from '@/lib/auth.config'
+import { LOGIN_RATE_LIMITED_CODE, LOGIN_UNAVAILABLE_CODE } from '@/lib/user-errors'
 
 // ─── Augmentação de tipos do NextAuth ────────────────────────────────────────
 declare module 'next-auth' {
@@ -61,10 +62,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Para evitar timing attacks, consultamos o usuário primeiro,
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
         // O email é globalmente único no schema Prisma, portanto findUnique é seguro.
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: { tenant: { select: { is_active: true } } },
-        })
+        let user
+        try {
+          user = await prisma.user.findUnique({
+            where: { email },
+            include: { tenant: { select: { is_active: true } } },
+          })
+        } catch (error) {
+          // Banco indisponível: registra o detalhe e devolve um código neutro.
+          // A mensagem original do Prisma (host/porta) nunca deve chegar ao cliente.
+          log.error({ err: error }, 'Falha ao consultar usuário no login')
+          throw new Error(LOGIN_UNAVAILABLE_CODE)
+        }
 
         // Hash bcrypt REAL (custo 12) de uma senha aleatória descartada. Precisa
         // ser um hash válido: bcrypt.compare contra um hash malformado retorna
@@ -92,10 +101,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           })
 
           if (isRateLimited(recentFailures)) {
-            throw new Error('RATE_LIMITED')
+            throw new Error(LOGIN_RATE_LIMITED_CODE)
           }
         } catch (error) {
-          if (error instanceof Error && error.message === 'RATE_LIMITED') {
+          if (error instanceof Error && error.message === LOGIN_RATE_LIMITED_CODE) {
             throw error // Propaga apenas o bloqueio
           }
           // ⚠️ FAIL-OPEN: se a checagem falhar, o login segue SEM proteção de brute-force.

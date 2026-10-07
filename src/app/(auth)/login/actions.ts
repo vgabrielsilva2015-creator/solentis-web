@@ -3,6 +3,8 @@
 import { signIn } from '@/lib/auth'
 import { AuthError } from 'next-auth'
 import { z } from 'zod'
+import { getLogger } from '@/lib/logger'
+import { LOGIN_MESSAGES, loginErrorMessage } from '@/lib/user-errors'
 
 const LoginSchema = z.object({
   email:    z.string().email().transform(v => v.trim().toLowerCase()),
@@ -23,7 +25,7 @@ export async function loginAction(
   })
 
   if (!parsed.success) {
-    return { error: 'Preencha e-mail e senha.' }
+    return { error: LOGIN_MESSAGES.invalidInput }
   }
 
   try {
@@ -34,19 +36,14 @@ export async function loginAction(
     })
   } catch (err) {
     if (err instanceof AuthError) {
-      switch (err.type) {
-        case 'CredentialsSignin':
-          return { error: 'E-mail ou senha incorretos.' }
-        case 'CallbackRouteError':
-          // Rate limit ou conta inativa — mensagem do authorize()
-          const msg = err.cause?.err?.message
-          if (msg === 'RATE_LIMITED') {
-            return { error: 'Muitas tentativas falhas. Tente novamente mais tarde.' }
-          }
-          return { error: msg ?? 'Acesso bloqueado temporariamente.' }
-        default:
-          return { error: 'Erro ao tentar entrar. Tente novamente.' }
+      const causeCode = err.cause?.err?.message ?? null
+      const message = loginErrorMessage(err.type, causeCode)
+      // Falha inesperada (banco fora, configuração): detalhe só no log do servidor.
+      if (message === LOGIN_MESSAGES.unavailable) {
+        const log = await getLogger({ action: 'login' })
+        log.error({ err, authErrorType: err.type }, 'Falha inesperada no login')
       }
+      return { error: message }
     }
     // signIn lança NEXT_REDIRECT internamente — relançar para o Next processar
     throw err
