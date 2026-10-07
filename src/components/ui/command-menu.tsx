@@ -83,8 +83,9 @@ export function CommandMenu() {
   const isGestor = pathname.startsWith('/gestor')
   const isTecnico = pathname.startsWith('/tecnico')
   const isOperador = pathname.startsWith('/operador')
+  const isManutencao = pathname.startsWith('/manutencao')
 
-  if (!isGestor && !isTecnico && !isOperador) return null
+  if (!isGestor && !isTecnico && !isOperador && !isManutencao) return null
 
   const getIconForType = (type: string) => {
     if (type === 'equipment') return <Wrench className="h-4 w-4" />
