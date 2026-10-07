@@ -1,6 +1,6 @@
-import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig, RuntimeCaching } from "serwist";
-import { NetworkOnly, Serwist } from "serwist";
+import { CacheFirst, ExpirationPlugin, NetworkOnly, Serwist, StaleWhileRevalidate } from "serwist";
+import { cacheStrategyFor, LEGACY_USER_DATA_CACHES } from "@/lib/sw-cache-policy";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -8,24 +8,32 @@ declare global {
   }
 }
 
-declare const self: WorkerGlobalScope;
+// O tsconfig não carrega a lib "webworker"; tipagem mínima do evento usado aqui.
+type ActivateEvent = Event & { waitUntil(p: Promise<unknown>): void };
+declare const self: WorkerGlobalScope & {
+  addEventListener(type: "activate", listener: (event: ActivateEvent) => void): void;
+};
 
-// Rotas autenticadas (páginas server-rendered com dados do operador logado) e a
-// API NUNCA vão para o cache. Em tablets de ETE compartilhados entre operadores,
-// isso impede que o HTML renderizado do operador A seja servido offline ao
-// operador B depois do logout. Só assets estáticos são cacheados (defaultCache).
-const AUTH_PATH = /^\/(operador|tecnico|gestor|admin)(\/|$)/;
-
-const noCacheAuthenticated: RuntimeCaching[] = [
+// T-12: cache só do que é igual para todos (build e /public). Páginas, RSC, API,
+// fotos e qualquer outra origem vão sempre para a rede — ver sw-cache-policy.ts.
+const runtimeCaching: RuntimeCaching[] = [
   {
-    matcher: ({ url, request }) =>
-      request.mode === "navigate" && AUTH_PATH.test(url.pathname),
-    handler: new NetworkOnly(),
+    matcher: ({ url, sameOrigin, request }) =>
+      cacheStrategyFor({ url, sameOrigin, mode: request.mode, headers: request.headers }) === "immutable",
+    handler: new CacheFirst({
+      cacheName: "solentis-build",
+      plugins: [new ExpirationPlugin({ maxEntries: 400, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+    }),
   },
   {
-    matcher: ({ url }) => url.pathname.startsWith("/api/"),
-    handler: new NetworkOnly(),
+    matcher: ({ url, sameOrigin, request }) =>
+      cacheStrategyFor({ url, sameOrigin, mode: request.mode, headers: request.headers }) === "static",
+    handler: new StaleWhileRevalidate({
+      cacheName: "solentis-static",
+      plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+    }),
   },
+  { matcher: () => true, handler: new NetworkOnly() },
 ];
 
 const serwist = new Serwist({
@@ -33,7 +41,16 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: [...noCacheAuthenticated, ...defaultCache],
+  runtimeCaching,
+});
+
+// Apaga os caches das versões anteriores que podiam guardar dados de usuário.
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((names) =>
+      Promise.all(names.filter((n) => LEGACY_USER_DATA_CACHES.includes(n)).map((n) => caches.delete(n))),
+    ),
+  );
 });
 
 serwist.addEventListeners();
