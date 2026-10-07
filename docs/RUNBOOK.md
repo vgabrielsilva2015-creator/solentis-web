@@ -20,12 +20,14 @@ npx prisma studio
 Interface disponível em: **http://localhost:5555** (ou porta aleatória disponível — veja o output do terminal).
 Para encerrar: `Ctrl + C` no terminal.
 
-### 1.3 Aplicar migrations (após alterar o schema.prisma)
+### 1.3 Criar migration (após alterar o schema.prisma) — só banco LOCAL
 ```bash
-npx prisma migrate dev --name <nome-descritivo>
+npx prisma migrate dev --create-only --name <nome-descritivo>   # gera o SQL sem aplicar
+# revise prisma/migrations/<data>_<nome>/migration.sql, depois:
+npx prisma migrate dev
 ```
-Exemplo: `npx prisma migrate dev --name add-users-table`
-Cria a migration SQL em `prisma/migrations/` e atualiza o banco.
+Produção: `npx prisma migrate deploy` (com dump antes). Processo completo e
+baselining do banco existente: `docs/MIGRATIONS.md`.
 
 ### 1.4 Regenerar cliente Prisma (após alterar o schema.prisma)
 ```bash

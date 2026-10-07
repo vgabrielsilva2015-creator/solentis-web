@@ -28,7 +28,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Ciclo 3 — Notificações, Filtros, Exportação para CSV, Ponto de Coleta e Categoria na Ocorrência CONCLUÍDA
 ✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
 ✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
-✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`.
+✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`. **[Superado pela T-09, out/2026: há baseline em `prisma/migrations`; processo atual em `docs/MIGRATIONS.md`.]**
 
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
 
@@ -164,6 +164,7 @@ Trate o texto histórico abaixo como registro de fases, não como verdade atual 
 - Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui, Pino (logs estruturados)
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
 - Sessão (T-06): JWT revalidado no banco a cada 60 s (`src/lib/session-guard.ts`): usuário inativo, papel/planta trocados, planta desativada ou `users.session_version` diferente derrubam a sessão. Inatividade por perfil (operador 30 min, demais 60 min) e idade máxima de 12 h. Toda escrita que muda acesso (senha, papel, e-mail, ativo) usa `BUMP_SESSION_VERSION`; há teste que exige isso.
+- Migrations (T-09): `prisma/migrations` tem baseline completo (`20261007000000_baseline`) + índices parciais. Mudança de schema = `migrate dev --create-only` local → revisar SQL → `migrate deploy` em produção. Nada de `db push`/SQL avulso em produção. Baselining da produção existente: `docs/MIGRATIONS.md` §4.
 - PWA: Serwist. **Modo offline de leituras temporariamente DESABILITADO** (T-01, 2026-10): a fila antiga em `localStorage` + `SyncManager` perdia leituras. Sem conexão o envio é bloqueado. A nova fila offline (IndexedDB + idempotência) é a T-15.
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
