@@ -144,12 +144,13 @@ export async function registrarLeitura(
     if (!collectionPoint) return { error: 'Ponto de coleta inválido ou não autorizado.' }
   }
 
+  // A leitura entra no turno aberto POR QUEM REGISTROU. Sem turno próprio, fica
+  // sem vínculo (shift_instance_id = null). Antes (P-16) caía em qualquer turno
+  // aberto da planta — o de outro operador — e entrava na contagem da passagem
+  // dele. Decisão da T-18: permitir sem vínculo em vez de bloquear (o operador
+  // em campo não perde a medição; o técnico/gestor também registra leituras).
   const activeInstance = await prisma.shiftInstance.findFirst({
     where: { tenant_id: await getTenantId(), opened_by: userId, status: 'OPEN' },
-    select: { id: true },
-    orderBy: { opened_at: 'desc' },
-  }) ?? await prisma.shiftInstance.findFirst({
-    where: { tenant_id: await getTenantId(), status: 'OPEN' },
     select: { id: true },
     orderBy: { opened_at: 'desc' },
   })
