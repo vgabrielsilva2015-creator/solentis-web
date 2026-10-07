@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { BackButton } from '@/components/back-button'
 import { ConfirmForm } from './confirm-form'
 import { getTenantId } from '@/lib/tenant'
+import { aguardandoConfirmacao, passagemVencida } from '@/lib/handover-status'
 
 
 function formatDatetime(d: Date): string {
@@ -38,7 +39,7 @@ export default async function ConfirmarPage({
   })
 
   if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) redirect('/operador/turnos')
-  if (handover.status !== 'PENDING') redirect('/operador/turnos')
+  if (!aguardandoConfirmacao(handover.status)) redirect('/operador/turnos')
 
   // Buscar turnos disponíveis para o operador entrante abrir junto
   const availableShifts = await prisma.shift.findMany({
@@ -55,7 +56,7 @@ export default async function ConfirmarPage({
     pending_tasks?: string[]
   }
 
-  const vencido = new Date(handover.timeout_at) < new Date()
+  const vencido = passagemVencida(handover)
 
   return (
     <main className="mx-auto max-w-lg px-4 py-6 space-y-5">
@@ -69,7 +70,7 @@ export default async function ConfirmarPage({
           </div>
           {vencido && (
             <span className="shrink-0 rounded px-2 py-0.5 text-xs font-semibold bg-red-950/60 text-red-400 border border-red-900/50 animate-pulse">
-              TIMEOUT
+              Prazo esgotado
             </span>
           )}
         </div>

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { aplicarTimeouts } from './actions'
+import { aguardandoConfirmacao, passagemVencida } from '@/lib/handover-status'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 
 
@@ -28,8 +28,8 @@ export default async function TurnosPage() {
   const session = await auth()
   if (!session) redirect('/login')
 
-  // Aplica timeouts pendentes de forma lazy
-  await aplicarTimeouts()
+  // T-18 (B-11): o timeout é calculado na leitura (passagemVencida), sem gravar
+  // nada no banco durante a renderização.
 
   const userId = await resolveUserId(session.user.email!)
   if (!userId) redirect('/login')
@@ -62,10 +62,13 @@ export default async function TurnosPage() {
     orderBy: { opened_at: 'asc' },
   })
 
-  // Handovers PENDING que este operador pode confirmar (ele não é o sainte)
+  // Passagens aguardando confirmação que este operador pode confirmar (ele não é
+  // o sainte). Vencidas continuam aqui, com o selo de prazo esgotado: o timeout
+  // é alerta, não bloqueio (ver src/lib/handover-status.ts).
   const pendingToConfirm = activeInstances.filter(
     (inst) =>
-      inst.handover?.status === 'PENDING' &&
+      inst.handover != null &&
+      aguardandoConfirmacao(inst.handover.status) &&
       inst.handover.outgoing_user_id !== userId,
   )
 
@@ -146,7 +149,7 @@ export default async function TurnosPage() {
             <h2 className="text-sm font-medium text-amber-400">Aguardando sua confirmação</h2>
             {pendingToConfirm.map((inst) => {
               const h        = inst.handover!
-              const vencido  = new Date(h.timeout_at) < now
+              const vencido  = passagemVencida(h, now)
               const checklist = JSON.parse((h.checklist_data as string) || '{}') as {
                 readings_count?: number
                 open_occurrences_count?: number
@@ -172,7 +175,7 @@ export default async function TurnosPage() {
                     </div>
                     {vencido && (
                       <span className="rounded px-2 py-0.5 text-xs font-semibold bg-red-950/60 text-red-400 border border-red-900/50 animate-pulse">
-                        TIMEOUT
+                        Prazo esgotado
                       </span>
                     )}
                   </div>

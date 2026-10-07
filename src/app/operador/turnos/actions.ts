@@ -10,6 +10,7 @@ import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
+import { aguardandoConfirmacao, STATUS_AGUARDANDO } from '@/lib/handover-status'
 
 const MAX_PHOTOS_TASK = 3
 const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
@@ -87,21 +88,6 @@ export type TurnoFormState = {
   error?: string
   fieldErrors?: Record<string, string[]>
   success?: boolean
-}
-
-// ─── Lazy timeout (chamado em Server Components ao renderizar a página) ────────
-// Não é uma Server Action de formulário — é chamada direto no page.tsx
-
-export async function aplicarTimeouts(): Promise<void> {
-  const now = new Date()
-  await prisma.shiftHandover.updateMany({
-    where: {
-      tenant_id:  await getTenantId(),
-      status:     'PENDING',
-      timeout_at: { lt: now },
-    },
-    data: { status: 'TIMED_OUT' },
-  })
 }
 
 // ─── Abrir turno ──────────────────────────────────────────────────────────────
@@ -329,6 +315,9 @@ export async function iniciarPassagem(
 
 // ─── Confirmar passagem (Etapa 2 — operador entrante) ─────────────────────────
 
+/** Outro entrante confirmou primeiro (só usado dentro da transação abaixo). */
+class PassagemJaConfirmada extends Error {}
+
 export async function confirmarPassagem(
   handoverId: string,
   _prev: TurnoFormState,
@@ -354,7 +343,9 @@ export async function confirmarPassagem(
   if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) {
     return { error: 'Passagem não encontrada.' }
   }
-  if (handover.status !== 'PENDING') {
+  // Vencida (PENDING com prazo esgotado, ou TIMED_OUT gravado pela versão antiga)
+  // ainda pode ser confirmada: o timeout é alerta para o gestor, não bloqueio.
+  if (!aguardandoConfirmacao(handover.status)) {
     return { error: 'Esta passagem já foi encerrada.' }
   }
   // Sainte não pode confirmar a própria passagem
@@ -380,14 +371,18 @@ export async function confirmarPassagem(
 
   try {
   await prisma.$transaction(async (tx) => {
-    // Confirma a passagem
-    await tx.shiftHandover.updateMany({ where: { id: handoverId , tenant_id: (await getTenantId()) }, data: {
+    // Confirma a passagem. A condição de status torna a confirmação única: se
+    // dois entrantes confirmarem ao mesmo tempo, só o primeiro fecha o turno.
+    const confirmada = await tx.shiftHandover.updateMany({
+      where: { id: handoverId, tenant_id: (await getTenantId()), status: { in: [...STATUS_AGUARDANDO] } },
+      data: {
         status:                'CONFIRMED',
         confirmed_at:          now,
         incoming_user_id:      userId,
         incoming_observations: parsed.data.incoming_observations,
       },
     })
+    if (confirmada.count !== 1) throw new PassagemJaConfirmada()
     // Fecha o turno anterior
     await tx.shiftInstance.updateMany({ where: { id: handover.shift_instance.id , tenant_id: (await getTenantId()) }, data:  { status: 'CLOSED', closed_at: now },
     })
@@ -455,6 +450,7 @@ export async function confirmarPassagem(
     }
   })
   } catch (e: unknown) {
+    if (e instanceof PassagemJaConfirmada) return { error: 'Esta passagem já foi confirmada por outro operador.' }
     if (isP2002(e)) return { error: 'Você já tem um turno aberto. Passe o seu turno antes de receber este.' }
     throw e
   }
