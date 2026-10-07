@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { calcularEstoqueAtual } from '@/lib/stock-utils'
+import { lockProduct, saldoAtual } from '@/lib/stock-lock'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
@@ -63,43 +63,36 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
   if (erroPosse) return { error: erroPosse }
 
-  // Calcula estoque atual para verificar se ficará negativo
-  const [entries, exits] = await Promise.all([
-    prisma.chemicalStockEntry.aggregate({
-      where: { tenant_id: (await getTenantId()), product_id },
-      _sum:  { quantity: true },
-    }),
-    prisma.chemicalStockExit.aggregate({
-      where: { tenant_id: (await getTenantId()), product_id },
-      _sum:  { quantity: true },
-    }),
-  ])
-
-  const estoqueAtual = calcularEstoqueAtual(
-    entries._sum.quantity ?? 0,
-    exits._sum.quantity   ?? 0,
-  )
-
   const recorded_by = await resolveUserId(session.user.email!)
   if (!recorded_by) return { error: 'Sessão inválida.' }
 
-  const novoEstoque = estoqueAtual - quantity
-  if (novoEstoque < 0) {
-    return {
-      error: `Atenção: saída de ${quantity} resulta em estoque negativo (saldo atual é ${estoqueAtual.toFixed(2)}). Operação bloqueada.`,
-    }
-  }
+  const tenantId = await getTenantId()
 
-  await prisma.chemicalStockExit.create({
-    data: {
-      tenant_id: (await getTenantId()),
-      product_id,
-      quantity,
-      notes,
-      used_at:    localInputToUTC(used_at),
-      recorded_by,
-    },
+  // T-13: trava o produto, lê o saldo e grava a saída na MESMA transação.
+  // Duas saídas simultâneas não passam mais juntas pela checagem de saldo.
+  const resultado = await prisma.$transaction(async (tx) => {
+    if (!(await lockProduct(tx, tenantId, product_id))) return { error: 'Produto inválido ou não autorizado.' }
+
+    const estoqueAtual = await saldoAtual(tx, tenantId, product_id)
+    if (estoqueAtual - quantity < 0) {
+      return {
+        error: `Atenção: saída de ${quantity} resulta em estoque negativo (saldo atual é ${estoqueAtual.toFixed(2)}). Operação bloqueada.`,
+      }
+    }
+
+    await tx.chemicalStockExit.create({
+      data: {
+        tenant_id: tenantId,
+        product_id,
+        quantity,
+        notes,
+        used_at:    localInputToUTC(used_at),
+        recorded_by,
+      },
+    })
+    return null
   })
+  if (resultado) return resultado
 
   revalidatePath('/operador/estoque')
   revalidatePath(`/operador/estoque/${product_id}`)
@@ -129,17 +122,14 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
   const erroPosse = await checkOwnership(tenantId, [{ model: 'chemicalProduct', id: product_id }])
   if (erroPosse) return { error: erroPosse }
 
-  // Saldo calculado atual (entradas - saídas) antes do ajuste
-  const [entradas, saidas] = await Promise.all([
-    prisma.chemicalStockEntry.aggregate({ where: { tenant_id: tenantId, product_id }, _sum: { quantity: true } }),
-    prisma.chemicalStockExit.aggregate({ where: { tenant_id: tenantId, product_id }, _sum: { quantity: true } }),
-  ])
-  const calculado = calcularEstoqueAtual(entradas._sum.quantity ?? 0, saidas._sum.quantity ?? 0)
-  const diff = counted_quantity - calculado
-
   // Contagem física = ajuste de inventário: cria uma movimentação da diferença
   // para que o saldo calculado passe a ser exatamente o valor contado.
-  await prisma.$transaction(async (tx) => {
+  // T-13: o saldo é lido com o produto travado, dentro da transação do ajuste.
+  const ok = await prisma.$transaction(async (tx) => {
+    if (!(await lockProduct(tx, tenantId, product_id))) return false
+    const calculado = await saldoAtual(tx, tenantId, product_id)
+    const diff = counted_quantity - calculado
+
     await tx.chemicalStockCount.create({
       data: {
         tenant_id: tenantId,
@@ -174,7 +164,9 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
         },
       })
     }
+    return true
   })
+  if (!ok) return { error: 'Produto inválido ou não autorizado.' }
 
   revalidatePath('/operador/estoque')
   revalidatePath(`/operador/estoque/${product_id}`)

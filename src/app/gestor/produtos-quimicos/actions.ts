@@ -8,6 +8,7 @@ import { CHEMICAL_UNITS_PRESET } from '@/types'
 import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
+import { lockProduct } from '@/lib/stock-lock'
 import { redirect } from 'next/navigation'
 
 
@@ -153,18 +154,26 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
   const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
   if (erroPosse) return { error: erroPosse }
 
-  await prisma.chemicalStockEntry.create({
-    data: {
-      tenant_id: (await getTenantId()),
-      product_id,
-      quantity,
-      supplier,
-      invoice_number,
-      notes,
-      received_at: localInputToUTC(received_at),
-      recorded_by,
-    },
+  // T-13: entrada também trava o produto, para não intercalar com uma
+  // contagem física que esteja calculando o ajuste ao mesmo tempo.
+  const tenantId = await getTenantId()
+  const ok = await prisma.$transaction(async (tx) => {
+    if (!(await lockProduct(tx, tenantId, product_id))) return false
+    await tx.chemicalStockEntry.create({
+      data: {
+        tenant_id: tenantId,
+        product_id,
+        quantity,
+        supplier,
+        invoice_number,
+        notes,
+        received_at: localInputToUTC(received_at),
+        recorded_by,
+      },
+    })
+    return true
   })
+  if (!ok) return { error: 'Produto inválido ou não autorizado.' }
 
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath(`/gestor/produtos-quimicos/${product_id}`)
