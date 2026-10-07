@@ -18,6 +18,7 @@ declare module 'next-auth' {
     role: string
     mustChangePassword: boolean
     tenantId: string
+    sessionVersion: number
   }
   interface Session {
     user: {
@@ -33,6 +34,10 @@ declare module '@auth/core/jwt' {
     role: string
     mustChangePassword: boolean
     tenantId: string
+    sv?: number
+    loginAt?: number
+    lastSeen?: number
+    checkedAt?: number
   }
 }
 
@@ -177,6 +182,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role:                user.role,
           mustChangePassword:  user.must_change_password,
           tenantId:            user.tenant_id,
+          sessionVersion:      user.session_version,
         }
       },
     }),

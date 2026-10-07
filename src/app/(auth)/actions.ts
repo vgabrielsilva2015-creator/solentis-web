@@ -2,6 +2,7 @@
 
 import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword, passwordSchema } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
 import { getLogger } from '@/lib/logger'
@@ -119,7 +120,7 @@ export async function resetPassword(token: string, newPassword: string) {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: record.user_id },
-        data: { password_hash: hashed, must_change_password: false },
+        data: { password_hash: hashed, must_change_password: false, ...BUMP_SESSION_VERSION },
       }),
       // @tenant-checked: mesmo registro de token validado acima.
       prisma.passwordResetToken.update({

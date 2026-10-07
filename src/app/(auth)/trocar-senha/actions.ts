@@ -2,6 +2,7 @@
 
 import { auth, signIn } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword, passwordSchema } from '@/lib/password'
 import { getLogger } from '@/lib/logger'
 import { z } from 'zod'
@@ -73,6 +74,8 @@ export async function trocarSenhaAction(
       data: {
         password_hash:        passwordHash,
         must_change_password: false,
+        // Derruba as outras sessões; esta é reemitida pelo signIn logo abaixo
+        ...BUMP_SESSION_VERSION,
       },
     })
 

@@ -3,6 +3,7 @@
 import { randomInt } from 'crypto'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword } from '@/lib/password'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
@@ -142,7 +143,7 @@ export async function resetarSenhaUsuario(
       // @tenant-safe: reset por super admin, alvo por PK global (ver justificativa acima).
       await tx.user.update({
         where: { id: userId },
-        data:  { password_hash: passwordHash, must_change_password: true },
+        data:  { password_hash: passwordHash, must_change_password: true, ...BUMP_SESSION_VERSION },
       })
       await logAudit(tx, {
         tenantId:  target.tenant_id,
@@ -194,7 +195,7 @@ export async function toggleAtivoUsuario(
       // @tenant-safe: toggle por super admin, alvo por PK global (ver justificativa acima).
       await tx.user.update({
         where: { id: userId },
-        data:  { is_active: novoStatus },
+        data:  { is_active: novoStatus, ...BUMP_SESSION_VERSION },
       })
       await logAudit(tx, {
         tenantId:  target.tenant_id,

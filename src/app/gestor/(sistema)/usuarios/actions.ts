@@ -3,6 +3,7 @@
 import { randomInt } from 'crypto'
 import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword } from '@/lib/password'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
@@ -167,7 +168,11 @@ export async function editarUsuario(
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({
         where: { id: userId, tenant_id: tenantId },
-        data:  { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
+        data:  {
+          name: parsed.data.name, email: parsed.data.email, role: parsed.data.role,
+          // Papel ou e-mail mudou: as sessões abertas carregam o valor antigo
+          ...(current.role !== parsed.data.role || current.email !== parsed.data.email ? BUMP_SESSION_VERSION : {}),
+        },
       })
       await logAudit(tx, {
         tenantId: tenantId,
@@ -212,7 +217,7 @@ export async function toggleAtivo(
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({
         where: { id: userId, tenant_id: tenantId },
-        data:  { is_active: !user.is_active },
+        data:  { is_active: !user.is_active, ...BUMP_SESSION_VERSION },
       })
       await logAudit(tx, {
         tenantId: tenantId,
@@ -259,7 +264,7 @@ export async function resetarSenha(
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({
         where: { id: userId, tenant_id: tenantId },
-        data:  { password_hash: passwordHash, must_change_password: true },
+        data:  { password_hash: passwordHash, must_change_password: true, ...BUMP_SESSION_VERSION },
       })
       await logAudit(tx, {
         tenantId: tenantId,

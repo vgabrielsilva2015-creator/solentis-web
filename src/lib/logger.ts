@@ -5,8 +5,8 @@ import { headers } from 'next/headers'
  * Logger estruturado (JSON) para observabilidade.
  *
  * - Emite JSON no stdout — na Vercel cai direto no painel "Logs", filtrável por campo.
- * - NUNCA use em código que roda no Edge (ex.: src/proxy.ts). Pino é Node-only.
- *   Server Actions e rotas de API rodam em Node (por causa do Prisma), então lá é seguro.
+ * - Pino é Node-only: não use em código com runtime Edge. No Next 16 o proxy
+ *   (src/proxy.ts), as Server Actions e as rotas de API rodam em Node.
  * - Em dev, para ler mais fácil: `npm run dev | npx pino-pretty` (não plugamos o
  *   transport pino-pretty aqui de propósito — worker thread quebra no bundle do Next).
  *

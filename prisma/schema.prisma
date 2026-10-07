@@ -76,6 +76,8 @@ model User {
   role                 String
   must_change_password Boolean   @default(true)
   is_active            Boolean   @default(true)
+  // T-06: incrementada quando o acesso muda; invalida todas as sessões abertas
+  session_version      Int       @default(0)
   receive_nc_push      Boolean   @default(true)
   last_login_at        DateTime?
   created_at           DateTime  @default(now())

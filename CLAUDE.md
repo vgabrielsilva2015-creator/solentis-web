@@ -123,7 +123,7 @@ Camada de log profissional adicionada (PR #14, branch `feat/observabilidade-logg
 - **Nível configurável** via env `LOG_LEVEL` na Vercel (sem deploy).
 
 ### ⚠️ Regras de uso
-- **NUNCA importar o logger em código Edge** (`src/proxy.ts`) — Pino é Node-only. Server Actions e rotas rodam em Node (Prisma), lá é seguro.
+- **Pino é Node-only.** No Next 16 o `src/proxy.ts` roda em runtime Node (confirmado no build: `functions-config-manifest.json` → `runtime: nodejs`), por isso o callback `jwt` (importado pelo proxy) pode usar logger e Prisma. Não adicionar `export const runtime = 'edge'` em nada que importe `auth.config`.
 - **Componentes client** (`push-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
 - Complementa (não substitui) o `logAudit()` (`src/lib/audit.ts`), que é auditoria **de negócio** (CONAMA), não observabilidade operacional.
 
@@ -163,6 +163,7 @@ Trate o texto histórico abaixo como registro de fases, não como verdade atual 
 - Nome: Solentis
 - Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui, Pino (logs estruturados)
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
+- Sessão (T-06): JWT revalidado no banco a cada 60 s (`src/lib/session-guard.ts`): usuário inativo, papel/planta trocados, planta desativada ou `users.session_version` diferente derrubam a sessão. Inatividade por perfil (operador 30 min, demais 60 min) e idade máxima de 12 h. Toda escrita que muda acesso (senha, papel, e-mail, ativo) usa `BUMP_SESSION_VERSION`; há teste que exige isso.
 - PWA: Serwist. **Modo offline de leituras temporariamente DESABILITADO** (T-01, 2026-10): a fila antiga em `localStorage` + `SyncManager` perdia leituras. Sem conexão o envio é bloqueado. A nova fila offline (IndexedDB + idempotência) é a T-15.
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
