@@ -15,7 +15,7 @@
 Os outros scripts de `prisma/sql/` continuam onde estão, como registro:
 - `add_task_templates`, `add_reading_photo` e `add_user_session_version` já estão dentro do baseline.
 - `add_indexes.sql` cria 5 índices `idx_*`. Quatro deles duplicam índices que o schema já tem. A limpeza fica para a T-19.
-- `enable_rls.sql` fica para a T-14.
+- `enable_rls.sql` foi substituído pela migration `20261007020000_rls_deny_all` (T-14).
 
 **Validado** num banco vazio, só com as migrations: 40 tabelas criadas, seed rodou, smoke E2E dos 4 perfis passou e os testes de execução da T-05 e da T-06 passaram. O app do harness passou a rodar sobre esse banco.
 
@@ -56,6 +56,13 @@ Sequência pedida: **produção → dump → staging → baseline → validar di
 8. **Só então repetir o passo 6 em produção** (com `$PROD_DIRECT_URL`). São 3 operações de metadado: renomear a tabela de histórico e registrar 2 migrations. Nenhum dado é tocado.
 
 **Rollback do baselining:** em produção, `DROP TABLE "_prisma_migrations"` (a nova, só com 2 linhas de metadado) e `ALTER TABLE "_prisma_migrations_legacy" RENAME TO "_prisma_migrations"`. As tabelas de negócio não mudaram em nenhum passo.
+
+### Migrations posteriores ao baseline
+Depois do passo 8, `npx prisma migrate deploy` aplica as que vieram depois do baseline. Todas são aditivas ou idempotentes:
+- `20261007010000_auth_rate_events` (T-10): tabela nova.
+- `20261007020000_rls_deny_all` (T-14): liga o RLS em todas as tabelas e tira os privilégios de `anon`/`authenticated`. Se o RLS já estiver ligado, só reforça.
+
+**Tabela nova daqui para frente:** a mesma migration precisa ter `ALTER TABLE "x" ENABLE ROW LEVEL SECURITY`. O teste `migrations-schema.test.ts` cobra isso.
 
 ## 5. Processo daqui para frente
 1. Alterar o `schema.prisma`.

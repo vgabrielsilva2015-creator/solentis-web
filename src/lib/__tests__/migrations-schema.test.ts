@@ -88,4 +88,19 @@ describe('migrations reproduzem o schema (T-09)', () => {
       readFileSync(join(MIG_DIR, d, 'migration.sql'), 'utf-8').split('\n').some((l) => /^\s*--.*;/.test(l)))
     expect(ruins).toEqual([])
   })
+
+  it('RLS ligado em toda tabela (T-14): tabelas criadas depois da migration de RLS habilitam o próprio RLS', () => {
+    const idx = migrationDirs.findIndex((d) => d.endsWith('_rls_deny_all'))
+    expect(idx).toBeGreaterThanOrEqual(0)
+    const semRls: string[] = []
+    migrationDirs.slice(idx + 1).forEach((d, i) => {
+      const sql = readFileSync(join(MIG_DIR, d, 'migration.sql'), 'utf-8')
+      for (const m of sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?"?(\w+)"?/g)) {
+        const t = m[1]
+        const depois = migrationDirs.slice(idx + 1 + i).map((x) => readFileSync(join(MIG_DIR, x, 'migration.sql'), 'utf-8')).join('\n')
+        if (!new RegExp(`ALTER TABLE (?:public\\.)?"?${t}"? ENABLE ROW LEVEL SECURITY`).test(depois)) semRls.push(`${d}: ${t}`)
+      }
+    })
+    expect(semRls).toEqual([])
+  })
 })

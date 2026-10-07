@@ -42,7 +42,7 @@ Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0
 
 ### ⏳ PENDENTE — só o dono/infra faz (checklist §7 do REVISAO_GERAL)
 - **DB-01** baseline de migration reproduzível (4 migrations p/ 42 tabelas; cuidado — ver memória "migrations quebradas").
-- **DB-03** habilitar **RLS no Supabase** (isolamento hoje é 100% na aplicação) — defesa em profundidade.
+- **DB-03** habilitar **RLS no Supabase** (isolamento hoje é 100% na aplicação) — defesa em profundidade. **[T-14: migration `20261007020000_rls_deny_all`; aplicar com `migrate deploy`.]**
 - **Envs na Vercel** conferir (`AUTH_SECRET`/`CRON_SECRET`/`RESEND_API_KEY`/`BLOB_READ_WRITE_TOKEN`/`GEMINI_API_KEY`/`WHATSAPP_*`/`DATABASE_URL`); nenhuma `NEXT_PUBLIC_` exceto VAPID pública.
 - **Rotacionar** token do GitHub que já apareceu no `git remote`.
 - **Backup Supabase** confirmar PITR e **testar restore**.

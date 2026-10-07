@@ -19,7 +19,7 @@ Rodar `scripts/ops/production-readonly-checks.sql` no SQL Editor do Supabase e c
 | 1.3 | Senhas padrão (`Admin@123`, `Tecnico@123`, `Operador@123`, `Manutencao@123`, `Super@123`, `admin123`) | **não testar login em produção** (trava a conta pelo rate limit). Se 1.1/1.2 existirem, resetar a senha pelo painel do gestor/super admin. | nenhuma conta com senha padrão | ❓ |
 | 1.4 | Unique global de e-mail | consulta 3 | índice `users_email_key` presente; nenhum e-mail duplicado | ❓ |
 | 1.5 | Índices de turno e de consultas | consulta 4 | 7 índices listados | ❓ |
-| 1.6 | RLS | consulta 5 | `rowsecurity = true` em todas as tabelas (hoje é esperado `false`; ver T-14) | ❓ |
+| 1.6 | RLS | consulta 5 | `rowsecurity = true` em todas as tabelas (garantido pela migration da T-14; uma sessão anterior relatou já estar ligado, sem confirmação) | ❓ |
 | 1.7 | Migrations registradas | consulta 6 | 4 migrations antigas (até a T-09 criar o baseline) | ❓ |
 | 1.8 | Colunas aplicadas por fora das migrations | consulta 7 | 7 colunas + tabela `shift_task_templates` presentes | ❓ |
 | 1.9 | Conexões | consulta 8 | uso bem abaixo do limite do plano | ❓ |

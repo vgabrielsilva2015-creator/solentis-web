@@ -1,3 +1,5 @@
+-- [SUPERADO pela T-14 (out/2026): prisma/migrations/20261007020000_rls_deny_all,
+--  aplicada por `prisma migrate deploy`. Mantido só como histórico.]
 -- ============================================================================
 -- Solentis — Habilitar Row Level Security (RLS) — DEFESA EM PROFUNDIDADE
 -- ============================================================================
