@@ -74,3 +74,7 @@ next-env.d.ts
 .vercel
 
 /src/generated/prisma
+
+# Códigos de recuperação/segredos pessoais: nunca versionar
+docs/recovery-codes.txt
+*recovery-codes*
