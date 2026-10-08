@@ -13,7 +13,8 @@
  *    permissão → /acesso-negado; o perfil vem do banco, não do token.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { readFileSync, readdirSync, statSync } from 'fs'
+import { readFileSync, readdirSync, statSync, mkdtempSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
 import { join, relative } from 'path'
 import { PERMISSIONS, can, type Permission } from '@/server/auth/permissions'
 
@@ -32,18 +33,33 @@ function walk(dir: string, acc: string[] = []): string[] {
 }
 const SERVER_FILES = walk(SRC).filter((f) => /^\s*['"]use server['"]/.test(readFileSync(f, 'utf-8')))
 
-/** Corpo de cada função exportada (parênteses e chaves balanceados, pulando o tipo de retorno). */
+/**
+ * Corpo de cada função exportada (parênteses e chaves balanceados, pulando o tipo de retorno).
+ * T-30: uma action pode ser um invólucro de medição — `export async function X(...args) { return
+ * medir('X', () => XImpl(...args)) }`. Nesse caso o corpo avaliado é o de `XImpl` (onde está o
+ * guard), então o guardião continua exigindo permissão na lógica real e não no invólucro.
+ */
 function actions(file: string): Array<{ name: string; body: string }> {
   const s = readFileSync(file, 'utf-8')
-  const out: Array<{ name: string; body: string }> = []
-  for (const m of s.matchAll(/export async function (\w+)\s*\(/g)) {
+  const todas = new Map<string, { exportada: boolean; body: string }>()
+  for (const m of s.matchAll(/^(export )?async function (\w+)\s*\(/gm)) {
     let k = m.index! + m[0].length, d = 1
     while (d) { if (s[k] === '(') d++; else if (s[k] === ')') d--; k++ }
     let a = 0
     while (!(s[k] === '{' && a === 0)) { if (s[k] === '<') a++; else if (s[k] === '>') a--; k++ }
     const i = k; d = 1; k++
     while (d) { if (s[k] === '{') d++; else if (s[k] === '}') d--; k++ }
-    out.push({ name: m[1], body: s.slice(i, k) })
+    todas.set(m[2], { exportada: !!m[1], body: s.slice(i, k) })
+  }
+  const out: Array<{ name: string; body: string }> = []
+  for (const [name, f] of todas) {
+    if (!f.exportada) continue
+    const inv = /medir\('(\w+)',\s*\(\)\s*=>\s*(\w+)\(\.\.\.args\)\)/.exec(f.body)
+    if (inv && inv[1] === name && todas.has(inv[2]) && inv[2] === `${name}Impl`) {
+      out.push({ name, body: todas.get(inv[2])!.body })
+    } else {
+      out.push({ name, body: f.body })
+    }
   }
   return out
 }
@@ -68,6 +84,31 @@ for (const f of SERVER_FILES) for (const a of actions(f)) ATUAL.set(chave(f, a.n
 
 describe('toda action passa pelo guard único', () => {
   it('encontrou as actions do app', () => expect(ATUAL.size).toBeGreaterThan(80))
+
+  it('controle negativo (T-30): invólucro de medição não esconde um Impl sem guard', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'guard-'))
+    const f = join(dir, 'a.ts')
+    writeFileSync(f, [
+      "'use server'",
+      'async function xImpl(a: string) {',
+      '  return prisma.thing.findMany({})',
+      '}',
+      'export async function x(...args: Parameters<typeof xImpl>) {',
+      "  return medir('x', () => xImpl(...args))",
+      '}',
+      'async function yImpl() {',
+      "  const ctx = await requirePermission('reading.create')",
+      '  return ctx',
+      '}',
+      'export async function y(...args: Parameters<typeof yImpl>) {',
+      "  return medir('y', () => yImpl(...args))",
+      '}',
+    ].join('\n'))
+    const r = actions(f)
+    expect(r.map((a) => a.name)).toEqual(['x', 'y'])
+    expect(permissaoDe(r[0].body)).toBeNull()            // sem guard → o teste de cobertura falharia
+    expect(permissaoDe(r[1].body)).toBe('reading.create') // com guard → reconhecido pelo nome público
+  })
 
   it('cada action protegida chama requirePermission/permissionError com permissão existente', () => {
     const sem: string[] = []

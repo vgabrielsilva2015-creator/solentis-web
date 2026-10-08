@@ -88,5 +88,5 @@ function redirectToLogin(req: NextRequest) {
 // fail-closed. Sem essa exclusão, o middleware redirecionava o cron ao /login
 // e o handler nunca executava.
 export const config = {
-  matcher: ['/((?!api/auth|api/cron|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  matcher: ['/((?!api/auth|api/cron|api/health|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
 }

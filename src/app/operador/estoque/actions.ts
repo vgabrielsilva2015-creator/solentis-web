@@ -1,6 +1,7 @@
 'use server'
 
 import { getActor, permissionError } from '@/server/auth/guards'
+import { medir } from '@/lib/observability'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
@@ -37,7 +38,7 @@ const ContagemSchema = z.object({
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-export async function registrarSaida(_prev: unknown, formData: FormData) {
+async function registrarSaidaImpl(_prev: unknown, formData: FormData) {
   const ctx = await getActor()
   const negado = permissionError(ctx, 'stock.move')
   if (negado) return { error: negado }
@@ -91,7 +92,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   return { success: true }
 }
 
-export async function registrarContagem(_prev: unknown, formData: FormData) {
+async function registrarContagemImpl(_prev: unknown, formData: FormData) {
   const ctx = await getActor()
   const negado = permissionError(ctx, 'stock.move')
   if (negado) return { error: negado }
@@ -161,4 +162,12 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
   revalidatePath('/tecnico/estoque')
   revalidatePath('/gestor/dashboard')
   return { success: true }
+}
+
+// ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───
+export async function registrarSaida(...args: Parameters<typeof registrarSaidaImpl>) {
+  return medir('registrarSaida', () => registrarSaidaImpl(...args))
+}
+export async function registrarContagem(...args: Parameters<typeof registrarContagemImpl>) {
+  return medir('registrarContagem', () => registrarContagemImpl(...args))
 }

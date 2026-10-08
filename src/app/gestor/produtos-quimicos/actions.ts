@@ -1,6 +1,7 @@
 'use server'
 
 import { requirePermission } from '@/server/auth/guards'
+import { medir } from '@/lib/observability'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
@@ -119,7 +120,7 @@ export async function toggleAtivoProduto(id: string, is_active: boolean) {
   revalidatePath('/gestor/dashboard')
 }
 
-export async function registrarEntrada(_prev: unknown, formData: FormData) {
+async function registrarEntradaImpl(_prev: unknown, formData: FormData) {
   const ctx = await requirePermission('stock.receive')
 
   const parsed = EntradaSchema.safeParse(Object.fromEntries(formData))
@@ -178,4 +179,9 @@ export async function excluirProduto(id: string) {
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath('/gestor/dashboard')
   redirect('/gestor/produtos-quimicos')
+}
+
+// ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───
+export async function registrarEntrada(...args: Parameters<typeof registrarEntradaImpl>) {
+  return medir('registrarEntrada', () => registrarEntradaImpl(...args))
 }

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { startOfDay, addDays } from 'date-fns'
 import { toZonedTime, format } from 'date-fns-tz'
 import { getLogger } from '@/lib/logger'
+import { baterCoracaoDoCron } from '@/lib/observability'
 
 export async function GET(request: Request) {
   // Verificação de segurança: a Vercel Cron envia 'Authorization: Bearer <CRON_SECRET>'.
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
   }
 
   const log = await getLogger({ action: 'cronShifts' })
+  const inicio = performance.now()
 
   try {
     const today = new Date()
@@ -113,6 +115,14 @@ export async function GET(request: Request) {
       }
     }
 
+    // T-30: registro de que o cron rodou (e quanto fez) + batimento para o monitor externo.
+    // Turnos pulados não são falha do job (ficam no log como warn); só exceção não tratada é.
+    log.info(
+      { processed: schedules.length, created, skipped, durationMs: Math.round(performance.now() - inicio) },
+      'Cron de turnos concluído',
+    )
+    await baterCoracaoDoCron(true)
+
     return NextResponse.json({
       success: true,
       processed: schedules.length,
@@ -120,7 +130,8 @@ export async function GET(request: Request) {
       skipped,
     })
   } catch (error) {
-    log.error({ err: error }, 'Erro ao gerar instâncias de turno')
+    log.error({ err: error, durationMs: Math.round(performance.now() - inicio) }, 'Erro ao gerar instâncias de turno')
+    await baterCoracaoDoCron(false)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

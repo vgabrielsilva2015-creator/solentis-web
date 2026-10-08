@@ -24,7 +24,7 @@ describe('estoque serializado por produto (T-13)', () => {
       const re = /(?:prisma|tx)\.chemicalStock(?:Exit|Entry|Count)\.(?:create|createMany|update|updateMany|upsert)\s*\(/g
       let m: RegExpExecArray | null
       while ((m = re.exec(text))) {
-        const fnStart = text.lastIndexOf('export async function', m.index)
+        const fnStart = text.lastIndexOf('async function', m.index) // T-30: cobre também a função *Impl por trás do invólucro de medição
         const corpo = text.slice(fnStart, m.index)
         if (!/lockProduct\(tx,/.test(corpo) || m[0].startsWith('prisma.')) {
           faltando.push(`${f.replace(process.cwd() + '/', '')}:${text.slice(0, m.index).split('\n').length}`)

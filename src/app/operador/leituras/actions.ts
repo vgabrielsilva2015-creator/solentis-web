@@ -1,6 +1,7 @@
 'use server'
 
 import { requirePermission } from '@/server/auth/guards'
+import { medir } from '@/lib/observability'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBROpcional } from '@/lib/zod-ptbr'
@@ -60,7 +61,7 @@ export type LeituraFormState = {
 
 // ─── Registrar leitura ────────────────────────────────────────────────────────
 
-export async function registrarLeitura(
+async function registrarLeituraImpl(
   _prev: LeituraFormState,
   formData: FormData,
 ): Promise<LeituraFormState> {
@@ -231,4 +232,9 @@ export async function registrarLeitura(
   revalidatePath('/tecnico/dashboard')
   revalidatePath('/gestor/dashboard')
   return { success: true, warning: photoWarning ?? undefined }
+}
+
+// ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───
+export async function registrarLeitura(...args: Parameters<typeof registrarLeituraImpl>) {
+  return medir('registrarLeitura', () => registrarLeituraImpl(...args))
 }
