@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { ResetPasswordButton } from './reset-password-button'
 import { ToggleActiveButton } from './toggle-active-button'
+import { ChangeRoleButton } from './change-role-button'
 import { AddUserButton } from './add-user-button'
 import { TogglePlantButton } from './toggle-plant-button'
 import { EditPlantButton } from './edit-plant-button'
@@ -243,6 +244,7 @@ export default async function AdminPlantaDetalhePage({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
+                      <ChangeRoleButton userId={u.id} userName={u.name} currentRole={u.role} />
                       <ResetPasswordButton userId={u.id} userName={u.name} />
                       <ToggleActiveButton userId={u.id} userName={u.name} isActive={u.is_active} />
                     </div>
