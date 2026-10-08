@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, passwordSchema } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
+import { passwordResetEmailHtml, EMAIL_SUBJECTS } from '@/lib/email-templates'
 import { getLogger } from '@/lib/logger'
 
 const TOKEN_TTL_MS = 60 * 60 * 1000 // 60 minutos
@@ -57,24 +58,11 @@ export async function sendPasswordResetLink(email: string) {
     })
 
     const resetUrl = buildResetUrl(rawToken)
-    const html = `
-      <div style="font-family: system-ui, sans-serif; line-height: 1.5; color: #1f2937;">
-        <h2 style="margin-bottom: 16px;">Redefinição de senha — Solentis</h2>
-        <p>Recebemos um pedido para redefinir a senha da sua conta.</p>
-        <p>Clique no botão abaixo para escolher uma nova senha. O link é válido por <strong>60 minutos</strong>.</p>
-        <p style="margin: 24px 0;">
-          <a href="${resetUrl}" style="background:#0ea5e9;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block;">
-            Redefinir senha
-          </a>
-        </p>
-        <p style="font-size: 13px; color: #6b7280;">Se você não solicitou isso, ignore este e-mail — sua senha continua a mesma.</p>
-      </div>
-    `
 
     await sendEmail({
       to: user.email,
-      subject: 'Redefinição de senha — Solentis',
-      html,
+      subject: EMAIL_SUBJECTS.reset,
+      html: passwordResetEmailHtml({ url: resetUrl }),
     })
   } catch (err) {
     const log = await getLogger({ action: 'requestPasswordReset' })
