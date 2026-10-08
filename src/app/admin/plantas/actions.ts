@@ -13,6 +13,7 @@ import { getLogger } from '@/lib/logger'
 import { logAudit } from '@/lib/audit'
 import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
 import { sendEmail } from '@/lib/email'
+import { inviteEmail } from '@/lib/email-templates'
 import { UsuarioSchema, type UsuarioFormState } from '@/app/gestor/(sistema)/usuarios/schema'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
@@ -263,20 +264,8 @@ export async function criarUsuarioPlanta(
     try {
       const rawToken = await createSetPasswordToken(newUserId, tenantId, INVITE_TTL_MS)
       const inviteUrl = buildSetPasswordUrl(rawToken)
-      const html = `
-        <div style="font-family: system-ui, sans-serif; line-height: 1.5; color: #1f2937;">
-          <h2 style="margin-bottom: 16px;">Você foi convidado para o Solentis</h2>
-          <p>Olá, ${parsed.data.name}. Uma conta foi criada para você no Solentis.</p>
-          <p>Clique no botão abaixo para definir sua senha e acessar. O link é válido por <strong>7 dias</strong>.</p>
-          <p style="margin: 24px 0;">
-            <a href="${inviteUrl}" style="background:#0ea5e9;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block;">
-              Definir minha senha
-            </a>
-          </p>
-          <p style="font-size: 13px; color: #6b7280;">Se você não esperava este convite, ignore este e-mail.</p>
-        </div>
-      `
-      const emailResult = await sendEmail({ to: parsed.data.email, subject: 'Convite — Solentis', html })
+      const mail = inviteEmail({ name: parsed.data.name, url: inviteUrl })
+      const emailResult = await sendEmail({ to: parsed.data.email, subject: mail.subject, html: mail.html })
       if (emailResult.success) inviteSent = true
       else inviteError = emailResult.error
     } catch (mailErr) {
