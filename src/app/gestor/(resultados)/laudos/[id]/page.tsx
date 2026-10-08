@@ -85,7 +85,7 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
           </div>
           
           <Button asChild className="bg-[var(--brand)] text-white hover:bg-[var(--brand)]/90">
-            <Link href={`/gestor/laudos/importar?ponto=${ponto.id}`}>
+            <Link href={`/gestor/importacao?ponto=${ponto.id}`}>
               <Upload className="w-4 h-4 mr-2" />
               Registrar Laudo (PDF)
             </Link>

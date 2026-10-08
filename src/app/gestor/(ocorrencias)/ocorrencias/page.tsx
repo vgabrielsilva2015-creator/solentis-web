@@ -126,12 +126,12 @@ export default async function OcorrenciasGestorPage({
           {/* View Toggle */}
           <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 mr-2">
             <Link href={`/gestor/ocorrencias?view=kanban${statusFilter ? `&status=${statusFilter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
+              <Button variant="ghost" size="icon" aria-label="Visualização em Kanban" className={`h-8 w-8 ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </Link>
             <Link href={`/gestor/ocorrencias?view=table${statusFilter ? `&status=${statusFilter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Tabela">
+              <Button variant="ghost" size="icon" aria-label="Visualização em Tabela" className={`h-8 w-8 ${view === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Tabela">
                 <Table className="w-4 h-4" />
               </Button>
             </Link>
