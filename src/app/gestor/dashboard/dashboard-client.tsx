@@ -812,6 +812,7 @@ export function DashboardClient({
           <HeatmapBlock 
             dbHeatmapPoints={dbHeatmapPoints}
             dbCriticalOccurrences={dbCriticalOccurrences}
+            dbOpenOccurrences={dbOpenOccurrences}
             onOpenPointDrawer={handlePointClick}
           />
         </div>

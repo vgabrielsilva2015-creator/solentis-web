@@ -10,10 +10,11 @@ const src = (p: string) => readFileSync(join(process.cwd(), 'src', p), 'utf-8')
 // ─── B-06 ────────────────────────────────────────────────────────────────────
 describe('B-06: filtro de ponto vale para as 3 contagens de ocorrência', () => {
   it('pointSql fica no WHERE, não dentro de um único FILTER', () => {
-    const t = src('app/gestor/dashboard/page.tsx')
+    // T-23: a consulta foi para src/server/dashboard/queries.ts
+    const t = src('server/dashboard/queries.ts')
     const i = t.indexOf('AS open_total')
     const sql = t.slice(t.lastIndexOf('SELECT', i), t.indexOf('`)', i))
-    expect(sql).not.toMatch(/FILTER\s*\([^)]*\$\{pointSql\}/)
-    expect(sql).toMatch(/FROM occurrences\s+WHERE tenant_id = \$\{tenant_id\}\s+\$\{pointSql\}/)
+    expect(sql).not.toMatch(/FILTER\s*\([^)]*\$\{ponto\}/)
+    expect(sql).toMatch(/FROM occurrences\s+WHERE tenant_id = \$\{tenantId\}\s+\$\{ponto\}/)
   })
 })

@@ -7,12 +7,15 @@ import { useRouter } from 'next/navigation'
 interface HeatmapBlockProps {
   dbHeatmapPoints: any[]
   dbCriticalOccurrences: any[]
+  /** Total real de ocorrências abertas (a lista traz só as mais graves). */
+  dbOpenOccurrences?: number
   onOpenPointDrawer: (id: string) => void
 }
 
 export function HeatmapBlock({
   dbHeatmapPoints,
   dbCriticalOccurrences,
+  dbOpenOccurrences,
   onOpenPointDrawer
 }: HeatmapBlockProps) {
 
@@ -215,6 +218,14 @@ export function HeatmapBlock({
           <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '310px', overflowY: 'auto' }}>
             {list}
           </div>
+        )}
+        {dbOpenOccurrences !== undefined && dbOpenOccurrences > dbCriticalOccurrences.length && (
+          <a
+            href="/gestor/ocorrencias"
+            style={{ display: 'block', marginTop: '8px', fontSize: '12px', color: 'var(--brand)', textAlign: 'center' }}
+          >
+            Mostrando as {dbCriticalOccurrences.length} mais graves de {dbOpenOccurrences} em aberto. Ver todas
+          </a>
         )}
       </div>
     )

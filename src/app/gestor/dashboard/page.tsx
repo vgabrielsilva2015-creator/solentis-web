@@ -1,20 +1,13 @@
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { getTenantId } from '@/lib/tenant'
 import { APP_TIMEZONE } from '@/lib/date-utils'
 import { DashboardClient } from './dashboard-client'
+import {
+  comCache, aoMinuto, contarMedicoes, contarOcorrenciasAbertas, serieSeteDias, mapaDeCalor,
+  serieTendencia, parametroMaisLido, consumoQuimicos, alertasAbertos, manutencoesProximas,
+} from '@/server/dashboard/queries'
 
 
-
-// COUNT retorna bigint no $queryRaw — normaliza para number
-const num = (v: unknown): number => Number(v as bigint)
-
-type MeasCountRow = {
-  today: bigint; yesterday: bigint
-  total_current: bigint; nc_current: bigint
-  total_prev: bigint; nc_prev: bigint
-  today_nc: bigint
-}
 
 function calcDelta(current: number, previous: number): number | null {
   if (previous === 0) return null // Sem histórico para comparar
@@ -55,110 +48,59 @@ export default async function GestorDashboard({
   const maxPreventiveDate = new Date()
   maxPreventiveDate.setDate(maxPreventiveDate.getDate() + 30)
 
+  // T-23: nada de linha de medição vem para o servidor só para contar ou desenhar.
+  // As consultas pesadas usam cache POR PLANTA (60 s, DASHBOARD_CACHE_TTL=0 desliga);
+  // ocorrências abertas e o status da ETE são sempre lidos na hora.
+  const iso = {
+    now: aoMinuto(now), today: today.toISOString(), yesterday: yesterday.toISOString(),
+    inicio: aoMinuto(periodoInicio), anterior: aoMinuto(periodoAnteriorInicio), h24: aoMinuto(last24h),
+  }
+
   // PHASE 1: Independent queries
   const [pt, parametersRaw] = await Promise.all([
     pontoId ? prisma.collectionPoint.findUnique({ where: { id: pontoId, tenant_id }, select: { name: true } }) : Promise.resolve(null),
     prisma.qualityParameter.findMany({ where: { tenant_id, is_active: true }, select: { id: true, name: true, unit: true, min_limit: true, max_limit: true } }),
   ])
   const activePointName = pt ? pt.name : null
-  
+
   let selectedParam = null
   if (paramId) {
     selectedParam = parametersRaw.find(p => p.id === paramId) || parametersRaw[0]
   } else if (parametersRaw.length > 0) {
-    const topParam = await prisma.reading.groupBy({
-      by: ['parameter_id'],
-      where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond },
-      _count: { parameter_id: true },
-      orderBy: { _count: { parameter_id: 'desc' } },
-      take: 1
-    })
-    if (topParam.length > 0) {
-      selectedParam = parametersRaw.find(p => p.id === topParam[0].parameter_id) || parametersRaw[0]
-    } else {
-      selectedParam = parametersRaw[0]
-    }
+    const topId = await comCache('param-top', tenant_id, parametroMaisLido, tenant_id, iso.inicio, pontoId)
+    selectedParam = parametersRaw.find(p => p.id === topId) || parametersRaw[0]
   }
 
-  // Filtro opcional de ponto para os counts em SQL bruto
-  const pointSql = pontoId ? Prisma.sql`AND collection_point_id = ${pontoId}` : Prisma.empty
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-
-  // As ~24 contagens por período viram 1 query por tabela via COUNT(*) FILTER.
-  // Validado 1:1 contra as contagens antigas (readings/analyses/external/occ,
-  // com e sem filtro de ponto, para 24h/7d/30d). table/dateCol são literais
-  // controlados (Prisma.raw) — sem injeção.
-  const measCounts = (table: Prisma.Sql, dateCol: Prisma.Sql) =>
-    prisma.$queryRaw<MeasCountRow[]>(Prisma.sql`
-      SELECT
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${today}) AS today,
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${yesterday} AND ${dateCol} < ${today}) AS yesterday,
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoInicio}) AS total_current,
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoInicio} AND is_non_conformant = true) AS nc_current,
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoAnteriorInicio} AND ${dateCol} < ${periodoInicio}) AS total_prev,
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${periodoAnteriorInicio} AND ${dateCol} < ${periodoInicio} AND is_non_conformant = true) AS nc_prev,
-        COUNT(*) FILTER (WHERE ${dateCol} >= ${today} AND is_non_conformant = true) AS today_nc
-      FROM ${table}
-      WHERE tenant_id = ${tenant_id} 
-        AND ${dateCol} >= ${periodoAnteriorInicio}
-        ${pointSql}
-    `)
-
   const [
-    readingCountsRow, analysisCountsRow, externalCountsRow, occCountsRow,
-    readsLast7Days, analysesLast7Days, externalLast7Days,
+    readingCounts, analysisCounts, externalCounts, occCounts,
+    sparklineData,
     schedules,
-    collectionPointsRaw,
+    heatmapPoints,
     occurrencesBySeverity,
-    chemicalExitsRaw,
-    trendReads, trendAnalyses, trendExternals,
+    chemicalConsumptionData,
+    trendRaw,
     auditFeed,
     pendingMaintenances,
     shiftScales,
     latestReading, latestAnalysis, latestExternal,
     latestNCReading, latestNCAnalysis, latestNCExternal,
-    activeOccurrences
+    sortedOccurrences
   ] = await Promise.all([
-    // Contagens consolidadas — 4 queries no lugar de ~24 counts
-    measCounts(Prisma.raw('readings'), Prisma.raw('created_at')),
-    measCounts(Prisma.raw('analyses'), Prisma.raw('collected_at')),
-    measCounts(Prisma.raw('external_analyses'), Prisma.raw('collected_at')),
-    prisma.$queryRaw<Array<{ open_total: bigint; open_critical: bigint; open_other: bigint }>>(Prisma.sql`
-      SELECT
-        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS')) AS open_total,
-        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') AND severity = 'CRITICAL') AS open_critical,
-        COUNT(*) FILTER (WHERE status IN ('OPEN','IN_PROGRESS') AND severity IN ('HIGH','MEDIUM','LOW')) AS open_other
-      FROM occurrences
-      WHERE tenant_id = ${tenant_id}
-        ${pointSql}
-    `),
-    // Sparkline
-    prisma.reading.findMany({ where: { tenant_id, created_at: { gte: sevenDaysAgo }, ...pointCond }, select: { created_at: true } }),
-    prisma.analysis.findMany({ where: { tenant_id, collected_at: { gte: sevenDaysAgo }, ...pointCond }, select: { collected_at: true } }),
-    prisma.externalAnalysis.findMany({ where: { tenant_id, collected_at: { gte: sevenDaysAgo }, ...pointCond }, select: { collected_at: true } }),
+    comCache('conta-readings', tenant_id, contarMedicoes, tenant_id, 'readings', iso.today, iso.yesterday, iso.inicio, iso.anterior, pontoId),
+    comCache('conta-analyses', tenant_id, contarMedicoes, tenant_id, 'analyses', iso.today, iso.yesterday, iso.inicio, iso.anterior, pontoId),
+    comCache('conta-external', tenant_id, contarMedicoes, tenant_id, 'external_analyses', iso.today, iso.yesterday, iso.inicio, iso.anterior, pontoId),
+    contarOcorrenciasAbertas(tenant_id, pontoId),
+    comCache('sparkline', tenant_id, serieSeteDias, tenant_id, iso.now, pontoId),
     // Monitoring Schedule
     prisma.monitoringSchedule.findMany({ where: { tenant_id, is_active: true } }),
-    // Heatmap
-    prisma.collectionPoint.findMany({
-      where: { tenant_id, is_active: true },
-      select: {
-        id: true, name: true,
-        readings: { where: { created_at: { gte: last24h } }, select: { is_non_conformant: true } },
-        analyses: { where: { collected_at: { gte: last24h } }, select: { is_non_conformant: true } },
-        external_analyses: { where: { collected_at: { gte: last24h } }, select: { is_non_conformant: true } },
-      },
-    }),
+    comCache('heatmap', tenant_id, mapaDeCalor, tenant_id, iso.h24),
     // Ocorrencias by severity
     prisma.occurrence.groupBy({ by: ['severity'], where: { tenant_id, created_at: { gte: periodoInicio }, ...pointCond }, _count: { severity: true } }),
-    // Chemical exits
-    prisma.chemicalStockExit.findMany({ where: { tenant_id, used_at: { gte: periodoInicio } }, include: { product: { select: { name: true, unit: true } } } }),
-    // Trend Data
-    selectedParam ? prisma.reading.findMany({ where: { tenant_id, parameter_id: selectedParam.id, created_at: { gte: periodoInicio }, ...pointCond }, select: { value: true, created_at: true } }) : Promise.resolve([]),
-    selectedParam ? prisma.analysis.findMany({ where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: periodoInicio }, ...pointCond }, select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true, laboratory_type: true } }) : Promise.resolve([]),
-    selectedParam ? prisma.externalAnalysis.findMany({ where: { tenant_id, parameter_id: selectedParam.id, collected_at: { gte: periodoInicio }, ...pointCond }, select: { value: true, min_limit_applied: true, max_limit_applied: true, collected_at: true } }) : Promise.resolve([]),
+    comCache('quimicos', tenant_id, consumoQuimicos, tenant_id, iso.inicio),
+    selectedParam ? comCache('tendencia', tenant_id, serieTendencia, tenant_id, selectedParam.id, iso.inicio, pontoId) : Promise.resolve([]),
     // Feed and Widgets
     prisma.auditLog.findMany({ where: { tenant_id }, orderBy: { timestamp: 'desc' }, take: 5, include: { user: { select: { name: true } } } }),
-    prisma.preventiveMaintenance.findMany({ where: { tenant_id, status: 'SCHEDULED', scheduled_date: { lte: maxPreventiveDate } }, orderBy: { scheduled_date: 'asc' }, include: { equipment: { select: { id: true, name: true } } } }),
+    manutencoesProximas(tenant_id, maxPreventiveDate.toISOString()),
     prisma.shiftScale.findMany({ where: { tenant_id, date: today }, include: { operator: { select: { name: true } }, shift: { select: { name: true, start_time: true, end_time: true, crosses_midnight: true } } } }),
     prisma.reading.findFirst({ where: { tenant_id }, orderBy: { recorded_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
     prisma.analysis.findFirst({ where: { tenant_id }, orderBy: { collected_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
@@ -166,39 +108,31 @@ export default async function GestorDashboard({
     prisma.reading.findFirst({ where: { tenant_id, created_at: { gte: today }, is_non_conformant: true }, orderBy: { recorded_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
     prisma.analysis.findFirst({ where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true }, orderBy: { collected_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
     prisma.externalAnalysis.findFirst({ where: { tenant_id, collected_at: { gte: today }, is_non_conformant: true }, orderBy: { collected_at: 'desc' }, include: { collection_point: { select: { name: true } }, parameter: { select: { name: true } } } }),
-    prisma.occurrence.findMany({ where: { tenant_id, status: { in: ['OPEN', 'IN_PROGRESS'] }, ...pointCond }, orderBy: { created_at: 'desc' }, include: { reporter: { select: { name: true } }, collection_point: { select: { name: true } } } })
+    // Só os alertas mais graves (20); o total real vem de occCounts
+    alertasAbertos(tenant_id, pontoId),
   ])
 
   // Deriva os escalares a partir das contagens consolidadas
-  const rc = readingCountsRow[0], ac = analysisCountsRow[0], ec = externalCountsRow[0], occ = occCountsRow[0]
-  const readingsToday = num(rc.today), readingsYesterday = num(rc.yesterday)
-  const analysesToday = num(ac.today), analysesYesterday = num(ac.yesterday)
-  const externalToday = num(ec.today), externalYesterday = num(ec.yesterday)
-  const totalReadsCurrent = num(rc.total_current), nonConformReadsCurrent = num(rc.nc_current), totalReadsPrev = num(rc.total_prev), nonConformReadsPrev = num(rc.nc_prev)
-  const totalAnalysesCurrent = num(ac.total_current), nonConformAnalysesCurrent = num(ac.nc_current), totalAnalysesPrev = num(ac.total_prev), nonConformAnalysesPrev = num(ac.nc_prev)
-  const totalExternalCurrent = num(ec.total_current), nonConformExternalCurrent = num(ec.nc_current), totalExternalPrev = num(ec.total_prev), nonConformExternalPrev = num(ec.nc_prev)
-  const nonConformReadingsTodayCount = num(rc.today_nc), nonConformAnalysesTodayCount = num(ac.today_nc), nonConformExternalTodayCount = num(ec.today_nc)
-  const openOccurrences = num(occ.open_total), openCriticalOccCount = num(occ.open_critical), openOtherOccCount = num(occ.open_other)
+  const rc = readingCounts, ac = analysisCounts, ec = externalCounts, occ = occCounts
+  const readingsToday = rc.today, readingsYesterday = rc.yesterday
+  const analysesToday = ac.today, analysesYesterday = ac.yesterday
+  const externalToday = ec.today, externalYesterday = ec.yesterday
+  const totalReadsCurrent = rc.total_current, nonConformReadsCurrent = rc.nc_current, totalReadsPrev = rc.total_prev, nonConformReadsPrev = rc.nc_prev
+  const totalAnalysesCurrent = ac.total_current, nonConformAnalysesCurrent = ac.nc_current, totalAnalysesPrev = ac.total_prev, nonConformAnalysesPrev = ac.nc_prev
+  const totalExternalCurrent = ec.total_current, nonConformExternalCurrent = ec.nc_current, totalExternalPrev = ec.total_prev, nonConformExternalPrev = ec.nc_prev
+  const nonConformReadingsTodayCount = rc.today_nc, nonConformAnalysesTodayCount = ac.today_nc, nonConformExternalTodayCount = ec.today_nc
+  const openOccurrences = occ.open_total, openCriticalOccCount = occ.open_critical, openOtherOccCount = occ.open_other
+
+  // Série do gráfico (já decimada no banco): volta a ter Date e o rótulo de hora
+  const trendData = trendRaw.map((p) => {
+    const time = new Date(p.time)
+    return { time, timeStr: formatDateDisplay(time, diasNum), value: p.value, minLimit: p.minLimit, maxLimit: p.maxLimit, laboratoryType: p.laboratoryType }
+  })
 
   // Total Registers Top KPI
   const totalRegistersToday = readingsToday + analysesToday + externalToday
   const totalRegistersYesterday = readingsYesterday + analysesYesterday + externalYesterday
   const registersDelta = calcDelta(totalRegistersToday, totalRegistersYesterday)
-
-  // Sparkline Aggregation
-  const sparklineData = Array(7).fill(0)
-  const allEvents = [
-    ...readsLast7Days.map(r => r.created_at),
-    ...analysesLast7Days.map(a => a.collected_at),
-    ...externalLast7Days.map(e => e.collected_at)
-  ]
-  allEvents.forEach(date => {
-    const diffTime = Math.abs(now.getTime() - date.getTime())
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    if (diffDays >= 0 && diffDays < 7) {
-      sparklineData[6 - diffDays] += 1
-    }
-  })
 
   // Cálculos Conformidade
   const totalChecksCurrent = totalReadsCurrent + totalAnalysesCurrent + totalExternalCurrent
@@ -226,30 +160,6 @@ export default async function GestorDashboard({
     external: { done: externalToday, scheduled: externalSchedules },
   }
 
-  // CHEMICAL CONSUMPTION
-  const chemicalConsumptionMap = new Map<string, { name: string, unit: string, total: number }>()
-  chemicalExitsRaw.forEach(exit => {
-    const key = exit.product_id
-    if (!chemicalConsumptionMap.has(key)) {
-      chemicalConsumptionMap.set(key, { name: exit.product.name, unit: exit.product.unit, total: 0 })
-    }
-    chemicalConsumptionMap.get(key)!.total += exit.quantity
-  })
-  const chemicalConsumptionData = Array.from(chemicalConsumptionMap.values()).sort((a, b) => b.total - a.total)
-
-  // HEATMAP
-  const heatmapPoints = collectionPointsRaw.map(cp => {
-    const hasNonConform = cp.readings.some(r => r.is_non_conformant) || 
-                          cp.analyses.some(a => a.is_non_conformant) || 
-                          cp.external_analyses.some(e => e.is_non_conformant)
-    
-    const hasAnyReadings = cp.readings.length > 0 || cp.analyses.length > 0 || cp.external_analyses.length > 0
-    let status: 'OK' | 'WARNING' | 'DANGER' = 'OK'
-    if (hasNonConform) status = 'DANGER'
-    else if (!hasAnyReadings) status = 'WARNING' 
-    return { id: cp.id, name: cp.name, status }
-  })
-
   const severityColors: Record<string, string> = {
     LOW: '#64748b', MEDIUM: '#f59e0b', HIGH: '#f97316', CRITICAL: '#ef4444'
   }
@@ -262,17 +172,6 @@ export default async function GestorDashboard({
     value: o._count.severity,
     color: severityColors[o.severity] || '#94a3b8'
   }))
-
-  // TREND DATA
-  let trendData: any[] = []
-  if (selectedParam) {
-    trendData = [
-      ...trendReads.map(a => ({ time: a.created_at, timeStr: formatDateDisplay(a.created_at, diasNum), value: a.value, minLimit: null, maxLimit: null, laboratoryType: 'FIELD' })),
-      ...trendAnalyses.map(a => ({ time: a.collected_at, timeStr: formatDateDisplay(a.collected_at, diasNum), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: a.laboratory_type })),
-      ...trendExternals.map(a => ({ time: a.collected_at, timeStr: formatDateDisplay(a.collected_at, diasNum), value: a.value, minLimit: a.min_limit_applied, maxLimit: a.max_limit_applied, laboratoryType: 'EXTERNAL' }))
-    ]
-    trendData.sort((a, b) => a.time.getTime() - b.time.getTime())
-  }
 
   // Determinar operador ativo
   function isTimeInShift(startStr: string, endStr: string, crossesMidnight: boolean, currentHour: number, currentMinute: number): boolean {
@@ -326,14 +225,6 @@ export default async function GestorDashboard({
     ncCandidates.sort((a, b) => b.date.getTime() - a.date.getTime())
     latestNCToday = ncCandidates[0]
   }
-
-  const severityWeights: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }
-  const sortedOccurrences = [...activeOccurrences].sort((a, b) => {
-    const wA = severityWeights[a.severity] || 0
-    const wB = severityWeights[b.severity] || 0
-    if (wA !== wB) return wB - wA
-    return b.created_at.getTime() - a.created_at.getTime()
-  })
 
   const dbFeed = auditFeed.map(log => {
     let text = 'registrou uma atividade.'
