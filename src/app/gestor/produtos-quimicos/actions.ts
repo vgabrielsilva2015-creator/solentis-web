@@ -2,6 +2,8 @@
 
 import { requirePermission } from '@/server/auth/guards'
 import { medir } from '@/lib/observability'
+import { EntradaSchema } from '@/server/estoque/schema'
+import { registrarEntradaDeEstoque } from '@/server/estoque/service'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
@@ -10,7 +12,6 @@ import { CHEMICAL_UNITS_PRESET } from '@/types'
 import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
-import { lockProduct } from '@/lib/stock-lock'
 import { redirect } from 'next/navigation'
 
 
@@ -32,24 +33,6 @@ const ProdutoSchema = z.object({
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-})
-
-const EntradaSchema = z.object({
-  product_id:     z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, { error: 'Produto obrigatório' }),
-  quantity:       numeroBR({ positivo: true, rotulo: 'A quantidade', obrigatorio: 'Informe a quantidade.' }),
-  supplier:       z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
-  ),
-  invoice_number: z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
-  ),
-  notes:          z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
-  ),
-  received_at:    z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, { error: 'Data de recebimento obrigatória' }),
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -124,36 +107,18 @@ async function registrarEntradaImpl(_prev: unknown, formData: FormData) {
   const ctx = await requirePermission('stock.receive')
 
   const parsed = EntradaSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos' }
-  }
-
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos' }
   const { product_id, quantity, supplier, invoice_number, notes, received_at } = parsed.data
-  const recorded_by = ctx.userId
 
-  const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
+  const erroPosse = await checkOwnership(ctx.tenantId, [{ model: 'chemicalProduct', id: product_id }])
   if (erroPosse) return { error: erroPosse }
 
-  // T-13: entrada também trava o produto, para não intercalar com uma
-  // contagem física que esteja calculando o ajuste ao mesmo tempo.
-  const tenantId = await getTenantId()
-  const ok = await prisma.$transaction(async (tx) => {
-    if (!(await lockProduct(tx, tenantId, product_id))) return false
-    await tx.chemicalStockEntry.create({
-      data: {
-        tenant_id: tenantId,
-        product_id,
-        quantity,
-        supplier,
-        invoice_number,
-        notes,
-        received_at: localInputToUTC(received_at),
-        recorded_by,
-      },
-    })
-    return true
+  // T-25: a regra (trava do produto + gravação) está em `src/server/estoque/service.ts`
+  const r = await registrarEntradaDeEstoque({
+    tenantId: ctx.tenantId, userId: ctx.userId, productId: product_id, quantity, supplier,
+    invoiceNumber: invoice_number, notes, receivedAt: localInputToUTC(received_at),
   })
-  if (!ok) return { error: 'Produto inválido ou não autorizado.' }
+  if (!r.ok) return { error: r.error }
 
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath(`/gestor/produtos-quimicos/${product_id}`)

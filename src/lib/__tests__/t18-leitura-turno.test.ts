@@ -11,10 +11,12 @@ const semComentarios = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace
 // ─── P-16 ────────────────────────────────────────────────────────────────────
 describe('P-16: leitura só entra no turno aberto por quem registrou', () => {
   it('sem turno próprio não procura "qualquer turno aberto" da planta', () => {
-    const t = semComentarios(src('app/operador/leituras/actions.ts'))
+    // T-25: a regra mudou de arquivo (action → serviço); a exigência é a mesma.
+    const t = semComentarios(src('server/leituras/service.ts'))
     const buscas = [...t.matchAll(/prisma\.shiftInstance\.findFirst\(\{[\s\S]*?\}\)/g)].map((m) => m[0])
     expect(buscas.length).toBeGreaterThan(0)
-    for (const b of buscas) expect(b, b).toMatch(/opened_by:\s*userId/)
-    expect(t).toMatch(/shift_instance_id:\s*activeInstance\?\.id \?\? null/)
+    for (const b of buscas) expect(b, b).toMatch(/opened_by:\s*i\.userId/)
+    expect(t).toMatch(/shift_instance_id:\s*turno\?\.id \?\? null/)
+    expect(semComentarios(src('app/operador/leituras/actions.ts'))).not.toMatch(/shiftInstance/)
   })
 })
