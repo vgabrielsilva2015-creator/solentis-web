@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { hashPassword, passwordSchema } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
-import { passwordResetEmailHtml, EMAIL_SUBJECTS } from '@/lib/email-templates'
+import { passwordResetEmailHtml, passwordChangedEmailHtml, EMAIL_SUBJECTS } from '@/lib/email-templates'
 import { getLogger } from '@/lib/logger'
 
 const TOKEN_TTL_MS = 60 * 60 * 1000 // 60 minutos
@@ -104,7 +104,7 @@ export async function resetPassword(token: string, newPassword: string) {
 
     // Troca a senha e marca o token como usado de forma atômica.
     // @tenant-checked: alvo derivado do token de reset validado acima (record).
-    await prisma.$transaction([
+    const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: record.user_id },
         data: { password_hash: hashed, must_change_password: false },
@@ -115,6 +115,19 @@ export async function resetPassword(token: string, newPassword: string) {
         data: { used_at: new Date() },
       }),
     ])
+
+    // E-mail de confirmação (aviso de segurança). Best-effort: nunca quebra a troca.
+    try {
+      const loginUrl = `${process.env.NEXTAUTH_URL?.replace(/\/$/, '') ?? 'http://localhost:3000'}/login`
+      await sendEmail({
+        to: updatedUser.email,
+        subject: EMAIL_SUBJECTS.passwordChanged,
+        html: passwordChangedEmailHtml({ name: updatedUser.name, loginUrl }),
+      })
+    } catch (mailErr) {
+      const log = await getLogger({ action: 'resetPassword' })
+      log.warn({ err: mailErr, userId: record.user_id }, 'Senha alterada, mas falhou o e-mail de confirmação')
+    }
 
     return { success: true }
   } catch (err) {
