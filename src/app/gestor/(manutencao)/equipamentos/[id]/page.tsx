@@ -8,6 +8,7 @@ import { CorrectiveForm } from './corrective-form'
 import { EditForm } from './edit-form'
 import { ToggleButton } from './toggle-button'
 import { getTenantId } from '@/lib/tenant'
+import type { ComponentProps } from 'react'
 
 
 function formatDate(d: Date | null): string {
@@ -298,7 +299,7 @@ export default async function EquipamentoDetailPage({
 
                     <StatusButton
                       corretivaId={c.id}
-                      currentStatus={c.status as any}
+                      currentStatus={c.status as ComponentProps<typeof StatusButton>['currentStatus']}
                       userRole={session.user.role}
                       estimatedCost={c.estimated_cost ? Number(c.estimated_cost) : null}
                       initialNotes={c.notes}

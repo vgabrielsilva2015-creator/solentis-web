@@ -69,7 +69,7 @@ export async function registrarAnalise(
 
   const tenantId = await getTenantId()
 
-  let postCommitHooks: Array<() => Promise<void>> = []
+  const postCommitHooks: Array<() => Promise<void>> = []
   await prisma.$transaction(async (tx) => {
     await tx.analysis.create({
       data: {

@@ -29,6 +29,7 @@ function gerarSenhaProvisoria(): string {
 }
 
 import { UsuarioSchema, type UsuarioFormState } from './schema'
+import { errorCode, errorMessage } from '@/lib/error-utils'
 
 // ─── Criar ──────────────────────────────────────────────────────────────────
 
@@ -101,11 +102,11 @@ export async function criarUsuario(
 
     revalidatePath('/gestor/usuarios')
     return { tempPassword, inviteSent, inviteError }
-  } catch (e: any) {
-    if (e && typeof e === 'object' && 'message' in e && e.message === 'NEXT_REDIRECT') {
+  } catch (e: unknown) {
+    if (errorMessage(e) === 'NEXT_REDIRECT') {
       throw e // let Next.js handle redirects
     }
-    if (e && e.code === 'P2002') {
+    if (errorCode(e) === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     const log = await getLogger({ action: 'criarUsuario' })
@@ -161,8 +162,8 @@ export async function editarUsuario(
         after:     { name: parsed.data.name, email: parsed.data.email, role: parsed.data.role },
       })
     })
-  } catch (e: any) {
-    if (e && e.code === 'P2002') {
+  } catch (e: unknown) {
+    if (errorCode(e) === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado nesta planta.'] } }
     }
     const errorMessage = e instanceof Error ? e.message : String(e)

@@ -1,5 +1,6 @@
 'use client'
 
+import type { SearchHit } from '@/lib/search'
 import * as React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Command } from 'cmdk'
@@ -25,7 +26,7 @@ export function CommandMenu() {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const debouncedSearch = useDebounce(search, 300)
-  const [results, setResults] = React.useState<any[]>([])
+  const [results, setResults] = React.useState<SearchHit[]>([])
   const [loading, setLoading] = React.useState(false)
 
   // Toggle the menu when ⌘K is pressed
@@ -122,7 +123,7 @@ export function CommandMenu() {
 
           {!loading && search.length >= 2 && results.length === 0 && (
             <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-              Nenhum resultado encontrado para "{search}".
+              Nenhum resultado encontrado para &quot;{search}&quot;.
             </Command.Empty>
           )}
 

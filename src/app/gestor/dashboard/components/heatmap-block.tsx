@@ -1,12 +1,14 @@
 'use client'
 
+import type { DashboardOccurrence } from '../types'
 import React from 'react'
 import { F, alpha, cardFrame, icon } from './ui-helpers'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 interface HeatmapBlockProps {
-  dbHeatmapPoints: any[]
-  dbCriticalOccurrences: any[]
+  dbHeatmapPoints: { id: string; name: string; status: 'OK' | 'WARNING' | 'DANGER' }[]
+  dbCriticalOccurrences: DashboardOccurrence[]
   /** Total real de ocorrências abertas (a lista traz só as mais graves). */
   dbOpenOccurrences?: number
   onOpenPointDrawer: (id: string) => void
@@ -220,12 +222,12 @@ export function HeatmapBlock({
           </div>
         )}
         {dbOpenOccurrences !== undefined && dbOpenOccurrences > dbCriticalOccurrences.length && (
-          <a
+          <Link
             href="/gestor/ocorrencias"
             style={{ display: 'block', marginTop: '8px', fontSize: '12px', color: 'var(--brand)', textAlign: 'center' }}
           >
             Mostrando as {dbCriticalOccurrences.length} mais graves de {dbOpenOccurrences} em aberto. Ver todas
-          </a>
+          </Link>
         )}
       </div>
     )

@@ -7,15 +7,34 @@ import { UploadCloud, FileText, CheckCircle, AlertCircle, Loader2, FileCheck2, P
 import { useRouter } from 'next/navigation'
 import stringSimilarity from 'string-similarity'
 import { compressPhoto } from '@/lib/compress-image'
+import { errorMessage } from '@/lib/error-utils'
 
 type FileStatus = 'pending' | 'extracting' | 'success' | 'error'
+
+/** Um resultado de parâmetro extraído do laudo pela IA (formato do JSON devolvido por extractDataFromPDF). */
+interface ResultadoLaudo {
+  parametro: string
+  valor: number | null
+  detectado: boolean
+  bruto: string
+  unidade: string
+}
+
+/** Laudo extraído pela IA. Só os campos que esta tela lê. */
+interface LaudoExtraido {
+  data_coleta?: string
+  ponto_amostragem?: string
+  resultados?: ResultadoLaudo[]
+}
+
+type MappingContext = Awaited<ReturnType<typeof getMappingContext>>
 
 interface FileItem {
   id: string
   file: File
   status: FileStatus
   error?: string
-  data?: any
+  data?: LaudoExtraido
   mappedPoint: string
   mappedDate: string
   mappedParams: Record<number, string>
@@ -33,7 +52,7 @@ export default function ImportLaudoPage() {
   const [globalError, setGlobalError] = useState<string | null>(null)
   const [creatingParam, setCreatingParam] = useState<string | null>(null) // tracks which param is being created (key: fileId-paramIdx)
   
-  const [context, setContext] = useState<{parameters: any[], points: any[], aliases?: any[]}>({ parameters: [], points: [] })
+  const [context, setContext] = useState<MappingContext>({ parameters: [], points: [], aliases: [] })
   const [filesQueue, setFilesQueue] = useState<FileItem[]>([])
 
   useEffect(() => {
@@ -73,7 +92,7 @@ export default function ImportLaudoPage() {
     setFilesQueue(prev => [...prev, ...newItems])
 
     // Process them sequentially with delay between each to avoid rate limits
-    let currentQueue = [...filesQueue, ...newItems]
+    const currentQueue = [...filesQueue, ...newItems]
 
     for (let i = 0; i < currentQueue.length; i++) {
       if (currentQueue[i].status !== 'pending') continue;
@@ -96,7 +115,7 @@ export default function ImportLaudoPage() {
         if (result.success) {
           const data = result.data
           let mPoint = ''
-          let mDate = data.data_coleta || new Date().toISOString().split('T')[0]
+          const mDate = data.data_coleta || new Date().toISOString().split('T')[0]
           
           if (data.ponto_amostragem) {
             const foundPoint = context.points.find(p => 
@@ -108,11 +127,11 @@ export default function ImportLaudoPage() {
 
           const mParams: Record<number, string> = {}
           if (data.resultados && Array.isArray(data.resultados)) {
-            data.resultados.forEach((p: any, idx: number) => {
+            data.resultados.forEach((p: ResultadoLaudo, idx: number) => {
               const nomeStr = (p.parametro || '').trim()
               
               // 1. Tentar match exato via alias
-              const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
+              const foundAlias = context.aliases?.find((a) => a.alias.toLowerCase() === nomeStr.toLowerCase())
               if (foundAlias) {
                 mParams[idx] = foundAlias.parameter_id
                 return
@@ -147,8 +166,8 @@ export default function ImportLaudoPage() {
         } else {
           updateFileItem(currentQueue[i].id, { status: 'error', error: result.error })
         }
-      } catch (err: any) {
-        updateFileItem(currentQueue[i].id, { status: 'error', error: err.message })
+      } catch (err: unknown) {
+        updateFileItem(currentQueue[i].id, { status: 'error', error: errorMessage(err) })
       }
     }
 
@@ -173,7 +192,7 @@ export default function ImportLaudoPage() {
       if (result.success) {
         const data = result.data
         let mPoint = ''
-        let mDate = data.data_coleta || new Date().toISOString().split('T')[0]
+        const mDate = data.data_coleta || new Date().toISOString().split('T')[0]
         
         if (data.ponto_amostragem) {
           const foundPoint = context.points.find(p => 
@@ -185,9 +204,9 @@ export default function ImportLaudoPage() {
 
         const mParams: Record<number, string> = {}
         if (data.resultados && Array.isArray(data.resultados)) {
-          data.resultados.forEach((p: any, idx: number) => {
+          data.resultados.forEach((p: ResultadoLaudo, idx: number) => {
             const nomeStr = (p.parametro || '').trim()
-            const foundAlias = context.aliases?.find((a: any) => a.alias.toLowerCase() === nomeStr.toLowerCase())
+            const foundAlias = context.aliases?.find((a) => a.alias.toLowerCase() === nomeStr.toLowerCase())
             if (foundAlias) { mParams[idx] = foundAlias.parameter_id; return }
             const exactParam = context.parameters.find(param => param.name.toLowerCase() === nomeStr.toLowerCase())
             if (exactParam) { mParams[idx] = exactParam.id; return }
@@ -205,8 +224,8 @@ export default function ImportLaudoPage() {
       } else {
         updateFileItem(fileItem.id, { status: 'error', error: result.error })
       }
-    } catch (err: any) {
-      updateFileItem(fileItem.id, { status: 'error', error: err.message })
+    } catch (err: unknown) {
+      updateFileItem(fileItem.id, { status: 'error', error: errorMessage(err) })
     }
   }
 
@@ -253,7 +272,7 @@ export default function ImportLaudoPage() {
       if (!item.mappedPoint) {
         return setGlobalError(`Selecione o ponto de coleta para o arquivo ${item.file.name}`)
       }
-      const hasValidParam = item.data.resultados?.some((p: any, idx: number) => item.mappedParams[idx])
+      const hasValidParam = item.data?.resultados?.some((p: ResultadoLaudo, idx: number) => item.mappedParams[idx])
       if (!hasValidParam) {
         return setGlobalError(`Mapeie pelo menos um parâmetro válido para o arquivo ${item.file.name}`)
       }
@@ -265,8 +284,8 @@ export default function ImportLaudoPage() {
     // Save sequentially
     let allSuccess = true
     for (const item of successItems) {
-      const validReadings = (item.data.resultados || [])
-        .map((p: any, idx: number) => ({
+      const validReadings = (item.data?.resultados || [])
+        .map((p: ResultadoLaudo, idx: number) => ({
           parameterId: item.mappedParams[idx],
           value: p.valor,
           is_detected: p.detectado,
@@ -274,7 +293,7 @@ export default function ImportLaudoPage() {
           bruto: p.bruto,
           unit: p.unidade
         }))
-        .filter((r: any) => r.parameterId)
+        .filter((r) => r.parameterId)
 
       const result = await saveMappedReadings({
         pointId: item.mappedPoint,
@@ -449,7 +468,7 @@ export default function ImportLaudoPage() {
 
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium text-muted-foreground mb-2">Parâmetros Mapeados</h4>
-                  {item.data?.resultados?.map((p: any, pIdx: number) => {
+                  {item.data?.resultados?.map((p: ResultadoLaudo, pIdx: number) => {
                     const isUnmapped = !item.mappedParams[pIdx]
                     const createKey = `${item.id}-${pIdx}`
                     const isCreating = creatingParam === createKey

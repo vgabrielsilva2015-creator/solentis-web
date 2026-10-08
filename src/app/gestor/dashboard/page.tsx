@@ -1,3 +1,4 @@
+import type { DashboardLatest } from './types'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { APP_TIMEZONE } from '@/lib/date-utils'
@@ -126,7 +127,8 @@ export default async function GestorDashboard({
   // Série do gráfico (já decimada no banco): volta a ter Date e o rótulo de hora
   const trendData = trendRaw.map((p) => {
     const time = new Date(p.time)
-    return { time, timeStr: formatDateDisplay(time, diasNum), value: p.value, minLimit: p.minLimit, maxLimit: p.maxLimit, laboratoryType: p.laboratoryType }
+    // valor nulo (não detectado) sempre foi desenhado como 0 no gráfico (null vira 0 nas contas); mantido
+    return { time, timeStr: formatDateDisplay(time, diasNum), value: p.value ?? 0, minLimit: p.minLimit, maxLimit: p.maxLimit, laboratoryType: p.laboratoryType }
   })
 
   // Total Registers Top KPI
@@ -206,9 +208,9 @@ export default async function GestorDashboard({
     latestReading && { date: latestReading.recorded_at, parameterName: latestReading.parameter?.name || 'Observação', pointName: latestReading.collection_point.name, value: latestReading.value, unit: latestReading.unit || '', isNonConformant: latestReading.is_non_conformant ?? false },
     latestAnalysis && { date: latestAnalysis.collected_at, parameterName: latestAnalysis.parameter.name, pointName: latestAnalysis.collection_point.name, value: latestAnalysis.value, unit: latestAnalysis.unit, isNonConformant: latestAnalysis.is_non_conformant },
     latestExternal && { date: latestExternal.collected_at, parameterName: latestExternal.parameter.name, pointName: latestExternal.collection_point.name, value: latestExternal.value, unit: latestExternal.unit, isNonConformant: latestExternal.is_non_conformant ?? false }
-  ].filter(Boolean) as any[]
+  ].filter(Boolean) as DashboardLatest[]
 
-  let absoluteLatest: any = null
+  let absoluteLatest: DashboardLatest | null = null
   if (candidates.length > 0) {
     candidates.sort((a, b) => b.date.getTime() - a.date.getTime())
     absoluteLatest = candidates[0]
@@ -218,9 +220,9 @@ export default async function GestorDashboard({
     latestNCReading && { date: latestNCReading.recorded_at, parameterName: latestNCReading.parameter?.name || 'Observação', pointName: latestNCReading.collection_point.name, value: latestNCReading.value, unit: latestNCReading.unit || '' },
     latestNCAnalysis && { date: latestNCAnalysis.collected_at, parameterName: latestNCAnalysis.parameter.name, pointName: latestNCAnalysis.collection_point.name, value: latestNCAnalysis.value, unit: latestNCAnalysis.unit },
     latestNCExternal && { date: latestNCExternal.collected_at, parameterName: latestNCExternal.parameter.name, pointName: latestNCExternal.collection_point.name, value: latestNCExternal.value, unit: latestNCExternal.unit }
-  ].filter(Boolean) as any[]
+  ].filter(Boolean) as DashboardLatest[]
 
-  let latestNCToday: any = null
+  let latestNCToday: DashboardLatest | null = null
   if (ncCandidates.length > 0) {
     ncCandidates.sort((a, b) => b.date.getTime() - a.date.getTime())
     latestNCToday = ncCandidates[0]

@@ -18,6 +18,7 @@ import {
   User,
   UserCheck
 } from 'lucide-react'
+import type { EscalaCorrective, EscalaMaintenanceDay, EscalaOccurrence, EscalaOperator, EscalaPreventive, EscalaScale, EscalaSchedule, EscalaShift, EscalaShiftInstance, EscalaTask } from '@/app/gestor/turnos/escala/escala-types'
 
 // Shift style mapping
 const SHIFT_CLASSES: Record<string, { border: string; bg: string; text: string; dot: string; label: string }> = {
@@ -56,15 +57,15 @@ interface EscalaClientProps {
   currentMonth: number
   operatorId: string
   operatorName: string
-  scales: any[]
-  maintenanceDays: any[]
-  shiftInstances: any[]
-  preventives: any[]
-  correctives: any[]
-  occurrences: any[]
-  schedules: any[]
-  shifts: any[]
-  operators: any[]
+  scales: EscalaScale[]
+  maintenanceDays: EscalaMaintenanceDay[]
+  shiftInstances: EscalaShiftInstance[]
+  preventives: EscalaPreventive[]
+  correctives: EscalaCorrective[]
+  occurrences: EscalaOccurrence[]
+  schedules: EscalaSchedule[]
+  shifts: EscalaShift[]
+  operators: EscalaOperator[]
   // Caminhos de navegação configuráveis (default: operador). Permite reusar a
   // mesma visualização em /manutencao e /tecnico sem links levando a 403.
   basePath?: string
@@ -194,7 +195,7 @@ export function EscalaClient({
     let doneTasks = 0
     dayInstances.forEach(inst => {
       totalTasks += inst.shift_tasks.length
-      doneTasks += inst.shift_tasks.filter((t: any) => t.status === 'DONE').length
+      doneTasks += inst.shift_tasks.filter((t: EscalaTask) => t.status === 'DONE').length
     })
 
     // Preventive Maintenance scheduled on this date
@@ -457,7 +458,7 @@ export function EscalaClient({
                           <p className="text-[11px] text-muted-foreground pl-5 italic">Nenhuma tarefa associada a este turno.</p>
                         ) : (
                           <div className="space-y-2 pl-4 border-l border-border">
-                            {inst.shift_tasks.map((task: any) => (
+                            {inst.shift_tasks.map((task: EscalaTask) => (
                               <div key={task.id} className="p-3 rounded-lg border border-border bg-background/20 space-y-1">
                                 <div className="flex items-start justify-between gap-2">
                                   <div>

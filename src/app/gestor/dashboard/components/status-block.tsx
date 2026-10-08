@@ -1,5 +1,6 @@
 'use client'
 
+import type { DashboardLatest } from '../types'
 import React from 'react'
 import { F, activeVars, alpha, icon } from './ui-helpers'
 import Link from 'next/link'
@@ -8,8 +9,8 @@ interface StatusBlockProps {
   eteStatus: 'OK' | 'WARNING' | 'DANGER'
   activeOperatorName: string | null
   activeShiftName: string | null
-  absoluteLatestReading: any
-  latestNCToday: any
+  absoluteLatestReading: DashboardLatest | null
+  latestNCToday: DashboardLatest | null
   onOpenReadingModal: () => void
   onShowToast: (text: string, type: 'success' | 'info' | 'error') => void
 }

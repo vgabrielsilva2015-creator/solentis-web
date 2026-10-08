@@ -1,5 +1,6 @@
 'use client'
 
+import type { DashboardFeedItem, DashboardLatest, DashboardMaintenanceItem, DashboardOccurrence, DashboardParameter, DashboardTrendPoint } from './types'
 import React, { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -14,6 +15,7 @@ import { HeatmapBlock } from './components/heatmap-block'
 import { FeedBlock } from './components/feed-block'
 import { StatusBlock } from './components/status-block'
 import { numeroOuNaN } from '@/lib/number-ptbr'
+import { errorMessage } from '@/lib/error-utils'
 
 interface DashboardClientProps {
   dbTotalRegistersToday: number
@@ -28,14 +30,14 @@ interface DashboardClientProps {
   dbConfDelta: number | null
   dbSparklineData: number[]
   dbHeatmapPoints: { id: string; name: string; status: 'OK' | 'WARNING' | 'DANGER' }[]
-  dbCriticalOccurrences: any[]
+  dbCriticalOccurrences: DashboardOccurrence[]
   dbOccurrencesPieData: { name: string; value: number; color: string }[]
   dbChemicalConsumptionData: { name: string; unit: string; total: number }[]
-  dbTrendData: any[]
-  dbFeed: any[]
-  dbMaintenance: any[]
-  dbParameters: { id: string; name: string; unit: string; min_limit?: number | null; max_limit?: number | null }[]
-  dbSelectedParam: any
+  dbTrendData: DashboardTrendPoint[]
+  dbFeed: DashboardFeedItem[]
+  dbMaintenance: DashboardMaintenanceItem[]
+  dbParameters: DashboardParameter[]
+  dbSelectedParam: DashboardParameter | null
   diasNum: number
   paramId?: string
   pontoId?: string
@@ -43,22 +45,8 @@ interface DashboardClientProps {
   eteStatus: 'OK' | 'WARNING' | 'DANGER'
   activeOperatorName: string | null
   activeShiftName: string | null
-  absoluteLatestReading: {
-    type: 'FIELD' | 'INTERNAL' | 'EXTERNAL'
-    date: string | Date
-    parameterName: string
-    pointName: string
-    value: number | null
-    unit: string
-    isNonConformant: boolean
-  } | null
-  latestNCToday: {
-    date: string | Date
-    parameterName: string
-    pointName: string
-    value: number | null
-    unit: string
-  } | null
+  absoluteLatestReading: DashboardLatest | null
+  latestNCToday: DashboardLatest | null
 }
 
 export function DashboardClient({
@@ -101,7 +89,7 @@ export function DashboardClient({
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [drawerLoading, setDrawerLoading] = useState(false)
-  const [drawerData, setDrawerData] = useState<any>(null)
+  const [drawerData, setDrawerData] = useState<Awaited<ReturnType<typeof obterDetalhesPonto>> | null>(null)
   const [drawerError, setDrawerError] = useState<string | null>(null)
 
   // Modal state
@@ -128,8 +116,8 @@ export function DashboardClient({
     try {
       const data = await obterDetalhesPonto(pointId)
       setDrawerData(data)
-    } catch (err: any) {
-      setDrawerError(err.message || 'Erro ao carregar detalhes do ponto')
+    } catch (err: unknown) {
+      setDrawerError(errorMessage(err) || 'Erro ao carregar detalhes do ponto')
     } finally {
       setDrawerLoading(false)
     }
@@ -191,8 +179,8 @@ export function DashboardClient({
           router.refresh()
         }, 1500)
       }
-    } catch (err: any) {
-      setModalError(err.message || 'Erro ao registrar leitura')
+    } catch (err: unknown) {
+      setModalError(errorMessage(err) || 'Erro ao registrar leitura')
     } finally {
       setIsSubmitting(false)
     }
@@ -313,7 +301,7 @@ export function DashboardClient({
                     Tendência Recente de {drawerData.parameterName}
                   </div>
                   <div style={{ height: '80px', marginTop: '10px' }}>
-                    {buildSpark(drawerData.sparklineData.map((d: any) => d.value), 'var(--brand)')}
+                    {buildSpark(drawerData.sparklineData.map((d) => d.value), 'var(--brand)')}
                   </div>
                   {drawerData.limits.max !== null || drawerData.limits.min !== null ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--txt3)', marginTop: '8px', fontFamily: F.mono }}>
@@ -336,7 +324,7 @@ export function DashboardClient({
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {drawerData.leituras.map((l: any) => {
+                    {drawerData.leituras.map((l) => {
                       const limitColor = l.is_non_conformant ? 'var(--danger)' : 'var(--txt2)'
                       const limitBg = l.is_non_conformant ? alpha('var(--danger)', 0.1) : 'transparent'
                       const limitBorder = l.is_non_conformant ? `1px solid ${alpha('var(--danger)', 0.3)}` : 'none'
@@ -387,7 +375,7 @@ export function DashboardClient({
 
                           {l.notes && (
                             <p style={{ fontSize: '11.5px', color: 'var(--txt3)', margin: '4px 0 0', fontStyle: 'italic' }}>
-                              " {l.notes} "
+                              &quot; {l.notes} &quot;
                             </p>
                           )}
                         </div>

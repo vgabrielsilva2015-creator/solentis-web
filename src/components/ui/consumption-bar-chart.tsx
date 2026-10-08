@@ -26,7 +26,7 @@ export function ConsumptionBarChart({ data }: { data: ConsumptionData[] }) {
     )
   }
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: ReadonlyArray<{ value: number; payload: ConsumptionData }>; label?: string | number }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-card border border-border p-3 rounded-lg shadow-xl text-sm">

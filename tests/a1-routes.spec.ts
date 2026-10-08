@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -9,7 +9,7 @@ const USERS = {
   gestor: { email: 'admin@solentis.local', pass: 'Admin@123' }, // admin acts as manager and admin
 };
 
-async function login(page: any, user: { email: string; pass: string }) {
+async function login(page: Page, user: { email: string; pass: string }) {
   await page.goto('/login');
   await page.fill('input[name="email"]', user.email);
   await page.fill('input[name="password"]', user.pass);

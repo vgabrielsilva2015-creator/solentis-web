@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const USERS = {
   operador: { email: 'operador@solentis.local', pass: 'Operador@123' },
 };
 
-async function login(page: any, user: { email: string; pass: string }) {
+async function login(page: Page, user: { email: string; pass: string }) {
   await page.goto('/login');
   await page.fill('input[name="email"]', user.email);
   await page.fill('input[name="password"]', user.pass);

@@ -36,7 +36,7 @@ export default async function GestorEscalaPage({ searchParams }: PageProps) {
       date: { gte: startDate, lte: endDate },
     },
     include: {
-      shift: { select: { id: true, name: true, start_time: true, end_time: true } },
+      shift: { select: { id: true, name: true, start_time: true, end_time: true, crosses_midnight: true } },
       operator: { select: { id: true, name: true, email: true } },
     }
   })

@@ -46,7 +46,8 @@ export function PushManager() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
       })
-      await subscribeUser(sub as any)
+      // o servidor lê endpoint/keys do objeto serializado; o tipo do DOM não casa com o da action
+      await subscribeUser(sub as unknown as Parameters<typeof subscribeUser>[0])
       setIsSubscribed(true)
     } catch (err) {
       clientLogger.error('Failed to subscribe to push notifications', err, { component: 'PushManager' })

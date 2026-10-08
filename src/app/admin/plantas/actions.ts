@@ -15,6 +15,7 @@ import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
 import { sendEmail } from '@/lib/email'
 import { inviteEmail } from '@/lib/email-templates'
 import { UsuarioSchema, type UsuarioFormState } from '@/app/gestor/(sistema)/usuarios/schema'
+import { errorCode, errorMessage } from '@/lib/error-utils'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
@@ -276,11 +277,11 @@ export async function criarUsuarioPlanta(
 
     revalidatePath(`/admin/plantas/${tenantId}`)
     return { tempPassword, inviteSent, inviteError }
-  } catch (e: any) {
-    if (e && typeof e === 'object' && 'message' in e && e.message === 'NEXT_REDIRECT') {
+  } catch (e: unknown) {
+    if (errorMessage(e) === 'NEXT_REDIRECT') {
       throw e // deixa o Next tratar redirects
     }
-    if (e && e.code === 'P2002') {
+    if (errorCode(e) === 'P2002') {
       return { fieldErrors: { email: ['Este e-mail já está cadastrado no sistema (pode ser em outra planta).'] } }
     }
     const log = await getLogger({ action: 'criarUsuarioPlanta' })
@@ -389,8 +390,8 @@ export async function editarPlanta(
         after:     { name: parsed.data.name, slug: parsed.data.slug },
       })
     })
-  } catch (e: any) {
-    if (e && e.code === 'P2002') {
+  } catch (e: unknown) {
+    if (errorCode(e) === 'P2002') {
       return { fieldErrors: { slug: ['Este slug já está em uso'] } }
     }
     const log = await getLogger({ action: 'editarPlanta' })

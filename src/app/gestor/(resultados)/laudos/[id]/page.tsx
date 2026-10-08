@@ -38,6 +38,7 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
 
   // Agrupar análises por "Campanha" (Data de coleta + PDF)
   // Como simplificação, agrupamos por YYYY-MM-DD
+  type Campanha = { date: Date; isConformant: boolean; analyses: typeof ponto.analyses }
   const campanhas = ponto.analyses.reduce((acc, analysis) => {
     const key = format(analysis.collected_at, 'yyyy-MM-dd')
     if (!acc[key]) {
@@ -52,9 +53,9 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
       acc[key].isConformant = false
     }
     return acc
-  }, {} as Record<string, any>)
+  }, {} as Record<string, Campanha>)
 
-  const campanhasList = Object.values(campanhas).sort((a: any, b: any) => b.date.getTime() - a.date.getTime())
+  const campanhasList = Object.values(campanhas).sort((a, b) => b.date.getTime() - a.date.getTime())
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
@@ -110,7 +111,7 @@ export default async function LaudoPontoPage(props: { params: Promise<{ id: stri
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {campanhasList.map((campanha: any, idx: number) => (
+                  {campanhasList.map((campanha, idx: number) => (
                     <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-border bg-card/50 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted flex items-center justify-center">

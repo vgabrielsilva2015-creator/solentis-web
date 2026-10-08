@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { User, MessageSquare, Calendar, Loader2, Clock, CheckCircle2, AlertTriangle, Send } from 'lucide-react'
 import { addOccurrenceComment } from '@/app/operador/ocorrencias/actions'
+import { errorMessage } from '@/lib/error-utils'
 
 interface Comment {
   id: string
@@ -53,8 +54,8 @@ export function OccurrenceTimeline({
       try {
         await addOccurrenceComment(occurrenceId, commentText)
         setCommentText('')
-      } catch (err: any) {
-        setError(err.message || 'Erro ao adicionar comentário.')
+      } catch (err: unknown) {
+        setError(errorMessage(err) || 'Erro ao adicionar comentário.')
       }
     })
   }

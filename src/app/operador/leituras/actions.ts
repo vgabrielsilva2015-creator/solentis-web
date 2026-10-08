@@ -165,7 +165,7 @@ export async function registrarLeitura(
     }
   }
 
-  let postCommitHooks: Array<() => Promise<void>> = []
+  const postCommitHooks: Array<() => Promise<void>> = []
   try {
     await prisma.$transaction(async (tx) => {
       const reading = await tx.reading.create({

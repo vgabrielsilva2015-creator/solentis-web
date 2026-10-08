@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
 import { ArrowLeft } from 'lucide-react'
+import type { Prisma } from '@prisma/client'
 
 const PAGE_SIZE = 20
 
@@ -27,7 +28,7 @@ export default async function HistoricoLeituraPage({
   const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
-  const where: any = { tenant_id: (await getTenantId()) }
+  const where: Prisma.ReadingWhereInput = { tenant_id: (await getTenantId()) }
   if (filter === 'non-conformant') {
     where.is_non_conformant = true
   } else if (filter === 'conformant') {

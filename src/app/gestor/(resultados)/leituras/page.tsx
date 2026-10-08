@@ -7,6 +7,7 @@ import { Camera } from 'lucide-react'
 import { ResultsDataTable, UnifiedResult } from '@/components/gestor/resultados/results-data-table'
 import { ResultsFilters } from '@/components/gestor/resultados/results-filters'
 import { ExportCsvMenu } from '@/components/export-csv-menu'
+import type { Prisma } from '@prisma/client'
 
 const PAGE_SIZE = 20
 
@@ -30,7 +31,7 @@ export default async function GestorLeiturasPage({
   const skip = (page - 1) * PAGE_SIZE
   const tenant_id = await getTenantId()
 
-  const where: any = { tenant_id }
+  const where: Prisma.ReadingWhereInput = { tenant_id }
 
   if (q) {
     where.OR = [

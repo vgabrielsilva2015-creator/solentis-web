@@ -31,7 +31,14 @@ export async function getReportData(startDate: string, endDate: string) {
   })
 
   // Group readings by parameter
-  const parameterStats: Record<string, any> = {}
+  const parameterStats: Record<string, {
+    name: string
+    unit: string | null
+    minLimit: number | null
+    maxLimit: number | null
+    values: number[]
+    nonConformantCount: number
+  }> = {}
   let totalNonConformant = 0
 
   for (const r of readings) {

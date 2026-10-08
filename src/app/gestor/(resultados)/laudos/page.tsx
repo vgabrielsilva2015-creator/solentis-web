@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ResultsDataTable, UnifiedResult } from '@/components/gestor/resultados/results-data-table'
 import { ResultsFilters } from '@/components/gestor/resultados/results-filters'
 import { ExportCsvMenu } from '@/components/export-csv-menu'
+import type { Prisma } from '@prisma/client'
 
 const PAGE_SIZE = 20
 
@@ -30,7 +31,7 @@ export default async function GestorLaudosPage({
   const skip = (page - 1) * PAGE_SIZE
   const tenant_id = await getTenantId()
 
-  const where: any = { 
+  const where: Prisma.AnalysisWhereInput = { 
     tenant_id,
     laboratory_type: 'EXTERNAL'
   }

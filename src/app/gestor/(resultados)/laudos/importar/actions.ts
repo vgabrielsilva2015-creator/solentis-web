@@ -4,6 +4,7 @@ import { getActor, permissionError, requirePermission } from '@/server/auth/guar
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
 import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
+import { errorMessage } from '@/lib/error-utils'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -62,7 +63,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
   const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-pro']
   const MAX_RETRIES = 3
   const BASE_DELAY_MS = 3000
-  let lastError: any = null
+  let lastError: unknown = null
 
   for (const modelName of modelsToTry) {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -104,7 +105,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
   }
 
   // Sempre incluir o erro real para facilitar debug
-  const rawError = lastError?.message || 'Erro desconhecido'
+  const rawError = errorMessage(lastError) || 'Erro desconhecido'
   const friendlyError = `Falha ao processar PDF. Erro: ${rawError.substring(0, 150)}`
 
   log.error({ err: lastError }, 'Erro em todos os modelos da IA')

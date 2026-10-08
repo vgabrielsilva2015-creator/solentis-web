@@ -27,8 +27,8 @@ export default async function CategoriasPage({ searchParams }: { searchParams: P
 
       <div className="rounded-lg border border-border bg-card/50 p-4">
         <p className="text-sm text-foreground">
-          <strong>O que são Categorias?</strong> As categorias servem para agrupar máquinas do mesmo tipo (ex: "Bombas Centrífugas", "Aeradores", "Sopradores"). 
-          Você não cadastra a máquina física aqui. O equipamento físico (ex: "Bomba Elevatória 01") é cadastrado no menu <strong>Equipamentos</strong>, onde você indicará a qual categoria ele pertence.
+          <strong>O que são Categorias?</strong> As categorias servem para agrupar máquinas do mesmo tipo (ex: &quot;Bombas Centrífugas&quot;, &quot;Aeradores&quot;, &quot;Sopradores&quot;). 
+          Você não cadastra a máquina física aqui. O equipamento físico (ex: &quot;Bomba Elevatória 01&quot;) é cadastrado no menu <strong>Equipamentos</strong>, onde você indicará a qual categoria ele pertence.
         </p>
       </div>
 

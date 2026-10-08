@@ -1,5 +1,6 @@
 'use client'
 
+import type { DashboardParameter, DashboardTrendPoint } from '../types'
 import React from 'react'
 import { F, activeVars, alpha, cardFrame, miniEmpty, icon } from './ui-helpers'
 import { ParamSelector } from '../param-selector'
@@ -7,11 +8,11 @@ import { PointSelector } from '../point-selector'
 import Link from 'next/link'
 
 interface TrendBlockProps {
-  dbTrendData: any[]
-  dbSelectedParam: any
-  dbParameters: any[]
-  dbHeatmapPoints: any[]
-  dbChemicalConsumptionData: any[]
+  dbTrendData: DashboardTrendPoint[]
+  dbSelectedParam: DashboardParameter | null
+  dbParameters: DashboardParameter[]
+  dbHeatmapPoints: { id: string; name: string; status: 'OK' | 'WARNING' | 'DANGER' }[]
+  dbChemicalConsumptionData: { name: string; unit: string; total: number }[]
   diasNum: number
   paramId?: string
   pontoId?: string

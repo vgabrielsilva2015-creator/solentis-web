@@ -21,6 +21,14 @@ export interface TrendChartData {
   laboratoryType?: string
 }
 
+/** O que o Recharts entrega ao desenhar cada ponto. */
+interface TrendDotProps {
+  cx?: number
+  cy?: number
+  key?: React.Key | null
+  payload: TrendChartData
+}
+
 interface TrendChartProps {
   data: TrendChartData[]
   parameterName: string
@@ -49,7 +57,7 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
   const dataMin = Math.min(...data.map(d => d.value))
   
   // Customização do YAxis domain para ter margem
-  const yAxisDomain = (dataMinMax: any) => {
+  const yAxisDomain = (dataMinMax: readonly [number, number]): [number, number] => {
     let min = dataMinMax[0] as number
     let max = dataMinMax[1] as number
     if (hasMax && max < maxLimit! * 1.2) max = maxLimit! * 1.2
@@ -89,14 +97,14 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
             fontSize={11} 
             tickLine={false} 
             axisLine={false}
-            domain={yAxisDomain as any}
+            domain={yAxisDomain}
           />
           <Tooltip
             contentStyle={{ backgroundColor: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)', borderRadius: '8px' }}
             itemStyle={{ color: 'var(--color-slate-200)', fontWeight: 500 }}
             labelStyle={{ color: 'var(--color-slate-400)', marginBottom: '4px' }}
-            formatter={(val: any, name: any, props: any) => {
-              const labType = props.payload.laboratoryType === 'EXTERNAL' ? '(Externo)' : '(Interno)'
+            formatter={(val, _name, item) => {
+              const labType = (item.payload as TrendChartData).laboratoryType === 'EXTERNAL' ? '(Externo)' : '(Interno)'
               return [`${val} ${unit} ${labType}`, parameterName]
             }}
           />
@@ -143,13 +151,13 @@ export function TrendChart({ data, parameterName, unit }: TrendChartProps) {
             strokeWidth={2}
             fillOpacity={1}
             fill="url(#colorBrand)"
-            dot={(props: any) => {
+            dot={(props: TrendDotProps) => {
               const { cx, cy, payload } = props
-              if (!cx || !cy) return <g key={`dot-${props.key}`} />
+              if (!cx || !cy) return <g key={`dot-${String(props.key)}`} />
               const isExternal = payload.laboratoryType === 'EXTERNAL'
               return (
                 <circle
-                  key={`dot-${props.key}`}
+                  key={`dot-${String(props.key)}`}
                   cx={cx}
                   cy={cy}
                   r={isExternal ? 5 : 3}

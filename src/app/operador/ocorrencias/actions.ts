@@ -118,7 +118,7 @@ export async function registrarOcorrencia(
     })
   }
 
-  let postCommitHooks: Array<() => Promise<void>> = []
+  const postCommitHooks: Array<() => Promise<void>> = []
   // Cria ocorrência (+ fotos + audit) em transação atômica
   await prisma.$transaction(async (tx) => {
     const occurrence = await tx.occurrence.create({

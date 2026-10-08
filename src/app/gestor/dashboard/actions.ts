@@ -93,7 +93,7 @@ export async function obterDetalhesPonto(pontoId: string) {
 
   let sparklineData: { value: number; date: Date }[] = []
   let parameterName = 'Parâmetro'
-  let limits = { min: null as number | null, max: null as number | null }
+  const limits = { min: null as number | null, max: null as number | null }
 
   if (parametroMaisComum.length > 0 && parametroMaisComum[0].parameter_id) {
     const paramId = parametroMaisComum[0].parameter_id

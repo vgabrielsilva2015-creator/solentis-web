@@ -7,10 +7,10 @@ export async function subscribeUser(sub: PushSubscription) {
   const session = await auth()
   if (!session) return { error: 'Unauthorized' }
 
-  // @ts-ignore
-  const p256dh = sub.keys?.p256dh
-  // @ts-ignore
-  const authKey = sub.keys?.auth
+  // PushSubscription.toJSON() entrega `keys`; o tipo do DOM não declara o campo
+  const keys = (sub as unknown as { keys?: { p256dh?: string; auth?: string } }).keys
+  const p256dh = keys?.p256dh
+  const authKey = keys?.auth
 
   if (!p256dh || !authKey) return { error: 'Invalid subscription' }
 

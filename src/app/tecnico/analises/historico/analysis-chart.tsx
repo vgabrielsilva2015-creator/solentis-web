@@ -23,10 +23,10 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomDot(props: any) {
+// cx, cy e payload são injetados pelo Recharts ao clonar o elemento <CustomDot />
+function CustomDot(props: { cx?: number; cy?: number; payload?: { isNonConformant?: boolean } }) {
   const { cx, cy, payload } = props
-  const fill = payload.isNonConformant ? '#f87171' : '#60a5fa'
+  const fill = payload?.isNonConformant ? '#f87171' : '#60a5fa'
   return <circle cx={cx} cy={cy} r={4} fill={fill} stroke="none" />
 }
 
