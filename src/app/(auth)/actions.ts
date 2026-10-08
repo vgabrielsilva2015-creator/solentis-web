@@ -87,7 +87,7 @@ async function enviarLinkDeReset(normalizedEmail: string): Promise<void> {
     })
 
     const resetUrl = buildResetUrl(rawToken)
-    const mail = resetPasswordEmail({ url: resetUrl })
+    const mail = resetPasswordEmail({ url: resetUrl, email: user.email })
 
     await sendEmail({
       to: user.email,

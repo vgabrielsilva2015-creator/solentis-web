@@ -1,6 +1,6 @@
 /** T-21 (V-12): o HTML dos e-mails não pode ser alterado pelo que o usuário digita. */
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { escapeHtml, safeUrl, inviteEmail, resetPasswordEmail } from '@/lib/email-templates'
 
@@ -23,7 +23,8 @@ describe('e-mail de convite', () => {
   it('nome com HTML não vira HTML (era V-12: link/HTML injetado com o remetente oficial)', () => {
     const { html } = inviteEmail({ name: `<a href="https://golpe.example">Clique aqui</a><img src=x onerror=1>`, url: URL_OK })
     expect(html).not.toContain('<a href="https://golpe.example"')
-    expect(html).not.toContain('<img')
+    expect(html).not.toContain('<img src=x')
+    expect(html).not.toContain('onerror=1>')
     expect(html).toContain('&lt;a href=&quot;https://golpe.example&quot;&gt;')
   })
   it('o único link do e-mail é o do convite', () => {
@@ -49,5 +50,30 @@ describe('nenhuma action monta HTML de e-mail na mão', () => {
     const t = readFileSync(join(process.cwd(), 'src', rel), 'utf-8')
     expect(t).not.toMatch(/const html = `/)
     expect(t).toMatch(/email-templates/)
+  })
+})
+
+describe('visual da marca (T-21)', () => {
+  const { html: convite } = inviteEmail({ name: 'Maria', url: URL_OK, email: 'maria@empresa.com' })
+  it('traz marca, logo absoluto em /email/ e e-mail convidado', () => {
+    expect(convite).toContain('Solentis')
+    expect(convite).toMatch(/src="https?:\/\/[^"]+\/email\/solentis-logo\.png"/)
+    expect(convite).toContain('maria@empresa.com')
+  })
+  it('e-mail do convidado também é escapado', () => {
+    expect(inviteEmail({ name: 'M', url: URL_OK, email: '"><script>x</script>@a.co' }).html).not.toContain('<script>')
+  })
+  it('sem script, sem recurso externo além do logo, estilos inline', () => {
+    for (const html of [convite, resetPasswordEmail({ url: URL_OK }).html]) {
+      expect(html).not.toMatch(/<script|<link|@import|<iframe/i)
+      expect(html).toMatch(/style="/)
+    }
+  })
+  it('informa a validade real do link (7 dias / 60 minutos)', () => {
+    expect(convite).toContain('7 dias')
+    expect(resetPasswordEmail({ url: URL_OK }).html).toContain('60 minutos')
+  })
+  it('o arquivo do logo existe em public/email', () => {
+    expect(existsSync(join(process.cwd(), 'public/email/solentis-logo.png'))).toBe(true)
   })
 })

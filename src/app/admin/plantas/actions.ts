@@ -264,7 +264,7 @@ export async function criarUsuarioPlanta(
     try {
       const rawToken = await createSetPasswordToken(newUserId, tenantId, INVITE_TTL_MS)
       const inviteUrl = buildSetPasswordUrl(rawToken)
-      const mail = inviteEmail({ name: parsed.data.name, url: inviteUrl })
+      const mail = inviteEmail({ name: parsed.data.name, url: inviteUrl, email: parsed.data.email })
       const emailResult = await sendEmail({ to: parsed.data.email, subject: mail.subject, html: mail.html })
       if (emailResult.success) inviteSent = true
       else inviteError = emailResult.error
