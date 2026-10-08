@@ -12,6 +12,7 @@ import { getLogger } from '@/lib/logger'
 import { logAudit } from '@/lib/audit'
 import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
 import { sendEmail } from '@/lib/email'
+import { seedTenantDefaults } from '@/lib/tenant-defaults'
 import { UsuarioSchema, type UsuarioFormState } from '@/app/gestor/(sistema)/usuarios/schema'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
@@ -80,7 +81,7 @@ export async function criarPlanta(
       })
 
       // 2. Criar Gestor associado a este Tenant
-      await tx.user.create({
+      const gestor = await tx.user.create({
         data: {
           tenant_id:            tenant.id,
           name:                 gestorName,
@@ -91,7 +92,11 @@ export async function criarPlanta(
           is_active:            true,
         }
       })
-    })
+
+      // 3. Mobiliar a planta "de fábrica": cadastros de referência CONAMA,
+      //    métodos, categorias, pontos, turnos, prazos e produtos químicos.
+      await seedTenantDefaults(tx, tenant.id, gestor.id)
+    }, { timeout: 20000 })
 
     revalidatePath('/admin/plantas')
     return { success: true, tempPassword, gestorEmail }
