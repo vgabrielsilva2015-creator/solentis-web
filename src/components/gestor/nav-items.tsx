@@ -28,7 +28,7 @@ export const GESTOR_NAV: GestorNavItem[] = [
   { type: 'link',    label: 'Dashboard',               href: '/gestor/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
   
   { type: 'section', label: 'Operação' },
-  { type: 'link',    label: 'Resultados',              href: '/gestor/leituras', activePrefixes: ['/gestor/leituras', '/gestor/analises', '/gestor/laudos'], icon: <Microscope className="w-4 h-4" /> },
+  { type: 'link',    label: 'Resultados',              href: '/gestor/leituras', activePrefixes: ['/gestor/leituras', '/gestor/analises', '/gestor/laudos', '/gestor/importacao'], icon: <Microscope className="w-4 h-4" /> },
   { type: 'link',    label: 'Ocorrências',             href: '/gestor/ocorrencias', activePrefixes: ['/gestor/ocorrencias', '/gestor/prazos-ocorrencia'], icon: <AlertTriangle className="w-4 h-4" /> },
   { type: 'link',    label: 'Turnos',                  href: '/gestor/turnos/tarefas', activePrefixes: ['/gestor/turnos'], icon: <Clock className="w-4 h-4" /> },
   
