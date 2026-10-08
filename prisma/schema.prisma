@@ -510,6 +510,8 @@ model Reading {
   @@index([parameter_id])
   @@index([shift_instance_id])
   @@index([tenant_id, is_non_conformant, created_at])
+  @@index([tenant_id, parameter_id, created_at])
+  @@index([tenant_id, collection_point_id, parameter_id, recorded_at], map: "readings_tenant_point_param_recorded_at_idx")
   @@unique([tenant_id, client_id])
   @@map("readings")
 }
@@ -549,6 +551,7 @@ model Analysis {
   @@index([collection_point_id])
   @@index([recorded_by])
   @@index([collected_at])
+  @@index([tenant_id, collection_point_id, collected_at])
   @@map("analyses")
 }
 
@@ -690,6 +693,7 @@ model Occurrence {
   @@index([tenant_id, severity, status])
   @@index([deadline])
   @@index([reported_by])
+  @@index([collection_point_id])
   @@map("occurrences")
 }
 
@@ -943,6 +947,7 @@ model MaintenanceLog {
   tenant    Tenant    @relation(fields: [tenant_id], references: [id])
   equipment Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
 
+  @@index([equipment_id])
   @@map("maintenance_logs")
 }
 
@@ -956,6 +961,7 @@ model OccurrenceComment {
   occurrence Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
   user       User       @relation(fields: [user_id], references: [id])
 
+  @@index([occurrence_id])
   @@map("occurrence_comments")
 }
 
