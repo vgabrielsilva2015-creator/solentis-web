@@ -116,7 +116,7 @@ export async function criarEquipamento(
 
   if (photoFile && photoFile.size > 0) {
     try {
-      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024)
+      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024, await getTenantId())
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
     }
@@ -132,7 +132,7 @@ export async function criarEquipamento(
       return { error: 'O manual deve ser um arquivo PDF válido.' }
     }
     const filename = `${crypto.randomUUID()}.pdf`
-    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf')
+    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf', await getTenantId())
   }
 
   const firstScheduledDate = addDays(new Date(), parsed.data.preventive_frequency_days)
@@ -222,7 +222,7 @@ export async function editarEquipamento(
 
   if (photoFile && photoFile.size > 0) {
     try {
-      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024)
+      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024, await getTenantId())
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
     }
@@ -238,7 +238,7 @@ export async function editarEquipamento(
       return { error: 'O manual deve ser um arquivo PDF válido.' }
     }
     const filename = `${crypto.randomUUID()}.pdf`
-    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf')
+    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf', await getTenantId())
   }
 
   await prisma.equipment.updateMany({

@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs/promises'
-import { put } from '@vercel/blob'
+import { put, get } from '@vercel/blob'
 import crypto from 'crypto'
 
 /**
@@ -15,7 +15,27 @@ import crypto from 'crypto'
  * - em disco: apenas o nome do arquivo
  *
  * `readUpload` aceita os dois formatos de forma transparente.
+ *
+ * T-26 — modo privado (`BLOB_ACCESS=private`, exige um Blob store privado):
+ * - o objeto é gravado com `access: 'private'` em `<tenantId>/<pasta>/<arquivo>`;
+ * - o valor guardado no banco é esse CAMINHO (nunca uma URL), então nada de URL de Blob vai para o
+ *   navegador nem fica acessível sem login;
+ * - `readUpload` só lê caminho que começa pela planta de quem pede.
+ * Sem `BLOB_ACCESS=private` o comportamento é o antigo (Blob público + URL). Arquivos antigos
+ * (URL pública) continuam legíveis nos dois modos até a migração.
  */
+
+const HOST_BLOB = '.blob.vercel-storage.com'
+
+/** 'private' só quando pedido explicitamente; qualquer outro valor mantém o comportamento antigo. */
+export function blobAccess(): 'public' | 'private' {
+  return process.env.BLOB_ACCESS === 'private' ? 'private' : 'public'
+}
+
+/** Pasta e nome gerados por nós: só letras, números, ponto, hífen e sublinhado. */
+const SEGMENTO = /^[A-Za-z0-9._-]+$/
+/** Segmento válido de caminho: sem '.' nem '..' (travessia de diretório). */
+const segmentoValido = (p: string | undefined): p is string => !!p && SEGMENTO.test(p) && p !== '.' && p !== '..'
 
 function hasBlob() {
   // Na Vercel o Blob autentica por OIDC (projeto conectado recebe BLOB_STORE_ID,
@@ -50,8 +70,17 @@ export async function saveUpload(
   filename: string,
   data: Buffer,
   contentType: string,
+  tenantId?: string,
 ): Promise<string> {
   if (hasBlob()) {
+    if (blobAccess() === 'private') {
+      if (!segmentoValido(tenantId) || !segmentoValido(folder) || !segmentoValido(filename)) {
+        throw new Error('Upload privado exige planta, pasta e nome de arquivo válidos.')
+      }
+      const pathname = `${tenantId}/${folder}/${filename}`
+      await put(pathname, data, { access: 'private', contentType, addRandomSuffix: false })
+      return pathname // o banco guarda o caminho, nunca uma URL
+    }
     const blob = await put(`${folder}/${filename}`, data, {
       access: 'public',
       contentType,
@@ -81,7 +110,8 @@ export async function saveUpload(
 export async function saveImageUpload(
   file: File,
   folder: string,
-  maxBytes: number = 5 * 1024 * 1024
+  maxBytes: number = 5 * 1024 * 1024,
+  tenantId?: string,
 ): Promise<string> {
   if (file.size > maxBytes) {
     throw new Error(`Arquivo muito grande. Máximo de ${maxBytes / 1024 / 1024} MB.`)
@@ -93,13 +123,16 @@ export async function saveImageUpload(
   }
   const ext = realType === 'image/jpeg' ? 'jpg' : realType.split('/')[1]
   const filename = `${crypto.randomUUID()}.${ext}`
-  return saveUpload(folder, filename, buffer, realType)
+  return saveUpload(folder, filename, buffer, realType, tenantId)
 }
 
-export async function readUpload(folder: string, stored: string): Promise<Buffer | null> {
-  // Valor salvo é uma URL do Blob → busca remota.
+export async function readUpload(folder: string, stored: string, tenantId?: string): Promise<Buffer | null> {
+  // Valor salvo é uma URL do Blob público (arquivo antigo) → busca remota.
   if (stored.startsWith('http://') || stored.startsWith('https://')) {
     try {
+      // Só buscamos o que é do nosso Blob: o valor vem do banco, mas não vale a pena confiar cegamente.
+      const url = new URL(stored)
+      if (url.protocol !== 'https:' || !url.hostname.endsWith(HOST_BLOB)) return null
       const res = await fetch(stored)
       if (!res.ok) return null
       return Buffer.from(await res.arrayBuffer())
@@ -108,7 +141,24 @@ export async function readUpload(folder: string, stored: string): Promise<Buffer
     }
   }
 
-  // Caso contrário, é um arquivo em disco local (dev).
+  // Caminho do Blob privado: `<planta>/<pasta>/<arquivo>`. Só lê o que é da planta de quem pede.
+  if (stored.includes('/')) {
+    const partes = stored.split('/')
+    if (
+      !tenantId || partes.length !== 3 || !partes.every((p) => SEGMENTO.test(p) && p !== '.' && p !== '..') ||
+      partes[0] !== tenantId || partes[1] !== folder
+    ) return null
+    try {
+      const r = await get(stored, { access: 'private' })
+      if (!r || r.statusCode !== 200) return null
+      return Buffer.from(await new Response(r.stream).arrayBuffer())
+    } catch {
+      return null
+    }
+  }
+
+  // Caso contrário, é um arquivo em disco local (dev). Só o nome, sem subpasta nem "..".
+  if (!SEGMENTO.test(stored) || stored === '.' || stored === '..') return null
   try {
     return await fs.readFile(path.join(process.cwd(), 'uploads', folder, stored))
   } catch {

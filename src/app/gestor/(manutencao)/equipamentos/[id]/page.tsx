@@ -374,8 +374,8 @@ export default async function EquipamentoDetailPage({
                 model_name:                equipment.model_name,
                 status:                    equipment.status,
                 responsible_id:            equipment.responsible_id,
-                photo_url:                 equipment.photo_url,
-                manual_url:                equipment.manual_url,
+                has_photo:                 !!equipment.photo_url,
+                has_manual:                !!equipment.manual_url,
               }}
               categories={categories}
               responsibles={responsibles}

@@ -497,7 +497,7 @@ export async function concluirTarefa(
     for (const file of files) {
       let stored: string
       try {
-        stored = await saveImageUpload(file, 'tasks', MAX_FILE_SIZE)
+        stored = await saveImageUpload(file, 'tasks', MAX_FILE_SIZE, ctx.tenantId)
       } catch (err: unknown) {
         return { error: err instanceof Error ? err.message : `Erro no upload de ${file.name}` }
       }

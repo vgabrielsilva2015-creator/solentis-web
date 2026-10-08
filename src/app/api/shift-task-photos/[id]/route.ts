@@ -25,7 +25,7 @@ export async function GET(
     return NextResponse.json({ error: 'Foto não encontrada' }, { status: 404 })
   }
 
-  const buffer = await readUpload('tasks', photo.filename)
+  const buffer = await readUpload('tasks', photo.filename, await getTenantId())
   if (!buffer) {
     return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 })
   }

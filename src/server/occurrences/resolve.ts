@@ -56,7 +56,7 @@ export async function resolverOcorrencia(
   if (evidencia) {
     if (!TIPOS_FOTO.includes(evidencia.type)) return { ok: false, error: 'Evidência: use foto JPG, PNG ou WEBP.', field: 'evidence' }
     try {
-      const filename = await saveImageUpload(evidencia, 'occurrences', MAX_EVIDENCIA_BYTES)
+      const filename = await saveImageUpload(evidencia, 'occurrences', MAX_EVIDENCIA_BYTES, ctx.tenantId)
       foto = { filename, original_name: evidencia.name, mime_type: evidencia.type, size_bytes: evidencia.size }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Não foi possível salvar a foto.', field: 'evidence' }

@@ -105,7 +105,7 @@ export async function registrarOcorrencia(
     }
     let stored: string
     try {
-      stored = await saveImageUpload(file, 'occurrences', MAX_FILE_BYTES)
+      stored = await saveImageUpload(file, 'occurrences', MAX_FILE_BYTES, tenantId)
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : `Erro no upload de ${file.name}` }
     }

@@ -153,7 +153,7 @@ export async function registrarLeitura(
   const photoFile = formData.get('photo') as File | null
   if (photoFile && photoFile.size > 0) {
     try {
-      photoFilename = await saveImageUpload(photoFile, 'readings', MAX_IMG_BYTES)
+      photoFilename = await saveImageUpload(photoFile, 'readings', MAX_IMG_BYTES, await getTenantId())
     } catch (err: unknown) {
       photoFilename = null
       photoWarning = 'Não deu para enviar a foto. A leitura foi salva; você pode anexar depois pelo histórico.'

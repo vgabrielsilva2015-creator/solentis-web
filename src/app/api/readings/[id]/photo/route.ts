@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   })
   if (!reading?.photo_filename) return NextResponse.json({ error: 'Foto não encontrada' }, { status: 404 })
 
-  const buffer = await readUpload('readings', reading.photo_filename)
+  const buffer = await readUpload('readings', reading.photo_filename, await getTenantId())
   if (!buffer) return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 })
 
   const ext = reading.photo_filename.split('.').pop()

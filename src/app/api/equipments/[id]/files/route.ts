@@ -44,7 +44,7 @@ export async function GET(
     mimeType = 'application/pdf'
   }
 
-  const buffer = await readUpload('equipments', fileName)
+  const buffer = await readUpload('equipments', fileName, await getTenantId())
   if (!buffer) {
     return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 })
   }
