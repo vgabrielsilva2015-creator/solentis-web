@@ -177,6 +177,12 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
     'lib/push-actions.ts#sendPushToUsers': 'T-21 (V-11): idem, em lib/push-service.ts',
   }
 
+  // Actions criadas depois da T-20: o que cada uma exige hoje
+  const ADICIONADAS: Record<string, string[]> = {
+    'mfa/cadastro/actions.ts#iniciarCadastroMfa': ['SUPER_ADMIN'],   // Fase 2 do Super Admin
+    'mfa/cadastro/actions.ts#confirmarCadastroMfa': ['SUPER_ADMIN'],
+  }
+
   const esperado = (k: string) => (k in MUDANCAS ? MUDANCAS[k].para : BEFORE[k])
   const agora = (k: string): string | string[] => {
     if (PUBLICAS.has(k)) return 'PUBLICO'
@@ -188,7 +194,11 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
   const VIGENTES = Object.keys(BEFORE).filter((k) => !(k in REMOVIDAS)).sort()
 
   it('o conjunto de actions é o mesmo (menos as removidas de propósito)', () => {
-    expect([...ATUAL.keys()].sort()).toEqual(VIGENTES)
+    expect([...ATUAL.keys()].sort()).toEqual([...VIGENTES, ...Object.keys(ADICIONADAS)].sort())
+  })
+
+  it.each(Object.keys(ADICIONADAS))('nova: %s', (k) => {
+    expect(agora(k)).toEqual(ADICIONADAS[k])
   })
 
   it.each(VIGENTES)('%s', (k) => {
@@ -266,7 +276,7 @@ describe('guard em execução', async () => {
   it('com permissão devolve o contexto (id, planta, perfil)', async () => {
     authMock.mockResolvedValue(sessao)
     findFirst.mockResolvedValue({ id: 'u1', email: 'g@a', name: 'G', role: 'MANAGER' })
-    await expect(requirePermission('config.manage')).resolves.toEqual({ userId: 'u1', tenantId: 'A', role: 'MANAGER', email: 'g@a', name: 'G' })
+    await expect(requirePermission('config.manage')).resolves.toEqual({ userId: 'u1', tenantId: 'A', role: 'MANAGER', email: 'g@a', name: 'G', mfa: 'none' })
   })
 
   it('permissionError devolve a mensagem para a tela', () => {

@@ -14,6 +14,9 @@ export function mascararEmails(s: string): string {
   return s.replace(EMAIL, '[email]')
 }
 
+// chaves cujo valor nunca sai do servidor (2º fator): o valor vira [removido], seja qual for o texto
+const CHAVES_SECRETAS = new Set(['totp', 'secret', 'secret_enc', 'segredo', 'recovery', 'recoverycodes', 'code_hash', 'password', 'password_hash'])
+
 const CHAVES_COM_URL = new Set(['url', 'request_path', 'path', 'transaction'])
 
 /** Percorre o evento todo: mascara e-mails em qualquer texto e corta `?query` de URLs/caminhos. */
@@ -26,7 +29,7 @@ function higienizar(valor: unknown, chave = '', fundo = 0): unknown {
   if (Array.isArray(valor)) return valor.map((v) => higienizar(v, chave, fundo + 1))
   if (valor && typeof valor === 'object') {
     const o = valor as Record<string, unknown>
-    for (const k of Object.keys(o)) o[k] = higienizar(o[k], k, fundo + 1)
+    for (const k of Object.keys(o)) o[k] = CHAVES_SECRETAS.has(k.toLowerCase()) ? '[removido]' : higienizar(o[k], k, fundo + 1)
     return o
   }
   return valor

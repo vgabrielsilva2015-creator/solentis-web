@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth.config'
 import { NextRequest, NextResponse } from 'next/server'
 import { isRouteAllowedForRole, getDashboardRoute } from '@/lib/auth-utils'
+import { mfaExigeCadastro, mfaMode, rotaLivreSemMfa } from '@/lib/mfa/config'
 import { isLoggedOut, LOGOUT_MARKER_COOKIE, sessionCookieNames } from '@/lib/logout-marker'
 
 const { auth } = NextAuth(authConfig)
@@ -63,6 +64,11 @@ export default auth((req) => {
   // Usuário com senha provisória só pode acessar /trocar-senha
   if (session.user.mustChangePassword) {
     return NextResponse.redirect(new URL('/trocar-senha', req.url))
+  }
+
+  // Fase 2 do Super Admin: no modo MFA_ENFORCE=required, quem não passou pelo 2º fator só alcança o cadastro
+  if (mfaExigeCadastro(session.user.role, session.user.mfa, mfaMode()) && !rotaLivreSemMfa(pathname)) {
+    return NextResponse.redirect(new URL('/mfa/cadastro', req.url))
   }
 
   // Verifica permissão por papel para as rotas

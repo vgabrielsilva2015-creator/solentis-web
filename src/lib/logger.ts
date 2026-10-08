@@ -24,9 +24,11 @@ export const REDACT_PATHS = [
   'password', 'senha', 'password_hash', 'passwordHash',
   'token', 'reset_token', 'resetToken', 'tempPassword', 'temp_password',
   'authorization', 'cookie', 'set-cookie', 'secret',
+  'totp', 'recovery', 'recoveryCodes', 'secret_enc', 'segredo',
   '*.password', '*.senha', '*.password_hash', '*.passwordHash',
   '*.token', '*.reset_token', '*.resetToken', '*.tempPassword',
   '*.authorization', '*.cookie', '*.secret',
+  '*.totp', '*.recovery', '*.recoveryCodes', '*.secret_enc', '*.segredo',
   'headers.authorization', 'headers.cookie',
   'email', 'to', 'phone', 'telefone', '*.email', '*.to', '*.phone', '*.telefone',
 ]

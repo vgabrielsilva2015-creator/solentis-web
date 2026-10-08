@@ -39,3 +39,6 @@ Decisões do dono do produto (08/10/2026): gestor registra leitura e mexe no est
 - Nunca se desativa o último super admin ativo nem a si mesmo (`FOR UPDATE` em `src/server/admin/plataforma.ts`).
 - Scripts: `scripts/ops/create-super-admin.ts` (cria na planta da plataforma) e `scripts/ops/move-super-admin.ts` (simulação por padrão; `--apply --confirm-host=<host>` grava; derruba a sessão do movido).
 - `audit_logs.ip_address` passa a ser preenchido por `logAudit` (cabeçalho da requisição, ou IP informado).
+
+### Segundo fator (Fase 2)
+- `requirePermission('platform.admin')` redireciona para `/mfa/cadastro` quando `MFA_ENFORCE=required` e a sessão não tem o claim `mfa = ok`. As actions de cadastro (`mfa/cadastro/actions.ts`) usam `getActor` + `permissionError` de propósito (o gate redirecionaria para si mesmas) e pedem a senha de novo.

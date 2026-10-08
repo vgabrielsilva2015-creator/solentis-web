@@ -25,6 +25,7 @@ export const authConfig = {
         token.role               = user.role
         token.mustChangePassword = user.mustChangePassword
         token.tenantId           = user.tenantId
+        token.mfa                = user.mfa
         token.email              = user.email // Garante que a sessão use o e-mail exato do banco de dados
         Object.assign(token, initialGuardFields(user.sessionVersion, now))
         return token
@@ -54,6 +55,7 @@ export const authConfig = {
       session.user.role               = token.role as string
       session.user.mustChangePassword = token.mustChangePassword as boolean
       session.user.tenantId           = token.tenantId as string
+      session.user.mfa                = (token.mfa as 'ok' | 'pending' | 'none' | undefined) ?? 'none'
       return session
     },
   },

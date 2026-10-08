@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { AuthHeader, AuthFooterLink, FormError } from '@/components/auth/AuthComponents'
 import { PasswordField } from '@/components/auth/PasswordField'
@@ -11,6 +11,10 @@ const initialState: LoginState = {}
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, initialState)
+  // controlados: o React limpa o formulário depois da action, e o 2º passo (código do
+  // autenticador, só SUPER_ADMIN) reenvia e-mail e senha junto com o código
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   return (
     <AuthShell tagline="Conformidade ambiental em tempo real.">
@@ -29,6 +33,8 @@ export default function LoginPage() {
             placeholder="voce@empresa.com.br"
             required
             disabled={isPending}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full h-[54px] px-3 rounded-[14px] bg-surface-2 border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/50 transition-all"
           />
         </div>
@@ -41,7 +47,31 @@ export default function LoginPage() {
           placeholder="Sua senha de acesso"
           required
           disabled={isPending}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
+
+        {state.needsCode && (
+          <div className="space-y-1.5">
+            <label htmlFor="totp" className="block text-xs uppercase tracking-wider text-muted-foreground">
+              Código de verificação
+            </label>
+            <input
+              id="totp"
+              name="totp"
+              type="text"
+              inputMode="text"
+              autoComplete="one-time-code"
+              autoFocus
+              required
+              maxLength={32}
+              placeholder="6 dígitos ou código de recuperação"
+              disabled={isPending}
+              className="w-full h-[54px] px-3 rounded-[14px] bg-surface-2 border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:border-primary/40 text-foreground placeholder:text-muted-foreground/50 tracking-widest"
+            />
+            <p className="text-xs text-muted-foreground">Abra o aplicativo autenticador e digite o código atual.</p>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 pt-1">
           <input 

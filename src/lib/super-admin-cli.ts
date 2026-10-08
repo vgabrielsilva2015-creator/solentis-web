@@ -52,3 +52,16 @@ export function lerEntrada(argv: string[], env: Record<string, string | undefine
   if (confirmHost !== dbHost) return { erro: `--confirm-host (${confirmHost}) não é o host do DATABASE_URL (${dbHost}). Nada foi feito.` }
   return { input: { email, name, tenantSlug, createTenantName, confirmHost, password: env.SUPER_ADMIN_PASSWORD } }
 }
+
+/** Argumentos do reset de emergência do 2º fator: --email e --confirm-host (mesma trava do banco certo). */
+export function lerEntradaResetMfa(argv: string[], env: Record<string, string | undefined>): { email?: string; erro?: string } {
+  const get = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined }
+  const email = get('--email')?.trim().toLowerCase()
+  const confirmHost = get('--confirm-host')?.trim()
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erro: 'Informe --email com um e-mail válido.' }
+  if (!confirmHost) return { erro: 'Informe --confirm-host com o host do banco que você quer alterar.' }
+  const dbHost = hostDoBanco(env.DATABASE_URL)
+  if (!dbHost) return { erro: 'DATABASE_URL ausente ou inválida.' }
+  if (confirmHost !== dbHost) return { erro: `--confirm-host (${confirmHost}) não é o host do DATABASE_URL (${dbHost}). Nada foi feito.` }
+  return { email }
+}

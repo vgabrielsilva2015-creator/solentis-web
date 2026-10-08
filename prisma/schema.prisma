@@ -86,10 +86,12 @@ model User {
   deleted_at           DateTime?
 
   // — identidade
-  tenant        Tenant    @relation(fields: [tenant_id], references: [id])
-  creator       User?     @relation("CreatedBy", fields: [created_by], references: [id])
-  created_users User[]    @relation("CreatedBy")
-  sessions      Session[]
+  tenant             Tenant            @relation(fields: [tenant_id], references: [id])
+  creator            User?             @relation("CreatedBy", fields: [created_by], references: [id])
+  created_users      User[]            @relation("CreatedBy")
+  sessions           Session[]
+  mfa                UserMfa?
+  mfa_recovery_codes MfaRecoveryCode[]
 
   // — configuração (1 FK por model → sem nome de relação)
   quality_parameters        QualityParameter[]
@@ -176,6 +178,39 @@ model RevokedSession {
 
   @@index([expires_at])
   @@map("revoked_sessions")
+}
+
+// Fase 2 do Super Admin: segundo fator (TOTP). Escopo de usuário, sem tenant_id.
+// `secret_enc` é AES-256-GCM (chave em MFA_ENCRYPTION_KEY, fora do banco).
+// `enabled_at` nulo = cadastro iniciado e ainda não confirmado com um código.
+// `last_step` é o último passo de 30 s aceito (anti-replay).
+model UserMfa {
+  user_id     String    @id
+  secret_enc  String
+  key_version Int       @default(1)
+  enabled_at  DateTime?
+  last_step   BigInt    @default(0)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_mfa")
+}
+
+// Códigos de recuperação: só o hash fica guardado; uso único (`used_at`).
+model MfaRecoveryCode {
+  id         String    @id @default(cuid())
+  user_id    String
+  code_hash  String
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, code_hash])
+  @@index([user_id])
+  @@map("mfa_recovery_codes")
 }
 
 model LoginAttempt {
@@ -505,6 +540,7 @@ model Reading {
   shift_instance   ShiftInstance?    @relation(fields: [shift_instance_id], references: [id])
   recorder         User              @relation(fields: [recorded_by], references: [id])
 
+  @@unique([tenant_id, client_id])
   @@index([tenant_id, recorded_at])
   @@index([collection_point_id])
   @@index([parameter_id])
@@ -512,7 +548,6 @@ model Reading {
   @@index([tenant_id, is_non_conformant, created_at])
   @@index([tenant_id, parameter_id, created_at])
   @@index([tenant_id, collection_point_id, parameter_id, recorded_at], map: "readings_tenant_point_param_recorded_at_idx")
-  @@unique([tenant_id, client_id])
   @@map("readings")
 }
 

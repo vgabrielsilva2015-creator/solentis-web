@@ -51,5 +51,19 @@ export const LOGIN_UNAVAILABLE_CODE = 'AUTH_UNAVAILABLE'
 export function loginErrorMessage(type: string | undefined, causeCode?: string | null): string {
   if (type === 'CredentialsSignin') return LOGIN_MESSAGES.invalidCredentials
   if (type === 'CallbackRouteError' && causeCode === LOGIN_RATE_LIMITED_CODE) return LOGIN_MESSAGES.rateLimited
+  if (type === 'CallbackRouteError' && causeCode === LOGIN_MFA_REQUIRED_CODE) return MFA_MESSAGES.required
+  if (type === 'CallbackRouteError' && causeCode === LOGIN_MFA_INVALID_CODE) return MFA_MESSAGES.invalid
   return LOGIN_MESSAGES.unavailable
 }
+
+// ─── Segundo fator (Super Admin) ───────────────────────────────────────────────
+
+/** Senha certa, falta o código do autenticador: a tela mostra o campo do código. */
+export const LOGIN_MFA_REQUIRED_CODE = 'MFA_REQUIRED'
+/** Código do autenticador ou de recuperação errado/repetido. */
+export const LOGIN_MFA_INVALID_CODE = 'MFA_INVALID'
+
+export const MFA_MESSAGES = {
+  required: 'Informe o código do aplicativo autenticador.',
+  invalid: 'Código inválido. Confira o código atual do aplicativo ou use um código de recuperação.',
+} as const

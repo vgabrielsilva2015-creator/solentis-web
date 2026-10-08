@@ -6,7 +6,10 @@ import { verifyPassword } from '@/lib/password'
 import { getLogger } from '@/lib/logger'
 import { clientIp, decideLogin, loginCounts, recordLoginFailure, sleep } from '@/lib/rate-limit'
 import { authConfig } from '@/lib/auth.config'
-import { LOGIN_RATE_LIMITED_CODE, LOGIN_UNAVAILABLE_CODE } from '@/lib/user-errors'
+import { LOGIN_MFA_INVALID_CODE, LOGIN_MFA_REQUIRED_CODE, LOGIN_RATE_LIMITED_CODE, LOGIN_UNAVAILABLE_CODE } from '@/lib/user-errors'
+import { mfaMode, type MfaClaim } from '@/lib/mfa/config'
+import { lerChave } from '@/lib/mfa/crypto'
+import { estadoMfa, verificarSegundoFator } from '@/server/mfa/service'
 
 // ─── Augmentação de tipos do NextAuth ────────────────────────────────────────
 declare module 'next-auth' {
@@ -15,6 +18,7 @@ declare module 'next-auth' {
     mustChangePassword: boolean
     tenantId: string
     sessionVersion: number
+    mfa: MfaClaim
   }
   interface Session {
     /** id da sessão (estável entre renovações), usado pelo "Sair" */
@@ -23,6 +27,8 @@ declare module 'next-auth' {
       role: string
       mustChangePassword: boolean
       tenantId: string
+      /** 2º fator (só SUPER_ADMIN): 'ok' entrou com o código, 'pending' sem TOTP cadastrado, 'none' MFA desligado */
+      mfa: MfaClaim
     } & DefaultSession['user']
   }
 }
@@ -33,6 +39,7 @@ declare module '@auth/core/jwt' {
     mustChangePassword: boolean
     tenantId: string
     sid?: string
+    mfa?: MfaClaim
     sv?: number
     loginAt?: number
     lastSeen?: number
@@ -45,6 +52,8 @@ declare module '@auth/core/jwt' {
 const loginSchema = z.object({
   email: z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email().transform((v) => v.trim().toLowerCase()),
   password: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).').min(1),
+  // código do autenticador (6 dígitos) ou de recuperação; só é lido para SUPER_ADMIN
+  totp: z.string().max(32).optional().transform((v) => (v ?? '').trim()),
 })
 
 // ─── Configuração NextAuth ────────────────────────────────────────────────────
@@ -55,12 +64,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email:    { label: 'Email', type: 'email' },
         password: { label: 'Senha', type: 'password' },
+        totp:     { label: 'Código', type: 'text' },
       },
       async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const { email, password } = parsed.data
+        const { email, password, totp } = parsed.data
         const log = await getLogger({ action: 'login' })
         const ip = clientIp(request?.headers)
 
@@ -156,6 +166,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return falhou()
         }
 
+        // ── Segundo fator (Fase 2 do Super Admin) ─────────────────────────────
+        // Só SUPER_ADMIN, e só quando MFA_ENFORCE != off. Roda DEPOIS da senha e das checagens
+        // de conta, e ANTES de qualquer efeito de login (last_login_at, sessão).
+        let mfa: MfaClaim = 'none'
+        if (user.role === 'SUPER_ADMIN' && mfaMode() !== 'off') {
+          let estado
+          try { estado = await estadoMfa(prisma, user.id) } catch (error) {
+            log.error({ err: error, userId: user.id }, 'Falha ao consultar o segundo fator')
+            throw new Error(LOGIN_UNAVAILABLE_CODE) // fail-closed: sem saber o estado, não entra
+          }
+          if (estado === 'enabled') {
+            if (!totp) throw new Error(LOGIN_MFA_REQUIRED_CODE)
+            let ok = false
+            let bloqueado = false
+            try {
+              const r = await verificarSegundoFator(prisma, { userId: user.id, entrada: totp, key: lerChave(), nowMs: Date.now() })
+              ok = r.ok
+              bloqueado = !r.ok && r.motivo === 'bloqueado'
+            } catch (error) {
+              // chave ausente/errada ou banco fora: NUNCA deixa passar sem o código (alavanca: MFA_ENFORCE=off)
+              log.error({ err: error, userId: user.id }, 'Falha ao verificar o segundo fator')
+              throw new Error(LOGIN_UNAVAILABLE_CODE)
+            }
+            if (bloqueado) throw new Error(LOGIN_RATE_LIMITED_CODE)
+            if (!ok) {
+              await falhou()
+              log.warn({ tenantId: tenantIdForLog, userId: user.id }, 'Login bloqueado: segundo fator inválido')
+              throw new Error(LOGIN_MFA_INVALID_CODE)
+            }
+            mfa = 'ok'
+          } else {
+            mfa = 'pending'
+          }
+        }
+
         try {
           // @tenant-checked: user é o registro autenticado nesta própria função.
           await prisma.user.update({
@@ -177,6 +222,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           mustChangePassword:  user.must_change_password,
           tenantId:            user.tenant_id,
           sessionVersion:      user.session_version,
+          mfa,
         }
       },
     }),

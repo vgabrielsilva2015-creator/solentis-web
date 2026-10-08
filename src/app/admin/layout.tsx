@@ -5,6 +5,7 @@ import { SignOutButton } from '@/components/sign-out-button'
 import { AdminSidebar } from '@/components/admin/sidebar'
 import { MobileNav } from '@/components/mobile-nav'
 import { Logo } from '@/components/logo'
+import { mfaMode } from '@/lib/mfa/config'
 
 export default async function AdminLayout({
   children,
@@ -45,6 +46,11 @@ export default async function AdminLayout({
 
         {/* Conteúdo das páginas */}
         <div className="min-w-0 flex-1">
+          {mfaMode() === 'enroll' && session.user.mfa === 'pending' && (
+            <div role="status" className="border-b border-amber-500/30 bg-amber-950/40 px-4 py-2 text-sm text-amber-300">
+              Esta conta ainda não tem o segundo fator. <Link href="/mfa/cadastro" className="underline font-medium">Cadastrar agora</Link>
+            </div>
+          )}
           {children}
         </div>
       </div>

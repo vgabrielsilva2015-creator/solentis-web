@@ -32,6 +32,10 @@ export const RESET_WINDOW_MS = 60 * 60 * 1000
 export const RESET_EMAIL_LIMIT = 3
 export const RESET_IP_LIMIT = 10
 
+/** Segundo fator: falhas por USUÁRIO (qualquer IP) — 6 dígitos não podem ser tentados à vontade. */
+export const MFA_WINDOW_MS = 15 * 60 * 1000
+export const MFA_FAIL_LIMIT = 10
+
 export const PWCHANGE_WINDOW_MS = 15 * 60 * 1000
 export const PWCHANGE_FAIL_LIMIT = 5
 
@@ -48,6 +52,7 @@ export const buckets = {
   resetIp: (ip: string) => `reset:ip:${ip}`,
   resetEmail: (email: string) => `reset:email:${emailKey(email)}`,
   passwordChange: (userId: string) => `pwchange:user:${userId}`,
+  mfaUser: (userId: string) => `mfa:user:${userId}`,
 }
 
 // ─── Política (pura, testável) ─────────────────────────────────────────────
