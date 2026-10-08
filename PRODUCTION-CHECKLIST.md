@@ -15,7 +15,7 @@ Rodar `scripts/ops/production-readonly-checks.sql` no SQL Editor do Supabase e c
 | # | Item | Como verificar | Esperado | Estado |
 |---|---|---|---|---|
 | 1.1 | Contas padrão do seed (`admin@`, `tecnico@`, `operador@`, `manutencao@solentis.local`) | consulta 1 | inexistentes, desativadas ou com senha trocada (`updated_at` recente e `must_change_password = false` após troca real) | ❓ |
-| 1.2 | SUPER_ADMIN padrão (`super@solentis.local`, senha fixa em `create-super.ts`) | consultas 1 e 2 | inexistente; SUPER_ADMIN só com e-mail real, fora do tenant de cliente | ❓ |
+| 1.2 | SUPER_ADMIN padrão (`super@solentis.local`, senha fixa no antigo `create-super.ts`, removido na T-21; criar com `scripts/ops/create-super-admin.ts`) | consultas 1 e 2 | inexistente; SUPER_ADMIN só com e-mail real, fora do tenant de cliente | ❓ |
 | 1.3 | Senhas padrão (`Admin@123`, `Tecnico@123`, `Operador@123`, `Manutencao@123`, `Super@123`, `admin123`) | **não testar login em produção** (trava a conta pelo rate limit). Se 1.1/1.2 existirem, resetar a senha pelo painel do gestor/super admin. | nenhuma conta com senha padrão | ❓ |
 | 1.4 | Unique global de e-mail | consulta 3 | índice `users_email_key` presente; nenhum e-mail duplicado | ❓ |
 | 1.5 | Índices de turno e de consultas | consulta 4 | 7 índices listados | ❓ |
@@ -73,7 +73,7 @@ Variáveis que o código lê de fato (levantamento por `process.env.*` no códig
 
 | Item | Resultado |
 |---|---|
-| `.env` local aponta para um pooler Supabase `sa-east-1` (porta 6543, `pgbouncer=true`, **sem** `connection_limit`) | ⚠️ não dá para saber se é o mesmo projeto de produção; scripts locais (`create-super.ts`, seeds, `normalize-emails.js`) **não devem ser rodados** até isso ser confirmado |
+| `.env` local aponta para um pooler Supabase `sa-east-1` (porta 6543, `pgbouncer=true`, **sem** `connection_limit`) | ⚠️ não dá para saber se é o mesmo projeto de produção; scripts locais (`create-super-admin.ts`, seeds, `normalize-emails.js`) **não devem ser rodados** até isso ser confirmado |
 | `.vercel/project.json` local | projeto Vercel chamado `meu-projeto` |
 | Segredos no histórico do Git | nenhum segredo real encontrado (Passada 1) |
 | `docs/recovery-codes.txt` | fora do Git, mas não ignorado (corrigido na T-08) |
