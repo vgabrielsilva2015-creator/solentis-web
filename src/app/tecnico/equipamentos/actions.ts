@@ -10,6 +10,7 @@ import { addDays } from '@/lib/equipment-utils'
 import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
+import { MAX_MANUAL_BYTES, mb } from '@/lib/upload-limits'
 
 
 
@@ -122,8 +123,8 @@ export async function criarEquipamento(
   }
 
   if (manualFile && manualFile.size > 0) {
-    if (manualFile.size > 10 * 1024 * 1024) {
-      return { error: 'O manual deve ter no máximo 10 MB.' }
+    if (manualFile.size > MAX_MANUAL_BYTES) {
+      return { error: `O manual deve ter no máximo ${mb(MAX_MANUAL_BYTES)} (limite de envio da plataforma). Reduza o PDF e tente de novo.` }
     }
     const buffer = Buffer.from(await manualFile.arrayBuffer())
     // Confere a assinatura "%PDF" no início do arquivo, não só o Content-Type.
@@ -228,8 +229,8 @@ export async function editarEquipamento(
   }
 
   if (manualFile && manualFile.size > 0) {
-    if (manualFile.size > 10 * 1024 * 1024) {
-      return { error: 'O manual deve ter no máximo 10 MB.' }
+    if (manualFile.size > MAX_MANUAL_BYTES) {
+      return { error: `O manual deve ter no máximo ${mb(MAX_MANUAL_BYTES)} (limite de envio da plataforma). Reduza o PDF e tente de novo.` }
     }
     const buffer = Buffer.from(await manualFile.arrayBuffer())
     // Confere a assinatura "%PDF" no início do arquivo, não só o Content-Type.

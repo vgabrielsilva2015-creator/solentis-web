@@ -3,6 +3,7 @@
 import { getActor, permissionError, requirePermission } from '@/server/auth/guards'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
+import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -15,9 +16,9 @@ export async function extractDataFromPDF(base64Data: string, mimeType: string) {
   if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType)) {
     throw new Error('Tipo de arquivo inválido.')
   }
-  // base64 ~= 1.37x os bytes reais → ~10 MB de arquivo original.
-  if (typeof base64Data !== 'string' || base64Data.length > 14_000_000) {
-    throw new Error('Arquivo muito grande.')
+  // base64 = 4/3 dos bytes reais; a requisição inteira não pode passar de 4,5 MB na Vercel (T-24).
+  if (typeof base64Data !== 'string' || base64Data.length > MAX_LAUDO_BASE64_CHARS) {
+    throw new Error(`Arquivo muito grande. O limite por arquivo é ${mb(MAX_LAUDO_BYTES)}; reduza o PDF e tente de novo.`)
   }
 
   const apiKey = process.env.GEMINI_API_KEY

@@ -1,5 +1,6 @@
 'use client'
 
+import { MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
 import { useState, useEffect } from 'react'
 import { extractDataFromPDF, getMappingContext, saveMappedReadings, createParameterFromImport } from './actions'
 import { UploadCloud, FileText, CheckCircle, AlertCircle, Loader2, FileCheck2, Plus, RotateCcw } from 'lucide-react'
@@ -49,10 +50,10 @@ export default function ImportLaudoPage() {
     // Comprime imagens (fotos de laudo); PDFs passam intactos. O Vercel
     // rejeita requisições acima de 4,5 MB antes do código do servidor rodar.
     const processed = await Promise.all(rawFiles.map((f) => compressPhoto(f)))
-    const tooBig = processed.filter((f) => f.size > 4 * 1024 * 1024)
-    const selectedFiles = processed.filter((f) => f.size <= 4 * 1024 * 1024)
+    const tooBig = processed.filter((f) => f.size > MAX_LAUDO_BYTES)
+    const selectedFiles = processed.filter((f) => f.size <= MAX_LAUDO_BYTES)
     if (tooBig.length > 0) {
-      setGlobalError(`Não adicionados por excederem 4 MB (limite do servidor): ${tooBig.map((f) => f.name).join(', ')}. Reduza o tamanho do PDF e tente de novo.`)
+      setGlobalError(`Não adicionados por excederem ${mb(MAX_LAUDO_BYTES)} (limite de envio da plataforma): ${tooBig.map((f) => f.name).join(', ')}. Reduza o tamanho do PDF e tente de novo.`)
     }
     if (selectedFiles.length === 0) {
       setIsProcessing(false)
