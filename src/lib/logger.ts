@@ -19,6 +19,18 @@ import { headers } from 'next/headers'
 
 const isProd = process.env.NODE_ENV === 'production'
 
+// T-21: dados pessoais (e-mail, destinatário, telefone) também nunca vão para o log.
+export const REDACT_PATHS = [
+  'password', 'senha', 'password_hash', 'passwordHash',
+  'token', 'reset_token', 'resetToken', 'tempPassword', 'temp_password',
+  'authorization', 'cookie', 'set-cookie', 'secret',
+  '*.password', '*.senha', '*.password_hash', '*.passwordHash',
+  '*.token', '*.reset_token', '*.resetToken', '*.tempPassword',
+  '*.authorization', '*.cookie', '*.secret',
+  'headers.authorization', 'headers.cookie',
+  'email', 'to', 'phone', 'telefone', '*.email', '*.to', '*.phone', '*.telefone',
+]
+
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? (isProd ? 'info' : 'debug'),
   base: {
@@ -33,15 +45,7 @@ export const logger = pino({
   // Qualquer campo abaixo, em qualquer objeto logado, vira [REDACTED].
   // Nunca gravar senha, hash, token ou credencial no log.
   redact: {
-    paths: [
-      'password', 'senha', 'password_hash', 'passwordHash',
-      'token', 'reset_token', 'resetToken', 'tempPassword', 'temp_password',
-      'authorization', 'cookie', 'set-cookie', 'secret',
-      '*.password', '*.senha', '*.password_hash', '*.passwordHash',
-      '*.token', '*.reset_token', '*.resetToken', '*.tempPassword',
-      '*.authorization', '*.cookie', '*.secret',
-      'headers.authorization', 'headers.cookie',
-    ],
+    paths: REDACT_PATHS,
     censor: '[REDACTED]',
   },
 })
