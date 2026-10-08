@@ -20,7 +20,7 @@ const AtribuirTarefaSchema = z.object({
   ),
   assigned_to_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
 })
 

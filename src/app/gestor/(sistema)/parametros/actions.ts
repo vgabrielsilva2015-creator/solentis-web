@@ -31,22 +31,22 @@ export async function carregarParametro(id: string) {
 }
 
 const ParametroSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  unit: z.string().min(1, 'Informe a unidade'),
+  name: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  unit: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(1, 'Informe a unidade'),
   min_limit: numeroBROpcional({ rotulo: 'O limite mínimo' }),
   max_limit: numeroBROpcional({ rotulo: 'O limite máximo' }),
   legal_reference: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
-  effective_date: z.string().min(1, 'Informe a data de vigência'),
+  effective_date: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data de vigência'),
   default_method_name: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   collection_points: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
 }).refine(
   (d) => d.min_limit === null || d.max_limit === null || d.min_limit < d.max_limit,

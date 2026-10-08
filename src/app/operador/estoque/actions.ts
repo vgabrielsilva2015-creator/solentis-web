@@ -15,24 +15,24 @@ import { localInputToUTC } from '@/lib/date-utils'
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const SaidaSchema = z.object({
-  product_id: z.string().min(1, { error: 'Produto obrigatório' }),
+  product_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, { error: 'Produto obrigatório' }),
   // T-16: antes parseFloat('2,5') gravava 2
   quantity:   numeroBR({ positivo: true, rotulo: 'A quantidade', obrigatorio: 'Informe a quantidade.' }),
   notes:   z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-  used_at: z.string().min(1, { error: 'Data obrigatória' }),
+  used_at: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, { error: 'Data obrigatória' }),
 })
 
 const ContagemSchema = z.object({
-  product_id:       z.string().min(1, { error: 'Produto obrigatório' }),
+  product_id:       z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, { error: 'Produto obrigatório' }),
   counted_quantity: numeroBR({ min: 0, rotulo: 'A quantidade contada', obrigatorio: 'Informe a quantidade contada.' }),
   notes:      z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-  counted_at: z.string().min(1, { error: 'Data obrigatória' }),
+  counted_at: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, { error: 'Data obrigatória' }),
 })
 
 // ─── Actions ──────────────────────────────────────────────────────────────────

@@ -7,8 +7,8 @@ import { getLogger } from '@/lib/logger'
 import { LOGIN_MESSAGES, loginErrorMessage } from '@/lib/user-errors'
 
 const LoginSchema = z.object({
-  email:    z.string().email().transform(v => v.trim().toLowerCase()),
-  password: z.string().min(1),
+  email:    z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email().transform(v => v.trim().toLowerCase()),
+  password: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).').min(1),
 })
 
 export type LoginState = {

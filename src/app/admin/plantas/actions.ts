@@ -29,10 +29,10 @@ function gerarSenhaProvisoria(): string {
 }
 
 const PlantaSchema = z.object({
-  tenantName:  z.string().min(2, 'Nome da planta muito curto'),
-  slug:        z.string().min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
-  gestorName:  z.string().min(2, 'Nome do gestor muito curto'),
-  gestorEmail: z.string().email('E-mail inválido').transform(v => v.trim().toLowerCase()),
+  tenantName:  z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome da planta muito curto'),
+  slug:        z.string().max(60, 'Texto muito longo (máximo 60 caracteres).').min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
+  gestorName:  z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome do gestor muito curto'),
+  gestorEmail: z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email('E-mail inválido').transform(v => v.trim().toLowerCase()),
 })
 
 export type PlantaFormState = {
@@ -340,8 +340,8 @@ export async function toggleAtivoPlanta(
 
 // ─── Editar dados da planta (nome/slug) — super admin ────────────────────────
 const EditPlantaSchema = z.object({
-  name: z.string().min(2, 'Nome da planta muito curto'),
-  slug: z.string().min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
+  name: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome da planta muito curto'),
+  slug: z.string().max(60, 'Texto muito longo (máximo 60 caracteres).').min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
 })
 
 export type EditPlantaFormState = {

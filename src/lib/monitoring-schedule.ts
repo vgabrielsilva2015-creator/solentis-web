@@ -41,8 +41,8 @@ function diasEntre(min: number, max: number, rotulo: string) {
 
 export const MonitoringScheduleSchema = z
   .object({
-    collection_point_id: z.string({ error: 'Selecione o ponto de coleta.' }).trim().min(1, { error: 'Selecione o ponto de coleta.' }),
-    parameter_id: z.string({ error: 'Selecione o parâmetro.' }).trim().min(1, { error: 'Selecione o parâmetro.' }),
+    collection_point_id: z.string({ error: 'Selecione o ponto de coleta.' }).max(64, 'Texto muito longo (máximo 64 caracteres).').trim().min(1, { error: 'Selecione o ponto de coleta.' }),
+    parameter_id: z.string({ error: 'Selecione o parâmetro.' }).max(64, 'Texto muito longo (máximo 64 caracteres).').trim().min(1, { error: 'Selecione o parâmetro.' }),
     sample_type: z.enum(SAMPLE_TYPES, { error: 'Selecione o tipo de análise.' }),
     frequency: z.enum(FREQUENCIES, { error: 'Selecione a frequência.' }),
     days_of_week: diasEntre(0, 6, 'Dias da semana'),

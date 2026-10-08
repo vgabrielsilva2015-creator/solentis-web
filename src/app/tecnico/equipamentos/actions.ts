@@ -16,42 +16,42 @@ import { saveUpload, saveImageUpload } from '@/lib/storage'
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const EquipamentoSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  category_id: z.string().min(1, 'Selecione a categoria'),
+  name: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  category_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione a categoria'),
   serial_number: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   location: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   installation_date: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').nullable(),
   ),
   preventive_frequency_days: numeroBR({ inteiro: true, min: 1, rotulo: 'A frequência', obrigatorio: 'Informe a frequência em dias' }),
   manufacturer: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   model_name: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   status: z.enum(['OPERATING', 'MAINTENANCE', 'INACTIVE', 'SCRAPPED']).default('OPERATING'),
   responsible_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
 })
 
 const CorretivaSchema = z.object({
-  description: z.string().min(5, 'Descreva o problema em pelo menos 5 caracteres'),
+  description: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(5, 'Descreva o problema em pelo menos 5 caracteres'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
     error: 'Selecione a prioridade',
   }),
-  start_date: z.string().min(1, 'Informe a data de início'),
+  start_date: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data de início'),
   notes: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(2000).nullable(),
@@ -398,6 +398,8 @@ export async function registrarCorretiva(
 
 // ─── Corretiva: concluir ou cancelar ─────────────────────────────────────────
 
+const STATUS_CORRETIVA = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'VALIDATED', 'CANCELLED']
+
 export async function atualizarStatusCorretiva(
   corretivaId: string,
   status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'VALIDATED' | 'CANCELLED',
@@ -409,6 +411,12 @@ export async function atualizarStatusCorretiva(
   const ctx = await requirePermission('equipment.maintain')
 
   const userId = ctx.userId
+
+  // T-21: o tipo do TypeScript não vale em tempo de execução; a action é chamada pelo cliente
+  if (!STATUS_CORRETIVA.includes(status)) return { error: 'Status inválido.' }
+  if (payload?.notes && payload.notes.length > 2000) {
+    return { error: 'Nota muito longa (máximo 2000 caracteres).' }
+  }
 
   const tenantId = await getTenantId()
 

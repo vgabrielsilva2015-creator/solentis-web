@@ -22,7 +22,7 @@ const TemplateSchema = z.object({
   ),
   assigned_to_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
   requires_photo: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
   sort_order: numeroBROpcional({ inteiro: true, min: 0, max: 999, rotulo: 'A ordem' }).transform((n) => n ?? 0),

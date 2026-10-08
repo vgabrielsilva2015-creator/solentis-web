@@ -41,15 +41,15 @@ function mensagemP2002Turno(e: unknown): string {
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const AbrirTurnoSchema = z.object({
-  shift_id: z.string().min(1, 'Selecione o turno'),
+  shift_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o turno'),
 })
 
 const IniciarPassagemSchema = z.object({
   pending_items: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-  outgoing_observations: z.string().min(5, 'A observação do turno deve ter pelo menos 5 caracteres.'),
+  outgoing_observations: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(5, 'A observação do turno deve ter pelo menos 5 caracteres.'),
   confirm: z.literal('on', {
     error: 'É obrigatório confirmar a passagem do turno.'
   }),
@@ -58,11 +58,11 @@ const IniciarPassagemSchema = z.object({
 const ConfirmarPassagemSchema = z.object({
   incoming_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
   shift_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
 })
 
@@ -557,8 +557,8 @@ export async function pularTarefa(taskId: string): Promise<void> {
 // ─── Assumir posto (turno anterior esquecido) ─────────────────────────────────
 
 const AssumirPostoSchema = z.object({
-  old_instance_id: z.string().min(1, 'ID do turno anterior obrigatório'),
-  new_shift_id: z.string().min(1, 'Selecione o turno a abrir'),
+  old_instance_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'ID do turno anterior obrigatório'),
+  new_shift_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o turno a abrir'),
 })
 
 export async function assumirPosto(

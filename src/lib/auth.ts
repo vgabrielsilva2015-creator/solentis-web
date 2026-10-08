@@ -43,8 +43,8 @@ declare module '@auth/core/jwt' {
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
-  email: z.string().email().transform((v) => v.trim().toLowerCase()),
-  password: z.string().min(1),
+  email: z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email().transform((v) => v.trim().toLowerCase()),
+  password: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).').min(1),
 })
 
 // ─── Configuração NextAuth ────────────────────────────────────────────────────

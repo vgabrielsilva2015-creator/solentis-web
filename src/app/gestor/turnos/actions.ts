@@ -12,9 +12,9 @@ import { assertOwned } from '@/lib/ownership'
 
 
 const TurnoSchema = z.object({
-  name:                     z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  start_time:               z.string().regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
-  end_time:                 z.string().regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
+  name:                     z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  start_time:               z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
+  end_time:                 z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
   crosses_midnight:         z.preprocess((v) => v === 'on', z.boolean()),
   handover_timeout_minutes: numeroBR({ inteiro: true, min: 30, max: 480, rotulo: 'O tempo de passagem (min)', obrigatorio: 'Informe o tempo de passagem em minutos' }),
 })

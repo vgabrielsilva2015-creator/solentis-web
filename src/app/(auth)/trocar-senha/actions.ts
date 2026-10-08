@@ -16,9 +16,9 @@ import { AuthError } from 'next-auth'
 // minúscula) que a tela não mostrava.
 const Schema = z
   .object({
-    currentPassword: z.string().min(1, 'Informe a senha atual'),
+    currentPassword: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).').min(1, 'Informe a senha atual'),
     newPassword: passwordSchema,
-    confirmPassword: z.string(),
+    confirmPassword: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).'),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     message: 'As senhas não coincidem',

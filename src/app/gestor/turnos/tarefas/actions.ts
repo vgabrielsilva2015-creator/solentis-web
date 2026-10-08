@@ -12,14 +12,14 @@ import { getTenantId } from '@/lib/tenant'
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const EditHandoverSchema = z.object({
-  justification: z.string().min(10, 'Justificativa deve ter ao menos 10 caracteres'),
+  justification: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(10, 'Justificativa deve ter ao menos 10 caracteres'),
   outgoing_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
   incoming_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
 })
 
@@ -86,8 +86,8 @@ export async function editarPassagem(
 // ─── Pré-agendar turno (criar instância futura com status SCHEDULED) ──────────
 
 const PreAgendarSchema = z.object({
-  shift_id: z.string().min(1, 'Selecione o turno'),
-  date:     z.string().min(1, 'Informe a data'),
+  shift_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o turno'),
+  date:     z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data'),
 })
 
 export type PreAgendarFormState = {

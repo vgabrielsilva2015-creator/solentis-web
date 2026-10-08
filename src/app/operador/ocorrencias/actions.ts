@@ -21,16 +21,16 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const OcorrenciaSchema = z.object({
-  description: z.string().min(5, 'Descreva a ocorrência em pelo menos 5 caracteres'),
+  description: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(5, 'Descreva a ocorrência em pelo menos 5 caracteres'),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
     message: 'Selecione a severidade'
   }),
-  category: z.string().min(1, 'Selecione a categoria'),
+  category: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(1, 'Selecione a categoria'),
   type: z.enum(['OPERATIONAL', 'LABORATORY', 'EQUIPMENT', 'ENVIRONMENTAL', 'SAFETY'], {
     message: 'Selecione o tipo de ocorrência'
   }),
-  collection_point_id: z.string().optional().or(z.literal('')),
-  immediate_action: z.string().optional().nullable(),
+  collection_point_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').optional().or(z.literal('')),
+  immediate_action: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').optional().nullable(),
 }).refine(data => {
   if ((data.severity === 'HIGH' || data.severity === 'CRITICAL') && (!data.immediate_action || data.immediate_action.trim().length === 0)) {
     return false
@@ -212,6 +212,9 @@ export async function addOccurrenceComment(occurrenceId: string, text: string) {
 
   if (!text || text.trim().length < 2) {
     throw new Error('Comentário deve ter pelo menos 2 caracteres.')
+  }
+  if (text.length > 2000) {
+    throw new Error('Comentário muito longo (máximo 2000 caracteres).')
   }
 
   // Isolamento de tenant: confirma que a ocorrência pertence ao tenant do usuário

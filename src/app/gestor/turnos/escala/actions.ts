@@ -64,6 +64,7 @@ export async function saveShiftScale(
 
 export async function toggleMaintenanceDay(dateStr: string, description?: string) {
   const ctx = await requirePermission('shift.manage')
+  if (description && description.length > 500) throw new Error('Descrição muito longa (máximo 500 caracteres).')
   const tenantId = await getTenantId()
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 
@@ -100,6 +101,8 @@ export async function addShiftTask(
   assignedToId?: string
 ) {
   const ctx = await requirePermission('shift.manage')
+  if (title.length > 200) throw new Error('Título muito longo (máximo 200 caracteres).')
+  if (description && description.length > 2000) throw new Error('Descrição muito longa (máximo 2000 caracteres).')
   const tenantId = await getTenantId()
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 

@@ -20,7 +20,7 @@ import { redirect } from 'next/navigation'
 const unitValues = [...CHEMICAL_UNITS_PRESET, 'outro'] as const
 
 const ProdutoSchema = z.object({
-  name:        z.string().min(2, { error: 'Nome deve ter pelo menos 2 caracteres' }),
+  name:        z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, { error: 'Nome deve ter pelo menos 2 caracteres' }),
   unit_select: z.enum(unitValues, { error: 'Selecione a unidade' }),
   unit_custom: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
@@ -29,26 +29,26 @@ const ProdutoSchema = z.object({
   min_stock: numeroBR({ min: 0, rotulo: 'O estoque mínimo', obrigatorio: 'Informe o estoque mínimo.' }),
   description: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
 })
 
 const EntradaSchema = z.object({
-  product_id:     z.string().min(1, { error: 'Produto obrigatório' }),
+  product_id:     z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, { error: 'Produto obrigatório' }),
   quantity:       numeroBR({ positivo: true, rotulo: 'A quantidade', obrigatorio: 'Informe a quantidade.' }),
   supplier:       z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   invoice_number: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   notes:          z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-  received_at:    z.string().min(1, { error: 'Data de recebimento obrigatória' }),
+  received_at:    z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, { error: 'Data de recebimento obrigatória' }),
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

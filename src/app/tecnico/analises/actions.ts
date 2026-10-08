@@ -15,15 +15,15 @@ import { handleNewOccurrence } from '@/lib/occurrences'
 
 
 const AnaliseSchema = z.object({
-  collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
-  parameter_id:        z.string().min(1, 'Selecione o parâmetro'),
+  collection_point_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o ponto de coleta'),
+  parameter_id:        z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o parâmetro'),
   value: numeroBR({ rotulo: 'O valor medido', obrigatorio: 'Informe o valor medido' }),
   report_text: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(5000, 'Laudo deve ter no máximo 5000 caracteres').nullable(),
   ),
   laboratory_type: z.enum(['INTERNAL', 'EXTERNAL']).default('INTERNAL'),
-  collected_at: z.string().min(1, 'Informe a data/hora da coleta'),
+  collected_at: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data/hora da coleta'),
 })
 
 export type AnaliseFormState = {

@@ -22,26 +22,26 @@ function isUniqueViolation(err: unknown): boolean {
 
 const LeituraSchema = z
   .object({
-    collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
+    collection_point_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o ponto de coleta'),
     parameter_id: z.preprocess(
       (v) => (v === '' || v == null ? null : String(v)),
-      z.string().nullable(),
+      z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
     ),
     // T-16: aceita 7,2 e 7.2; mensagens em português
     value: numeroBROpcional({ rotulo: 'O valor medido' }),
     unit: z.preprocess(
       (v) => (v === '' || v == null ? null : String(v)),
-      z.string().nullable(),
+      z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
     ),
     notes: z.preprocess(
       (v) => (v === '' || v == null ? null : String(v)),
       z.string().max(1000, 'Observação deve ter no máximo 1000 caracteres').nullable(),
     ),
-    recorded_at: z.string().min(1, 'Informe a data/hora da leitura'),
+    recorded_at: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data/hora da leitura'),
     // T-15: id gerado no aparelho; o mesmo id enviado de novo não duplica a leitura
     client_id: z.preprocess(
       (v) => (v === '' || v == null ? null : String(v)),
-      z.string().regex(/^[A-Za-z0-9-]{8,64}$/, 'Identificador inválido').nullable(),
+      z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').regex(/^[A-Za-z0-9-]{8,64}$/, 'Identificador inválido').nullable(),
     ),
   })
   .refine((d) => d.parameter_id === null || d.value !== null, {
