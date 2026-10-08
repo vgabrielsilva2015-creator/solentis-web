@@ -68,6 +68,9 @@ function walk(dir: string, acc: string[] = []): string[] {
     const full = join(dir, entry)
     if (statSync(full).isDirectory()) {
       if (entry === 'node_modules' || entry === '__tests__') continue
+      // src/test = apoio dos testes de integração (T-28): faz TRUNCATE de propósito; o teste
+      // 'nenhum código de produção importa src/test' (t28-apoio-de-teste.test.ts) fecha essa porta.
+      if (entry === 'test' && dir.replace(/\\/g, '/').endsWith('/src')) continue
       walk(full, acc)
     } else if (/\.tsx?$/.test(entry)) {
       acc.push(full)

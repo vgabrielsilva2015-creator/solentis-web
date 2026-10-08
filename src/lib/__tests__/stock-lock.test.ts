@@ -10,7 +10,7 @@ import { join } from 'path'
 function walk(dir: string, acc: string[] = []): string[] {
   for (const e of readdirSync(dir)) {
     const full = join(dir, e)
-    if (statSync(full).isDirectory()) { if (e !== '__tests__' && e !== 'node_modules') walk(full, acc) }
+    if (statSync(full).isDirectory()) { if (e !== '__tests__' && e !== 'node_modules' && !(dir.endsWith('/src') && e === 'test')) walk(full, acc) } // src/test = apoio dos testes (T-28), nunca importado pelo app
     else if (/\.tsx?$/.test(e)) acc.push(full)
   }
   return acc

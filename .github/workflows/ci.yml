@@ -57,3 +57,40 @@ jobs:
 
       - name: Verificação de tipos (TypeScript)
         run: npx tsc --noEmit
+
+  # T-28 — testes de integração: Postgres de verdade, migrations aplicadas do zero.
+  # O banco é efêmero (serviço do próprio job); os testes se recusam a rodar em outro lugar
+  # (src/test/db.ts: host local + nome terminando em _int/_test/_ci).
+  integracao:
+    name: Integração (Postgres + migrations)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: solentis_int
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d solentis_int"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # placeholders para o Prisma; o banco real dos testes vem de INTEGRATION_DATABASE_URL
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/solentis_int?schema=public"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/solentis_int?schema=public"
+      INTEGRATION_DATABASE_URL: "postgresql://ci:ci@localhost:5432/solentis_int?schema=public"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Aplicar as migrations do zero (valida o baseline)
+        run: npx prisma migrate deploy
+      - name: Testes de integração
+        run: npm run test:integration
