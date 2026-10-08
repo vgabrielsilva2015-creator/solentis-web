@@ -13,12 +13,15 @@ import {
   UserCog,
   KeyRound,
   Power,
+  SlidersHorizontal,
+  CheckCircle2,
 } from 'lucide-react'
 import { ResetPasswordButton } from './reset-password-button'
 import { ToggleActiveButton } from './toggle-active-button'
 import { AddUserButton } from './add-user-button'
 import { TogglePlantButton } from './toggle-plant-button'
 import { EditPlantButton } from './edit-plant-button'
+import { FEATURES } from '@/lib/features'
 
 export default async function AdminPlantaDetalhePage({
   params,
@@ -248,6 +251,59 @@ export default async function AdminPlantaDetalhePage({
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Opcionais & Plano */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <SlidersHorizontal className="w-4 h-4" />
+          Opcionais &amp; Plano
+        </h2>
+
+        {/* Incluído de fábrica */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+            Incluído de fábrica
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {FEATURES.filter(f => f.base).map(f => (
+              <div
+                key={f.key}
+                className="flex items-start gap-2 rounded-lg border border-emerald-500/15 bg-emerald-950/20 px-3 py-2"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{f.label}</p>
+                  <p className="text-xs text-muted-foreground">{f.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Opcionais disponíveis (futuros) */}
+        <div className="rounded-xl border border-dashed border-border bg-card/50 p-5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            Opcionais disponíveis
+          </p>
+          {FEATURES.some(f => !f.base) ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {FEATURES.filter(f => !f.base).map(f => (
+                <div key={f.key} className="flex items-start gap-2 rounded-lg border border-border px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{f.label}</p>
+                    <p className="text-xs text-muted-foreground">{f.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum opcional disponível ainda. Novos recursos aparecerão aqui para você
+              ligar ou desligar por planta conforme forem lançados.
+            </p>
+          )}
         </div>
       </div>
 

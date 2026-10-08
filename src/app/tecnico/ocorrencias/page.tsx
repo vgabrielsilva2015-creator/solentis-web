@@ -78,12 +78,12 @@ export default async function OcorrenciasTecnicoPage({
           {/* View Toggle */}
           <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 mr-2">
             <Link href={`/tecnico/ocorrencias?view=kanban${statusFilter ? `&status=${statusFilter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
+              <Button variant="ghost" size="icon" aria-label="Visualização em Kanban" className={`h-8 w-8 ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Kanban">
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </Link>
             <Link href={`/tecnico/ocorrencias?view=list${statusFilter ? `&status=${statusFilter}` : ''}`}>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
+              <Button variant="ghost" size="icon" aria-label="Visualização em Lista" className={`h-8 w-8 ${view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`} title="Lista">
                 <Table className="w-4 h-4" />
               </Button>
             </Link>

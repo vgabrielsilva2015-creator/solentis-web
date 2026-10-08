@@ -188,7 +188,7 @@ export function CommandMenu() {
                   <Command.Item onSelect={() => runCommand(() => router.push('/gestor/relatorios'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <FileText className="h-4 w-4 text-emerald-500" /> Gerar Relatório de Auditoria
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/laudos/importar'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/importacao'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <UploadCloud className="h-4 w-4 text-blue-500" /> Importar Laudos com IA
                   </Command.Item>
                   <Command.Item onSelect={() => runCommand(() => router.push('/gestor/ocorrencias'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">

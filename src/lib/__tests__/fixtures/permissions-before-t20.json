@@ -41,16 +41,16 @@
  "gestor/(ocorrencias)/prazos-ocorrencia/actions.ts#atualizarPrazos": [
   "MANAGER"
  ],
- "gestor/(resultados)/laudos/importar/actions.ts#createParameterFromImport": [
+ "gestor/importacao/actions.ts#createParameterFromImport": [
   "MANAGER"
  ],
- "gestor/(resultados)/laudos/importar/actions.ts#extractDataFromPDF": [
+ "gestor/importacao/actions.ts#extractDataFromPDF": [
   "MANAGER"
  ],
- "gestor/(resultados)/laudos/importar/actions.ts#getMappingContext": [
+ "gestor/importacao/actions.ts#getMappingContext": [
   "MANAGER"
  ],
- "gestor/(resultados)/laudos/importar/actions.ts#saveMappedReadings": [
+ "gestor/importacao/actions.ts#saveMappedReadings": [
   "MANAGER"
  ],
  "gestor/(sistema)/cronograma/actions.ts#deleteMonitoringSchedule": [

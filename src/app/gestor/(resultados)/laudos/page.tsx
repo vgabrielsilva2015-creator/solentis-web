@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId } from '@/lib/tenant'
 import { Button } from '@/components/ui/button'
+import { UploadCloud } from 'lucide-react'
 import { ResultsDataTable, UnifiedResult } from '@/components/gestor/resultados/results-data-table'
 import { ResultsFilters } from '@/components/gestor/resultados/results-filters'
 import { ExportCsvMenu } from '@/components/export-csv-menu'
@@ -100,9 +101,10 @@ export default async function GestorLaudosPage({
             <h1 className="text-2xl font-bold text-white">Laudos Externos</h1>
             <p className="text-sm text-muted-foreground">Histórico unificado de análises realizadas por laboratórios terceiros. ({total} registros)</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href={`/gestor/laudos/importar`}>
-              <Button className="bg-[var(--brand)] hover:bg-[var(--brand)]/90 text-white text-xs h-8">
+          <div className="flex gap-2">
+            <Link href={`/gestor/importacao`}>
+              <Button className="h-10 px-4 bg-brand text-brand-foreground hover:bg-brand-soft shadow-sm border border-border">
+                <UploadCloud className="w-4 h-4 mr-2" />
                 Importar Laudo PDF
               </Button>
             </Link>

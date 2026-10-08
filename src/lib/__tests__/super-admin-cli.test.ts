@@ -32,6 +32,19 @@ describe('create-super-admin', () => {
     expect(r.input).toMatchObject({ email: 'dono@exemplo.com', tenantSlug: 'solentis', password: 'x' })
     expect(JSON.stringify(ARGS)).not.toContain('x"')
   })
+  it('recusa slug inválido (maiúsculas ou espaço)', () => {
+    const args = ['--email', 'a@b.co', '--name', 'Dono', '--tenant-slug', 'Planta Errada', '--confirm-host', 'db.exemplo.supabase.co']
+    expect(lerEntrada(args, ENV).erro).toMatch(/tenant-slug/)
+  })
+  it('--create-tenant passa o nome da planta adiante (banco vazio)', () => {
+    const args = [...ARGS, '--create-tenant', 'Planta de Sistema']
+    const r = lerEntrada(args, { ...ENV, SUPER_ADMIN_PASSWORD: 'x' })
+    expect(r.input).toMatchObject({ createTenantName: 'Planta de Sistema' })
+  })
+  it('--create-tenant vazio é recusado', () => {
+    const args = [...ARGS, '--create-tenant', '']
+    expect(lerEntrada(args, ENV).erro).toMatch(/create-tenant/)
+  })
   it('hostDoBanco devolve só o host (sem usuário nem senha)', () => {
     expect(hostDoBanco(ENV.DATABASE_URL)).toBe('db.exemplo.supabase.co')
     expect(hostDoBanco('lixo')).toBeNull()

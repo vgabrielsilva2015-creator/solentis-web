@@ -40,16 +40,16 @@ describe('limites coerentes com a plataforma', () => {
     const eq = src('app/tecnico/equipamentos/actions.ts')
     expect(eq).not.toMatch(/10 \* 1024 \* 1024/)
     expect(eq).not.toMatch(/máximo 10 MB/)
-    const laudo = src('app/gestor/(resultados)/laudos/importar/actions.ts')
+    const laudo = src('app/gestor/importacao/actions.ts')
     expect(laudo).not.toMatch(/14_000_000/)
-    const pagina = src('app/gestor/(resultados)/laudos/importar/page.tsx')
+    const pagina = src('app/gestor/importacao/page.tsx')
     expect(pagina).not.toMatch(/4 \* 1024 \* 1024/)
     expect(pagina).toMatch(/MAX_LAUDO_BYTES/)
   })
 })
 
 describe('laudo grande demais é recusado no servidor antes de chamar a IA', async () => {
-  const { extractDataFromPDF } = await import('@/app/gestor/(resultados)/laudos/importar/actions')
+  const { extractDataFromPDF } = await import('@/app/gestor/importacao/actions')
 
   it('base64 acima do teto → erro com o limite em MB', async () => {
     await expect(extractDataFromPDF('A'.repeat(MAX_LAUDO_BASE64_CHARS + 1), 'application/pdf')).rejects.toThrow(/muito grande.*3 MB/)

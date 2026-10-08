@@ -114,6 +114,29 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
     setResolvingId(null)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent, id: string, currentStatus: string) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      
+      const currentIndex = COLUMNS.findIndex(c => c.id === currentStatus)
+      let nextIndex = currentIndex
+      
+      if (e.key === 'ArrowRight') nextIndex = Math.min(currentIndex + 1, COLUMNS.length - 1)
+      if (e.key === 'ArrowLeft') nextIndex = Math.max(currentIndex - 1, 0)
+
+      if (nextIndex !== currentIndex) {
+        const targetStatus = COLUMNS[nextIndex].id
+        if (targetStatus === 'RESOLVED') {
+          setResolvingId(id)
+          setResolutionNotes('')
+          setShowResolveModal(true)
+        } else {
+          performStatusUpdate(id, targetStatus)
+        }
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Kanban Board Grid */}
@@ -152,11 +175,15 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
                       <div
                         key={item.id}
                         draggable
+                        tabIndex={0}
+                        onKeyDown={(e) => handleKeyDown(e, item.id, item.status)}
                         onDragStart={(e) => handleDragStart(e, item.id)}
-                        className={`rounded-lg border border-border bg-background/40 p-3.5 space-y-2.5 cursor-grab active:cursor-grabbing hover:border-border transition-all hover:-translate-y-0.5 shadow-sm group relative ${
+                        className={`rounded-lg border border-border bg-background/40 p-3.5 space-y-2.5 cursor-grab active:cursor-grabbing hover:border-border transition-all hover:-translate-y-0.5 shadow-sm group relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                           isPending ? 'opacity-50 pointer-events-none' : ''
                         }`}
+                        aria-label={`Ocorrência ${item.id.slice(-4)}. Pressione setas esquerda ou direita para mover.`}
                       >
+                        <span className="sr-only">Pressione setas para mover entre colunas</span>
                         {/* Header card */}
                         <div className="flex items-start justify-between gap-1.5">
                           <span className={`rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${SEVERITY_CLASSES[item.severity] || ''}`}>
@@ -215,7 +242,7 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-sm font-bold text-foreground">Confirmar Resolução</h3>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowResolveModal(false)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="icon" aria-label="Fechar modal" onClick={() => setShowResolveModal(false)} className="h-8 w-8 text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-emerald-500">
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -223,11 +250,12 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
             <div className="space-y-2">
               <label className="text-xs font-semibold text-muted-foreground">O que foi feito para resolver? * <span className="font-normal">(mínimo {RESOLUCAO_MIN} caracteres; fica registrado com seu nome, data e hora)</span></label>
               <textarea
+                autoFocus
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
                 placeholder="Descreva detalhadamente a ação corretiva tomada..."
                 rows={4}
-                className="w-full bg-background border border-border rounded-lg p-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border resize-none"
+                className="w-full bg-background border border-border rounded-lg p-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
                 required
               />
             </div>
@@ -239,7 +267,7 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
               <Button
                 disabled={isPending || !resolucaoValida(resolutionNotes)}
                 onClick={handleConfirmResolve}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-semibold"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Resolver Ocorrência
               </Button>
