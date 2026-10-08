@@ -222,6 +222,76 @@ export async function toggleAtivoUsuario(
   return { isActive: novoStatus }
 }
 
+// ─── Alterar o perfil/função de QUALQUER usuário (super admin, cross-tenant) ──
+const PAPEIS_EDITAVEIS = ['OPERATOR', 'TECHNICIAN', 'MANAGER', 'MAINTENANCE'] as const
+const papelSchema = z.enum(PAPEIS_EDITAVEIS)
+
+export async function alterarPapelUsuario(
+  userId: string,
+  novoPapel: string,
+): Promise<{ error?: string; role?: string; userName?: string }> {
+  const session = await requireSuperAdmin()
+
+  const parsed = papelSchema.safeParse(novoPapel)
+  if (!parsed.success) {
+    return { error: 'Perfil inválido. Use Operador, Técnico, Gestor ou Manutenção.' }
+  }
+
+  // Ator (super admin) para a auditoria — resolvido pelo e-mail (único global).
+  const admin = await prisma.user.findFirst({
+    where:  { email: { equals: session.user.email ?? '', mode: 'insensitive' } },
+    select: { id: true },
+  })
+
+  // Trava: super admin não altera o próprio perfil (evita se rebaixar sem querer).
+  if (admin?.id === userId) {
+    return { error: 'Você não pode alterar o seu próprio perfil.' }
+  }
+
+  // @tenant-safe: super admin opera entre plantas de propósito. Alvo por PK global,
+  // acesso restrito por requireSuperAdmin() acima.
+  const target = await prisma.user.findUnique({
+    where:  { id: userId },
+    select: { id: true, tenant_id: true, name: true, role: true },
+  })
+  if (!target) return { error: 'Usuário não encontrado.' }
+
+  // Não rebaixa um SUPER_ADMIN por aqui (conta de sistema; use o script dedicado).
+  if (target.role === 'SUPER_ADMIN') {
+    return { error: 'Não é possível alterar o perfil de um super admin por aqui.' }
+  }
+
+  if (target.role === parsed.data) {
+    return { role: parsed.data, userName: target.name } // já está nesse perfil
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // @tenant-safe: alteração por super admin, alvo por PK global (ver justificativa acima).
+      await tx.user.update({
+        where: { id: userId },
+        data:  { role: parsed.data },
+      })
+      await logAudit(tx, {
+        tenantId:  target.tenant_id,
+        userId:    admin?.id ?? null,
+        action:    'UPDATE',
+        tableName: 'users',
+        recordId:  userId,
+        before:    { role: target.role },
+        after:     { role: parsed.data, alterado_por: 'SUPER_ADMIN' },
+      })
+    })
+  } catch (e) {
+    const log = await getLogger({ action: 'alterarPapelUsuario' })
+    log.error({ err: e, targetUserId: userId }, 'Falha ao alterar perfil (super admin)')
+    return { error: 'Erro ao alterar o perfil do usuário.' }
+  }
+
+  revalidatePath(`/admin/plantas/${target.tenant_id}`)
+  return { role: parsed.data, userName: target.name }
+}
+
 // ─── Criar usuário DENTRO de uma planta (super admin) ────────────────────────
 // tenantId vem "bindado" pela tela de detalhe da planta.
 export async function criarUsuarioPlanta(
