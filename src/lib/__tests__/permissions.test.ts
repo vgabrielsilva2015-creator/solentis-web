@@ -53,8 +53,6 @@ const SO_LOGADO = new Set([
   '(auth)/trocar-senha/actions.ts#trocarSenhaAction', 'actions/notifications.ts#getNotifications',
   'components/sign-out-action.ts#handleSignOut', 'lib/push-actions.ts#subscribeUser', 'lib/push-actions.ts#unsubscribeUser',
 ])
-// Funções internas exportadas de arquivo 'use server' (V-11): saem daqui na T-21.
-const INTERNAS_T21 = new Set(['lib/push-actions.ts#sendPushToRole', 'lib/push-actions.ts#sendPushToUsers'])
 
 const chave = (file: string, name: string) =>
   `${relative(SRC, file).replace(/\\/g, '/').replace(/^app\//, '')}#${name}`
@@ -74,7 +72,7 @@ describe('toda action passa pelo guard único', () => {
   it('cada action protegida chama requirePermission/permissionError com permissão existente', () => {
     const sem: string[] = []
     for (const [k, p] of ATUAL) {
-      if (PUBLICAS.has(k) || SO_LOGADO.has(k) || INTERNAS_T21.has(k)) continue
+      if (PUBLICAS.has(k) || SO_LOGADO.has(k)) continue
       if (!p || !(p in PERMISSIONS)) sem.push(`${k} -> ${p}`)
     }
     expect(sem).toEqual([])
@@ -84,7 +82,7 @@ describe('toda action passa pelo guard único', () => {
     const tarde: string[] = []
     for (const f of SERVER_FILES) for (const a of actions(f)) {
       const k = chave(f, a.name)
-      if (PUBLICAS.has(k) || SO_LOGADO.has(k) || INTERNAS_T21.has(k)) continue
+      if (PUBLICAS.has(k) || SO_LOGADO.has(k)) continue
       const g = a.body.search(/requirePermission\(|getActor\(\)/)
       const db = a.body.search(/\b(prisma|tx)\.\w+\.\w+\(/)
       if (g < 0 || (db >= 0 && db < g)) tarde.push(k)
@@ -134,11 +132,13 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
   // Actions que deixaram de existir (o caminho passou para outra action)
   const REMOVIDAS: Record<string, string> = {
     'operador/ocorrencias/actions.ts#resolverOcorrencia': 'tela do operador usa tecnico/ocorrencias#resolverOcorrencia (aceitava nota vazia)',
+    'lib/push-actions.ts#sendPushToRole': 'T-21 (V-11): era endpoint público sem login; virou função de servidor em lib/push-service.ts',
+    'lib/push-actions.ts#sendPushToUsers': 'T-21 (V-11): idem, em lib/push-service.ts',
   }
 
   const esperado = (k: string) => (k in MUDANCAS ? MUDANCAS[k].para : BEFORE[k])
   const agora = (k: string): string | string[] => {
-    if (PUBLICAS.has(k) || INTERNAS_T21.has(k)) return 'PUBLICO'
+    if (PUBLICAS.has(k)) return 'PUBLICO'
     if (SO_LOGADO.has(k)) return 'LOGADO'
     const p = ATUAL.get(k)
     return p ? [...PERMISSIONS[p]].sort() : 'SEM GUARD'
