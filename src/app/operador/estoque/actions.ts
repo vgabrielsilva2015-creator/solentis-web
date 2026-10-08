@@ -39,7 +39,8 @@ const ContagemSchema = z.object({
 
 export async function registrarSaida(_prev: unknown, formData: FormData) {
   const ctx = await getActor()
-  if (permissionError(ctx, 'stock.move')) return { error: 'Apenas operadores ou técnicos podem registrar saídas.' }
+  const negado = permissionError(ctx, 'stock.move')
+  if (negado) return { error: negado }
 
   const parsed = SaidaSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -92,7 +93,8 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 
 export async function registrarContagem(_prev: unknown, formData: FormData) {
   const ctx = await getActor()
-  if (permissionError(ctx, 'stock.move')) return { error: 'Apenas operadores ou técnicos podem registrar contagens.' }
+  const negado = permissionError(ctx, 'stock.move')
+  if (negado) return { error: negado }
 
   const parsed = ContagemSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {

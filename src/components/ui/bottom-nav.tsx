@@ -12,6 +12,7 @@ import {
   Package,
   CalendarDays,
   MoreHorizontal,
+  Megaphone,
   type LucideIcon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,7 +20,7 @@ import { cn } from '@/lib/utils'
 export type NavItem = {
   href:  string
   label: string
-  iconName: 'LayoutDashboard' | 'FlaskConical' | 'Wrench' | 'AlertTriangle' | 'Clock' | 'Droplets' | 'Package' | 'CalendarDays' | 'MoreHorizontal'
+  iconName: 'LayoutDashboard' | 'FlaskConical' | 'Wrench' | 'AlertTriangle' | 'Clock' | 'Droplets' | 'Package' | 'CalendarDays' | 'MoreHorizontal' | 'Megaphone'
 }
 
 const ICON_MAP: Record<NavItem['iconName'], LucideIcon> = {
@@ -32,6 +33,7 @@ const ICON_MAP: Record<NavItem['iconName'], LucideIcon> = {
   Package,
   CalendarDays,
   MoreHorizontal,
+  Megaphone,
 }
 
 type BottomNavProps = {

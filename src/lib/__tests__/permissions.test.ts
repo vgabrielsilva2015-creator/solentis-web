@@ -117,6 +117,19 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
       de: ['MANAGER', 'TECHNICIAN'], para: ['MANAGER', 'OPERATOR', 'TECHNICIAN'],
       motivo: 'virou o único "Resolver" das três telas (decisão 2: o operador resolve, sempre com a ação registrada)',
     },
+    // Decisões do dono do produto, 08/10/2026
+    'operador/estoque/actions.ts#registrarSaida': {
+      de: ['OPERATOR', 'TECHNICIAN'], para: ['MANAGER', 'OPERATOR', 'TECHNICIAN'], motivo: 'decisão 1: gestor altera estoque',
+    },
+    'operador/estoque/actions.ts#registrarContagem': {
+      de: ['OPERATOR', 'TECHNICIAN'], para: ['MANAGER', 'OPERATOR', 'TECHNICIAN'], motivo: 'decisão 1: gestor altera estoque',
+    },
+    'operador/ocorrencias/actions.ts#registrarOcorrencia': {
+      de: ['MANAGER', 'OPERATOR', 'TECHNICIAN'], para: ['MAINTENANCE', 'MANAGER', 'OPERATOR', 'TECHNICIAN'], motivo: 'decisão 3: manutenção registra',
+    },
+    'operador/ocorrencias/actions.ts#addOccurrenceComment': {
+      de: ['MANAGER', 'OPERATOR', 'TECHNICIAN'], para: ['MAINTENANCE', 'MANAGER', 'OPERATOR', 'TECHNICIAN'], motivo: 'decisão 3: manutenção registra e comenta',
+    },
   }
   // Actions que deixaram de existir (o caminho passou para outra action)
   const REMOVIDAS: Record<string, string> = {

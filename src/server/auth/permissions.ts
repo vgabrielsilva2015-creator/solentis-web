@@ -5,12 +5,13 @@
  *
  * Arquivo puro (sem Next/Prisma): testável e importável no proxy.
  *
- * Esta versão REPRODUZ o comportamento que existia antes da T-20 (eram 21
- * guards locais espalhados), com uma correção: `dashboard.view` (detalhes do
- * ponto no painel do gestor) aceitava qualquer perfil logado.
- *
- * Linhas marcadas "DECISÃO PENDENTE" esperam a escolha do dono do produto —
- * trocar a lista aqui muda o comportamento em todas as telas e actions.
+ * Decisões do dono do produto (08/10/2026), marcadas "DECISÃO" abaixo:
+ *  1. Gestor consulta e altera o que é do operador: registra leitura e mexe no estoque.
+ *  2. Operador registra, acompanha E resolve ocorrência — toda resolução fica
+ *     registrada com responsável, data/hora e a ação tomada (evidência quando houver).
+ *  3. Manutenção registra ocorrências.
+ *  4. Técnico registra leitura de campo (como já era).
+ * Prioridade declarada: rastreabilidade e separação de responsabilidades.
  */
 
 export const ROLES = ['OPERATOR', 'TECHNICIAN', 'MANAGER', 'MAINTENANCE', 'SUPER_ADMIN'] as const
@@ -20,19 +21,19 @@ const OP = 'OPERATOR', TEC = 'TECHNICIAN', GES = 'MANAGER', MAN = 'MAINTENANCE',
 
 export const PERMISSIONS = {
   // ── Campo (telas do operador) ─────────────────────────────────────────────
-  /** Registrar leitura de campo. DECISÃO PENDENTE: gestor registra ou só consulta? técnico registra? */
+  /** Registrar leitura de campo. DECISÃO 1 (gestor) e 4 (técnico). */
   'reading.create': [OP, TEC, GES],
-  /** Saída e contagem física de produto químico. */
-  'stock.move': [OP, TEC],
+  /** Saída e contagem física de produto químico. DECISÃO 1: gestor também. */
+  'stock.move': [OP, TEC, GES],
   /** Entrada de produto químico (recebimento). */
   'stock.receive': [GES, TEC],
 
   // ── Ocorrências ───────────────────────────────────────────────────────────
-  /** Registrar e comentar. DECISÃO PENDENTE: perfil Manutenção também? */
-  'occurrence.create': [OP, TEC, GES],
+  /** Registrar e comentar. DECISÃO 3: Manutenção também. */
+  'occurrence.create': [OP, TEC, GES, MAN],
   /** Mudar a coluna do kanban (aberta, em andamento, aguardando). */
   'occurrence.move': [OP, TEC, GES],
-  /** Resolver (inclusive arrastando para "Resolvida"). DECISÃO PENDENTE: operador resolve? */
+  /** Resolver, ou reabrir uma resolvida. Sempre com a ação descrita (src/server/occurrences/resolve.ts). DECISÃO 2. */
   'occurrence.resolve': [OP, TEC, GES],
 
   // ── Turnos ────────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ export const AREA_ACCESS: Record<string, readonly AppRole[]> = {
 /** Mensagem curta para a tela quando o perfil não pode fazer a ação. */
 export const PERMISSION_DENIED_MESSAGE: Partial<Record<Permission, string>> = {
   'shift.operate': 'Apenas operadores podem fazer esta ação no turno.',
-  'stock.move': 'Apenas operadores ou técnicos podem registrar saída e contagem.',
+  'stock.move': 'Seu perfil não pode registrar saída e contagem de estoque.',
   'maintenance.validate': 'Apenas Gestores podem validar Ordens de Serviço concluídas.',
 }
 export const DEFAULT_DENIED_MESSAGE = 'Seu perfil não pode fazer esta ação.'
