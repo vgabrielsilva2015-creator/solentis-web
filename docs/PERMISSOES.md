@@ -30,3 +30,12 @@ Decisões do dono do produto (08/10/2026): gestor registra leitura e mexe no est
 **Telas por área** (`AREA_ACCESS`): `/gestor` gestor; `/tecnico` técnico e gestor; `/operador` operador, técnico e gestor; `/manutencao` manutenção e gestor; `/admin` super admin.
 
 **Como uma action usa:** `const ctx = await requirePermission('config.manage')` (sem permissão vai para /acesso-negado) ou `getActor()` + `permissionError(ctx, 'shift.operate')` quando a tela mostra a mensagem. `ctx.userId`, `ctx.tenantId` e `ctx.role` vêm do banco a cada chamada.
+
+## Super Admin (Fase 1 — base)
+
+- `SUPER_ADMIN` **não é mais curinga** em `src/lib/auth-utils.ts`: só alcança `/admin/*` (e as rotas comuns a todos os perfis). Telas de gestor/técnico/operador não abrem para ele.
+- Super admins moram na planta oculta `solentis-plataforma` (slug reservado; não pode ser criado, editado nem desativado pelo painel). Clientes não a enxergam em `/admin/plantas`.
+- O gestor de uma planta **não enxerga nem altera** usuários `SUPER_ADMIN` (listas e todas as actions de `gestor/usuarios` filtram `role: { not: 'SUPER_ADMIN' }`).
+- Nunca se desativa o último super admin ativo nem a si mesmo (`FOR UPDATE` em `src/server/admin/plataforma.ts`).
+- Scripts: `scripts/ops/create-super-admin.ts` (cria na planta da plataforma) e `scripts/ops/move-super-admin.ts` (simulação por padrão; `--apply --confirm-host=<host>` grava; derruba a sessão do movido).
+- `audit_logs.ip_address` passa a ser preenchido por `logAudit` (cabeçalho da requisição, ou IP informado).

@@ -137,7 +137,7 @@ export async function editarUsuario(
   const managerId = ctx.userId
 
   const current = await prisma.user.findFirst({
-    where: { id: userId, tenant_id: tenantId },
+    where: { id: userId, tenant_id: tenantId, role: { not: 'SUPER_ADMIN' } },
     select: { name: true, email: true, role: true },
   })
   if (!current) return { error: 'Usuário não encontrado.' }
@@ -145,7 +145,7 @@ export async function editarUsuario(
   try {
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({
-        where: { id: userId, tenant_id: tenantId },
+        where: { id: userId, tenant_id: tenantId, role: { not: 'SUPER_ADMIN' } },
         data:  {
           name: parsed.data.name, email: parsed.data.email, role: parsed.data.role,
           // Papel ou e-mail mudou: as sessões abertas carregam o valor antigo
@@ -185,7 +185,7 @@ export async function toggleAtivo(
   const managerId = ctx.userId
 
   const user = await prisma.user.findFirst({
-    where: { id: userId, tenant_id: tenantId },
+    where: { id: userId, tenant_id: tenantId, role: { not: 'SUPER_ADMIN' } },
     select: { is_active: true }
   })
   if (!user) return { error: 'Usuário não encontrado.' }
@@ -193,7 +193,7 @@ export async function toggleAtivo(
   try {
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({
-        where: { id: userId, tenant_id: tenantId },
+        where: { id: userId, tenant_id: tenantId, role: { not: 'SUPER_ADMIN' } },
         data:  { is_active: !user.is_active, ...BUMP_SESSION_VERSION },
       })
       await logAudit(tx, {
@@ -228,7 +228,7 @@ export async function resetarSenha(
   const managerId = ctx.userId
 
   const user = await prisma.user.findFirst({
-    where: { id: userId, tenant_id: tenantId },
+    where: { id: userId, tenant_id: tenantId, role: { not: 'SUPER_ADMIN' } },
     select: { id: true }
   })
   if (!user) return { error: 'Usuário não encontrado.' }
@@ -239,7 +239,7 @@ export async function resetarSenha(
   try {
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({
-        where: { id: userId, tenant_id: tenantId },
+        where: { id: userId, tenant_id: tenantId, role: { not: 'SUPER_ADMIN' } },
         data:  { password_hash: passwordHash, must_change_password: true, ...BUMP_SESSION_VERSION },
       })
       await logAudit(tx, {

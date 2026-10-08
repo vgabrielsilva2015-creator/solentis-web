@@ -3,7 +3,9 @@
  *
  *   SUPER_ADMIN_PASSWORD='...' npx tsx scripts/ops/create-super-admin.ts \
  *     --email dono@seudominio.com --name "Seu Nome" \
- *     --tenant-slug <slug-da-planta> --confirm-host <host do DATABASE_URL>
+ *     [--tenant-slug <slug>] --confirm-host <host do DATABASE_URL>
+ *
+ * Sem --tenant-slug a conta é criada na planta da plataforma (oculta; criada se não existir) — o recomendado.
  *
  * - não existe senha nem e-mail padrão; a senha vem do ambiente (não vai para o histórico do shell se
  *   você usar `read -s SUPER_ADMIN_PASSWORD; export SUPER_ADMIN_PASSWORD`);
@@ -14,6 +16,7 @@
 import { PrismaClient } from '@prisma/client'
 import { hashPassword } from '../../src/lib/password'
 import { lerEntrada, validarSenhaSuper } from '../../src/lib/super-admin-cli'
+import { PLATAFORMA_SLUG, garantirPlantaPlataforma } from '../../src/server/admin/plataforma'
 
 async function main() {
   const lido = lerEntrada(process.argv.slice(2), process.env)
@@ -25,16 +28,20 @@ async function main() {
 
   const prisma = new PrismaClient()
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } })
-    if (!tenant) { console.error(`Planta com slug "${tenantSlug}" não encontrada.`); process.exit(1) }
     const existente = await prisma.user.findUnique({ where: { email } })
     if (existente) { console.error('Já existe um usuário com este e-mail. Nada foi alterado.'); process.exit(1) }
-    const user = await prisma.user.create({
-      data: {
-        tenant_id: tenant.id, email, name, role: 'SUPER_ADMIN',
-        password_hash: await hashPassword(password),
-        must_change_password: false, is_active: true,
-      },
+    const passwordHash = await hashPassword(password)
+    const user = await prisma.$transaction(async (tx) => {
+      const tenant = tenantSlug === PLATAFORMA_SLUG
+        ? await garantirPlantaPlataforma(tx)
+        : await tx.tenant.findUnique({ where: { slug: tenantSlug } })
+      if (!tenant) throw new Error(`Planta com slug "${tenantSlug}" não encontrada.`)
+      return tx.user.create({
+        data: {
+          tenant_id: tenant.id, email, name, role: 'SUPER_ADMIN',
+          password_hash: passwordHash, must_change_password: false, is_active: true,
+        },
+      })
     })
     console.log(`SUPER_ADMIN criado: ${user.email}`)
   } finally {

@@ -4,6 +4,7 @@
  * create-super.ts com e-mail e senha fixos no código.
  */
 import { passwordSchema } from '@/lib/password'
+import { PLATAFORMA_SLUG } from '@/server/admin/plataforma'
 
 const SENHAS_PADRAO = ['super@123', 'admin@123', 'tecnico@123', 'operador@123', 'manutencao@123', 'admin123', 'senha123', 'solentis123']
 
@@ -35,11 +36,11 @@ export function lerEntrada(argv: string[], env: Record<string, string | undefine
   const get = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined }
   const email = get('--email')?.trim().toLowerCase()
   const name = get('--name')?.trim()
-  const tenantSlug = get('--tenant-slug')?.trim()
+  // sem --tenant-slug a conta vai para a planta da plataforma (oculta), que é o recomendado
+  const tenantSlug = get('--tenant-slug')?.trim() || PLATAFORMA_SLUG
   const confirmHost = get('--confirm-host')?.trim()
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erro: 'Informe --email com um e-mail válido.' }
   if (!name || name.length < 2) return { erro: 'Informe --name.' }
-  if (!tenantSlug) return { erro: 'Informe --tenant-slug (planta à qual a conta fica vinculada).' }
   if (!confirmHost) return { erro: 'Informe --confirm-host com o host do banco que você quer alterar (veja o que o script mostra).' }
   const dbHost = hostDoBanco(env.DATABASE_URL)
   if (!dbHost) return { erro: 'DATABASE_URL ausente ou inválida.' }

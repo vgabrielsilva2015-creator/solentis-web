@@ -2,7 +2,6 @@
 
 import { requirePermission } from '@/server/auth/guards'
 import { randomInt } from 'crypto'
-import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword } from '@/lib/password'
@@ -16,6 +15,7 @@ import { sendEmail } from '@/lib/email'
 import { inviteEmail } from '@/lib/email-templates'
 import { UsuarioSchema, type UsuarioFormState } from '@/app/gestor/(sistema)/usuarios/schema'
 import { errorCode, errorMessage } from '@/lib/error-utils'
+import { PLATAFORMA_SLUG, alternarAtivoUsuarioPlataforma } from '@/server/admin/plataforma'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
@@ -29,9 +29,11 @@ function gerarSenhaProvisoria(): string {
   return pwd
 }
 
+const SLUG_RESERVADO = `O slug "${PLATAFORMA_SLUG}" é reservado à plataforma.`
+
 const PlantaSchema = z.object({
   tenantName:  z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome da planta muito curto'),
-  slug:        z.string().max(60, 'Texto muito longo (máximo 60 caracteres).').min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
+  slug:        z.string().max(60, 'Texto muito longo (máximo 60 caracteres).').min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens').refine((v) => v !== PLATAFORMA_SLUG, SLUG_RESERVADO),
   gestorName:  z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome do gestor muito curto'),
   gestorEmail: z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email('E-mail inválido').transform(v => v.trim().toLowerCase()),
 })
@@ -157,53 +159,24 @@ export async function resetarSenhaUsuario(
 }
 
 // ─── Ativar/desativar QUALQUER usuário (super admin, cross-tenant) ───────────
+// Regra e transação em `src/server/admin/plataforma.ts` (inclui "sempre sobra um super admin ativo").
 export async function toggleAtivoUsuario(
   userId: string,
 ): Promise<{ error?: string; isActive?: boolean }> {
   const ctx = await requirePermission('platform.admin')
 
-  const admin = { id: ctx.userId }
-
-  // Trava de segurança: super admin não pode desativar a própria conta.
-  if (admin?.id === userId) {
-    return { error: 'Você não pode desativar a sua própria conta.' }
-  }
-
-  // @tenant-safe: super admin opera entre plantas de propósito. Alvo por PK global,
-  // acesso restrito por requireSuperAdmin() acima.
-  const target = await prisma.user.findUnique({
-    where:  { id: userId },
-    select: { id: true, tenant_id: true, is_active: true },
-  })
-  if (!target) return { error: 'Usuário não encontrado.' }
-
-  const novoStatus = !target.is_active
-
+  let r
   try {
-    await prisma.$transaction(async (tx) => {
-      // @tenant-safe: toggle por super admin, alvo por PK global (ver justificativa acima).
-      await tx.user.update({
-        where: { id: userId },
-        data:  { is_active: novoStatus, ...BUMP_SESSION_VERSION },
-      })
-      await logAudit(tx, {
-        tenantId:  target.tenant_id,
-        userId:    admin?.id ?? null,
-        action:    'UPDATE',
-        tableName: 'users',
-        recordId:  userId,
-        before:    { is_active: target.is_active },
-        after:     { is_active: novoStatus },
-      })
-    })
+    r = await alternarAtivoUsuarioPlataforma(prisma, { actorId: ctx.userId, userId })
   } catch (e) {
     const log = await getLogger({ action: 'toggleAtivoUsuario' })
     log.error({ err: e, targetUserId: userId }, 'Falha ao alterar status (super admin)')
     return { error: 'Erro ao alterar o status do usuário.' }
   }
+  if (r.error) return { error: r.error }
 
-  revalidatePath(`/admin/plantas/${target.tenant_id}`)
-  return { isActive: novoStatus }
+  revalidatePath(`/admin/plantas/${r.tenantId}`)
+  return { isActive: r.isActive }
 }
 
 // ─── Criar usuário DENTRO de uma planta (super admin) ────────────────────────
@@ -226,8 +199,9 @@ export async function criarUsuarioPlanta(
     }
 
     // Garante que a planta existe (não cria usuário órfão num tenant inválido).
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } })
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, slug: true } })
     if (!tenant) return { error: 'Planta não encontrada.' }
+    if (tenant.slug === PLATAFORMA_SLUG) return { error: 'A planta da plataforma só recebe usuários pelo script de super admin.' }
 
     // Ator (super admin) para a auditoria — resolvido pelo e-mail (único global).
     const admin = { id: ctx.userId }
@@ -306,9 +280,10 @@ export async function toggleAtivoPlanta(
 
   const tenant = await prisma.tenant.findUnique({
     where:  { id: tenantId },
-    select: { id: true, is_active: true },
+    select: { id: true, is_active: true, slug: true },
   })
   if (!tenant) return { error: 'Planta não encontrada.' }
+  if (tenant.slug === PLATAFORMA_SLUG) return { error: 'A planta da plataforma não pode ser desativada.' }
 
   const novoStatus = !tenant.is_active
 
@@ -342,7 +317,7 @@ export async function toggleAtivoPlanta(
 // ─── Editar dados da planta (nome/slug) — super admin ────────────────────────
 const EditPlantaSchema = z.object({
   name: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome da planta muito curto'),
-  slug: z.string().max(60, 'Texto muito longo (máximo 60 caracteres).').min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
+  slug: z.string().max(60, 'Texto muito longo (máximo 60 caracteres).').min(2, 'Slug muito curto').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens').refine((v) => v !== PLATAFORMA_SLUG, SLUG_RESERVADO),
 })
 
 export type EditPlantaFormState = {
@@ -373,6 +348,7 @@ export async function editarPlanta(
     select: { name: true, slug: true },
   })
   if (!current) return { error: 'Planta não encontrada.' }
+  if (current.slug === PLATAFORMA_SLUG) return { error: 'A planta da plataforma não pode ser editada.' }
 
   try {
     await prisma.$transaction(async (tx) => {

@@ -23,7 +23,8 @@ export function getDashboardRoute(role: string): string {
 }
 
 export function isRouteAllowedForRole(pathname: string, userRole: string): boolean {
-  if (userRole === 'SUPER_ADMIN') return true
+  // SUPER_ADMIN só entra na própria área (/admin) e nas rotas sem área (troca de senha, API, etc.).
+  // Antes liberava tudo; as telas dos perfis de planta ficam fora do alcance da conta de plataforma.
   for (const [prefix, roles] of Object.entries(ROUTE_ACCESS)) {
     if (pathname.startsWith(prefix)) {
       return roles.includes(userRole)
