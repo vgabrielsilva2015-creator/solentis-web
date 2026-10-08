@@ -1,6 +1,7 @@
 'use server'
 
 import { requirePermission } from '@/server/auth/guards'
+import { reabrirOcorrencia, resolverOcorrencia } from '@/server/occurrences/resolve'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
@@ -204,52 +205,6 @@ export async function registrarOcorrencia(
   return { success: true }
 }
 
-// ─── Resolver ocorrência ──────────────────────────────────────────────────────
-
-export async function resolverOcorrencia(formData: FormData) {
-  const ctx = await requirePermission('occurrence.resolve')
-  const userId = ctx.userId
-
-  const occurrenceId = formData.get('id') as string
-  const notes = formData.get('notes') as string
-
-  if (!occurrenceId) throw new Error('ID não informado')
-
-  await prisma.$transaction(async (tx) => {
-    const occurrence = await tx.occurrence.findUnique({
-      where: { id: occurrenceId, tenant_id: await getTenantId() },
-    })
-    if (!occurrence) throw new Error('Ocorrência não encontrada.')
-
-    // @tenant-checked: occurrence validada por tenant_id no findUnique acima.
-    await tx.occurrence.update({
-      where: { id: occurrenceId },
-      data: {
-        status: 'RESOLVED',
-        resolved_at: new Date(),
-        resolved_by: userId,
-        resolution_notes: notes,
-      },
-    })
-
-    await logAudit(tx, {
-      tenantId: (await getTenantId()),
-      userId,
-      action: 'UPDATE',
-      tableName: 'occurrences',
-      recordId: occurrence.id,
-      before: { status: occurrence.status },
-      after: { status: 'RESOLVED', resolved_by: userId, resolution_notes: notes },
-    })
-  })
-
-  revalidatePath('/operador/ocorrencias')
-  revalidatePath('/tecnico/ocorrencias')
-  revalidatePath('/gestor/ocorrencias')
-  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
-  redirect(`/operador/ocorrencias/${occurrenceId}`)
-}
-
 export async function addOccurrenceComment(occurrenceId: string, text: string) {
   const ctx = await requirePermission('occurrence.create')
   const tenantId = await getTenantId()
@@ -297,57 +252,50 @@ export async function updateOccurrenceStatus(
   occurrenceId: string,
   newStatus: string,
   notes?: string
-) {
+): Promise<{ error?: string }> {
   const ctx = await requirePermission('occurrence.move')
-  const tenantId = await getTenantId()
-  const userId = ctx.userId
 
   const validStatuses = ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']
   if (!validStatuses.includes(newStatus)) {
-    throw new Error('Status inválido.')
+    return { error: 'Status inválido.' }
   }
-  // Arrastar para "Resolvida" é resolver: mesma permissão do botão Resolver
-  if (newStatus === 'RESOLVED') await requirePermission('occurrence.resolve')
 
   const occurrence = await prisma.occurrence.findFirst({
-    where: { id: occurrenceId, tenant_id: tenantId }
+    where: { id: occurrenceId, tenant_id: ctx.tenantId },
+    select: { status: true },
   })
-  if (!occurrence) throw new Error('Ocorrência não encontrada.')
+  if (!occurrence) return { error: 'Ocorrência não encontrada.' }
+  if (occurrence.status === newStatus) return {}
 
-  await prisma.$transaction(async (tx) => {
-    const isResolving = newStatus === 'RESOLVED'
-    // @tenant-checked: occurrence validada por tenant_id no findFirst acima.
-    await tx.occurrence.update({
-      where: { id: occurrenceId },
-      data: {
-        status: newStatus,
-        ...(isResolving ? {
-          resolved_at: new Date(),
-          resolved_by: userId,
-          resolution_notes: notes || 'Resolvido via painel Kanban.',
-        } : {})
-      }
+  if (newStatus === 'RESOLVED') {
+    // Arrastar para "Resolvida" é resolver: mesma permissão e mesmas regras do botão
+    // (ação descrita obrigatória, responsável e data/hora na auditoria). T-20.
+    const permCtx = await requirePermission('occurrence.resolve')
+    const r = await resolverOcorrencia(permCtx, occurrenceId, notes, null, 'kanban')
+    if (!r.ok) return { error: r.error }
+  } else if (occurrence.status === 'RESOLVED') {
+    // Reabrir também exige a permissão de resolver; a resolução anterior fica na auditoria
+    const permCtx = await requirePermission('occurrence.resolve')
+    if (!(await reabrirOcorrencia(permCtx, occurrenceId, newStatus))) return { error: 'A ocorrência mudou enquanto você arrastava. Atualize a tela.' }
+  } else {
+    await prisma.$transaction(async (tx) => {
+      await tx.occurrence.updateMany({ where: { id: occurrenceId, tenant_id: ctx.tenantId }, data: { status: newStatus } })
+      await logAudit(tx, {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        action: 'UPDATE',
+        tableName: 'occurrences',
+        recordId: occurrenceId,
+        before: { status: occurrence.status },
+        after: { status: newStatus },
+      })
     })
+  }
 
-    await logAudit(tx, {
-      tenantId,
-      userId,
-      action: 'UPDATE',
-      tableName: 'occurrences',
-      recordId: occurrenceId,
-      before: { status: occurrence.status },
-      after: {
-        status: newStatus,
-        ...(isResolving ? { resolved_by: userId, resolution_notes: notes || 'Resolvido via painel Kanban.' } : {})
-      }
-    })
-  })
-
-  revalidatePath('/operador/ocorrencias')
-  revalidatePath('/tecnico/ocorrencias')
-  revalidatePath('/gestor/ocorrencias')
-  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
-  revalidatePath(`/tecnico/ocorrencias/${occurrenceId}`)
-  revalidatePath(`/gestor/ocorrencias/${occurrenceId}`)
+  for (const area of ['operador', 'tecnico', 'gestor']) {
+    revalidatePath(`/${area}/ocorrencias`)
+    revalidatePath(`/${area}/ocorrencias/${occurrenceId}`)
+  }
+  return {}
 }
 

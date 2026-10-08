@@ -24,6 +24,8 @@ interface OccurrenceTimelineProps {
   resolvedAt: Date | null
   resolverName?: string | null
   resolutionNotes?: string | null
+  /** Link da foto de evidência da resolução, quando houver (T-20) */
+  evidenceUrl?: string | null
   comments: Comment[]
 }
 
@@ -35,6 +37,7 @@ export function OccurrenceTimeline({
   resolvedAt,
   resolverName,
   resolutionNotes,
+  evidenceUrl,
   comments
 }: OccurrenceTimelineProps) {
   const [commentText, setCommentText] = useState('')
@@ -63,6 +66,7 @@ export function OccurrenceTimeline({
     date: Date
     title: string
     content?: string
+    link?: string
     actor: string
     actorRole?: string
   }[] = [
@@ -83,7 +87,7 @@ export function OccurrenceTimeline({
       title: 'Comentário adicionado',
       content: c.text,
       actor: c.user.name,
-      actorRole: c.user.role === 'MANAGER' ? 'Gestor' : c.user.role === 'TECHNICIAN' ? 'Técnico' : 'Operador',
+      actorRole: c.user.role === 'MANAGER' ? 'Gestor' : c.user.role === 'TECHNICIAN' ? 'Técnico' : c.user.role === 'MAINTENANCE' ? 'Manutenção' : 'Operador',
     })
   })
 
@@ -94,6 +98,7 @@ export function OccurrenceTimeline({
       date: new Date(resolvedAt),
       title: 'Ocorrência Resolvida',
       content: resolutionNotes || undefined,
+      link: evidenceUrl || undefined,
       actor: resolverName || 'Desconhecido',
     })
   }
@@ -154,6 +159,11 @@ export function OccurrenceTimeline({
                     <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed bg-card/40 rounded p-2.5 border border-border/50">
                       {evt.content}
                     </p>
+                  )}
+                  {evt.link && (
+                    <a href={evt.link} target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-emerald-400 underline">
+                      Ver foto da evidência
+                    </a>
                   )}
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 pt-0.5">
                     <User className="w-3 h-3" /> Por: <span className="font-semibold text-muted-foreground">{evt.actor}</span>

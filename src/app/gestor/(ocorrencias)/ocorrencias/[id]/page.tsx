@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { BackButton } from '@/components/back-button'
-import { ResolveForm } from './resolve-form'
+import { ResolveForm } from '@/components/occurrences/resolve-form'
 import { getTenantId } from '@/lib/tenant'
 import { OccurrenceTimeline } from '@/components/occurrence-timeline'
 import { PhotoGallery } from '@/components/ui/photo-gallery'
@@ -41,7 +41,8 @@ export default async function OcorrenciaDetailPage({
       reporter:    { select: { name: true } },
       resolver:    { select: { name: true } },
       responsible: { select: { name: true } },
-      photos:      { select: { id: true }, take: 3 },
+      photos:      { where: { kind: 'REPORT' }, select: { id: true }, take: 3 },
+      _count: { select: { photos: { where: { kind: 'RESOLUTION' } } } },
       comments: {
         include: {
           user: { select: { name: true, role: true } }
@@ -175,6 +176,7 @@ export default async function OcorrenciaDetailPage({
               resolvedAt={occurrence.resolved_at}
               resolverName={occurrence.resolver?.name}
               resolutionNotes={occurrence.resolution_notes}
+              evidenceUrl={occurrence._count.photos > 0 ? `/api/occurrences/${occurrence.id}/photo?kind=RESOLUTION` : null}
               comments={occurrence.comments}
             />
           </div>

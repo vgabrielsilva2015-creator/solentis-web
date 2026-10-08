@@ -707,6 +707,8 @@ model OccurrencePhoto {
   size_bytes    Int
   uploaded_by   String
   uploaded_at   DateTime @default(now())
+  /// REPORT = foto do registro; RESOLUTION = evidência da resolução (T-20)
+  kind          String   @default("REPORT")
 
   tenant     Tenant     @relation(fields: [tenant_id], references: [id])
   occurrence Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)

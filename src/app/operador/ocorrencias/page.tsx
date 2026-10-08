@@ -52,7 +52,7 @@ export default async function OcorrenciasOperadorPage({
       where,
       include: {
         reporter: { select: { name: true } },
-        photos: { select: { id: true } },
+        photos: { where: { kind: 'REPORT' }, select: { id: true } },
       },
       orderBy: { created_at: 'desc' },
       take: view === 'list' ? PAGE_SIZE : 100,

@@ -1,17 +1,8 @@
 'use server'
 
 import { requirePermission } from '@/server/auth/guards'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { logAudit } from '@/lib/audit'
-import { getTenantId } from '@/lib/tenant'
-
-
-
-const ResolucaoSchema = z.object({
-  resolution_notes: z.string().min(5, 'Descreva a resolução em pelo menos 5 caracteres'),
-})
+import { evidenciaDoForm, resolverOcorrencia as resolverComRegistro } from '@/server/occurrences/resolve'
 
 export type ResolucaoFormState = {
   error?: string
@@ -20,6 +11,9 @@ export type ResolucaoFormState = {
 }
 
 // ─── Resolver ocorrência ──────────────────────────────────────────────────────
+// Usado pelas telas de detalhe do operador, do técnico e do gestor. As regras
+// (ação obrigatória, evidência opcional, auditoria, gravação única) ficam em
+// src/server/occurrences/resolve.ts — o mesmo caminho do kanban.
 
 export async function resolverOcorrencia(
   ocorrenciaId: string,
@@ -28,43 +22,12 @@ export async function resolverOcorrencia(
 ): Promise<ResolucaoFormState> {
   const ctx = await requirePermission('occurrence.resolve')
 
-  const parsed = ResolucaoSchema.safeParse({
-    resolution_notes: formData.get('resolution_notes'),
-  })
-  if (!parsed.success) {
-    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  const r = await resolverComRegistro(ctx, ocorrenciaId, formData.get('resolution_notes'), evidenciaDoForm(formData), 'tela')
+  if (!r.ok) return r.field ? { fieldErrors: { [r.field]: [r.error] } } : { error: r.error }
+
+  for (const area of ['operador', 'tecnico', 'gestor']) {
+    revalidatePath(`/${area}/ocorrencias`)
+    revalidatePath(`/${area}/ocorrencias/${ocorrenciaId}`)
   }
-
-  const userId = ctx.userId
-
-  const occurrence = await prisma.occurrence.findFirst({ where: { id: ocorrenciaId , tenant_id: (await getTenantId()) },
-    select: { status: true, severity: true },
-  })
-  if (!occurrence)                        return { error: 'Ocorrência não encontrada.' }
-  if (occurrence.status === 'RESOLVED')   return { error: 'Ocorrência já encerrada.' }
-
-  const now = new Date()
-  await prisma.$transaction(async (tx) => {
-    await tx.occurrence.updateMany({ where: { id: ocorrenciaId , tenant_id: (await getTenantId()) }, data: {
-        status:           'RESOLVED',
-        resolved_at:      now,
-        resolved_by:      userId,
-        resolution_notes: parsed.data.resolution_notes,
-      },
-    })
-    await logAudit(tx, {
-      tenantId: (await getTenantId()),
-      userId,
-      action:    'UPDATE',
-      tableName: 'occurrences',
-      recordId:  ocorrenciaId,
-      before:    { status: occurrence.status },
-      after:     { status: 'RESOLVED', resolved_by: userId, resolution_notes: parsed.data.resolution_notes },
-    })
-  })
-
-  revalidatePath('/tecnico/ocorrencias')
-  revalidatePath(`/tecnico/ocorrencias/${ocorrenciaId}`)
-  revalidatePath('/operador/ocorrencias')
   return { success: true }
 }

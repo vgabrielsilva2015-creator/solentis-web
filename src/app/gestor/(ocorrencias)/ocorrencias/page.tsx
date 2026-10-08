@@ -50,7 +50,7 @@ export default async function OcorrenciasGestorPage({
       where,
       include: {
         reporter: { select: { name: true } },
-        photos:   { select: { id: true } },
+        photos:   { where: { kind: 'REPORT' }, select: { id: true } },
       },
       orderBy: [{ status: 'asc' }, { deadline: 'asc' }],
       take: view === 'table' ? PAGE_SIZE : 100,

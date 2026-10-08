@@ -115,8 +115,12 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
     },
     'tecnico/ocorrencias/actions.ts#resolverOcorrencia': {
       de: ['MANAGER', 'TECHNICIAN'], para: ['MANAGER', 'OPERATOR', 'TECHNICIAN'],
-      motivo: 'mesma regra do outro "Resolver" (o operador já resolvia pela tela dele); a decisão do dono vale para os dois',
+      motivo: 'virou o único "Resolver" das três telas (decisão 2: o operador resolve, sempre com a ação registrada)',
     },
+  }
+  // Actions que deixaram de existir (o caminho passou para outra action)
+  const REMOVIDAS: Record<string, string> = {
+    'operador/ocorrencias/actions.ts#resolverOcorrencia': 'tela do operador usa tecnico/ocorrencias#resolverOcorrencia (aceitava nota vazia)',
   }
 
   const esperado = (k: string) => (k in MUDANCAS ? MUDANCAS[k].para : BEFORE[k])
@@ -127,11 +131,13 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
     return p ? [...PERMISSIONS[p]].sort() : 'SEM GUARD'
   }
 
-  it('o conjunto de actions é o mesmo', () => {
-    expect([...ATUAL.keys()].sort()).toEqual(Object.keys(BEFORE).sort())
+  const VIGENTES = Object.keys(BEFORE).filter((k) => !(k in REMOVIDAS)).sort()
+
+  it('o conjunto de actions é o mesmo (menos as removidas de propósito)', () => {
+    expect([...ATUAL.keys()].sort()).toEqual(VIGENTES)
   })
 
-  it.each(Object.keys(BEFORE).sort())('%s', (k) => {
+  it.each(VIGENTES)('%s', (k) => {
     expect(agora(k)).toEqual(esperado(k))
   })
 
@@ -143,7 +149,10 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
 
   it('arrastar para "Resolvida" no kanban exige a permissão de resolver', () => {
     const corpo = actions(join(SRC, 'app/operador/ocorrencias/actions.ts')).find((a) => a.name === 'updateOccurrenceStatus')!.body
-    expect(corpo).toMatch(/newStatus === 'RESOLVED'\) await requirePermission\('occurrence\.resolve'\)/)
+    // resolver e reabrir pelo kanban: permissão de resolver + o caminho único de resolução
+    expect(corpo).toMatch(/if \(newStatus === 'RESOLVED'\) \{[\s\S]*?requirePermission\('occurrence\.resolve'\)[\s\S]*?resolverOcorrencia\(permCtx, occurrenceId, notes, null, 'kanban'\)/)
+    expect(corpo).toMatch(/occurrence\.status === 'RESOLVED'\) \{[\s\S]*?requirePermission\('occurrence\.resolve'\)[\s\S]*?reabrirOcorrencia/)
+    expect(corpo).not.toMatch(/Resolvido via painel Kanban/)
   })
 })
 
