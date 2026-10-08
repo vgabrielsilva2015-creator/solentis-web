@@ -1,38 +1,42 @@
 /**
- * Templates de e-mail transacional do Solentis.
+ * Templates de e-mail transacional do Solentis — identidade única e compatível
+ * com clientes de e-mail (Gmail, Outlook, Apple Mail, Yahoo, Android, iOS).
  *
- * Três e-mails: convite (novo usuário define a senha), redefinição de senha
- * (link de reset) e confirmação de senha alterada (aviso de segurança).
+ * Esta camada é SÓ apresentação: não altera lógica de envio, tokens, URLs ou auth.
+ * Os links/dados chegam prontos de quem chama (actions). Aqui só montamos o HTML.
  *
- * Compatibilidade com clientes de e-mail (Gmail, Outlook, Apple Mail…):
- *  - layout em TABELAS e estilos INLINE (nada de fl/grid/classe/<style>);
+ * Técnicas de e-mail usadas:
+ *  - documento HTML completo com <head> (viewport, color-scheme, media query mobile);
+ *  - layout em TABELAS com role="presentation" e estilos INLINE;
+ *  - botão à prova de Outlook via `mso-padding-alt` (padding no <td>, que o Word respeita);
  *  - pilha de fontes do sistema (webfont em e-mail é instável);
  *  - logo por URL hospedada (data: URI é bloqueado em muitos clientes);
- *  - botão "bulletproof" (padding no <a> + bgcolor no <td>) + link cru de fallback;
- *  - header com degradê que degrada para cor sólida no Outlook (bgcolor);
- *  - preheader oculto (texto de prévia na caixa de entrada).
+ *  - preheader oculto (texto de prévia na caixa de entrada);
+ *  - sem JavaScript, sem CSS que quebre no Outlook, sem dependências externas.
  */
 
 const BRAND = {
   name: 'Solentis',
-  tagline: 'Gestão de Estação de Tratamento de Efluentes',
-  // Teal/cyan da logo — o único acento "forte"; o resto fica quieto.
-  teal: '#0e7490', // cyan-700
-  cyan: '#06b6d4', // cyan-500
-  primary: '#0891b2', // cyan-600 (botão)
-  ink: '#0f172a', // slate-900
-  body: '#334155', // slate-700
-  muted: '#64748b', // slate-500
-  ground: '#eef2f6', // neutro frio (leve viés teal)
+  // Teal/cyan da logo — único acento "forte"; o resto fica neutro e elegante.
+  primary: '#0e7490', // cyan-700 — botão (bom contraste com texto branco)
+  accent: '#06b6d4', // cyan-500 — detalhes finos
+  ink: '#0f172a', // slate-900 — títulos
+  body: '#475569', // slate-600 — corpo do texto
+  muted: '#94a3b8', // slate-400 — rodapé / secundário
+  ground: '#eef1f5', // fundo discreto (leve viés frio)
   card: '#ffffff',
-  border: '#e2e8f0', // slate-200
-  pill: '#f1f5f9', // slate-100
+  border: '#e6eaef',
+  pill: '#f4f6f8',
 }
 
+const FONT = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`
+
 export const EMAIL_SUBJECTS = {
-  invite: 'Seu convite para o Solentis',
-  reset: 'Redefinição de senha — Solentis',
+  invite: 'Você foi convidado para o Solentis',
+  emailConfirmation: 'Confirme seu e-mail — Solentis',
+  reset: 'Redefina sua senha — Solentis',
   passwordChanged: 'Sua senha do Solentis foi alterada',
+  emailChange: 'Confirme seu novo e-mail — Solentis',
 } as const
 
 /** URL base para a logo e links — mesmo critério do buildResetUrl. */
@@ -51,127 +55,188 @@ function escapeHtml(input: string): string {
 
 interface EmailLayoutParams {
   preheader: string
-  eyebrow: string
-  heading: string
-  /** Corpo do e-mail (HTML; dado do usuário deve vir já escapado). */
-  intro: string
+  title: string
+  /** Mensagem curta (HTML; dado do usuário deve vir já escapado). */
+  message: string
   ctaLabel: string
   ctaUrl: string
-  note?: string
+  /** Informação complementar (prazo, aviso de segurança…). */
+  complement?: string
+  /** Mostra o bloco "copie e cole este link" (padrão: true). */
+  showFallbackLink?: boolean
 }
 
 function renderEmailLayout(p: EmailLayoutParams): string {
   const logo = `${baseUrl()}/icons/icon-192x192.png`
   const ctaUrl = escapeHtml(p.ctaUrl)
-  const font = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`
-  return `<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${escapeHtml(p.preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.ground};margin:0;padding:32px 12px;font-family:${font};">
-  <tr>
-    <td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-radius:16px;overflow:hidden;border:1px solid ${BRAND.border};">
+  const year = new Date().getFullYear()
+  const showFallback = p.showFallbackLink !== false
 
-        <!-- Header: faixa teal com logo e marca -->
-        <tr>
-          <td bgcolor="${BRAND.teal}" style="background-color:${BRAND.teal};background-image:linear-gradient(135deg,${BRAND.teal} 0%,${BRAND.cyan} 100%);padding:28px 32px;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td align="left" valign="middle" width="56">
-                  <img src="${logo}" width="48" height="48" alt="Solentis" style="display:block;border-radius:11px;background:#ffffff;" />
-                </td>
-                <td align="left" valign="middle" style="padding-left:14px;">
-                  <div style="font-size:19px;font-weight:700;color:#ffffff;letter-spacing:.3px;line-height:1.1;">${BRAND.name}</div>
-                  <div style="font-size:12px;color:#e0f2fe;line-height:1.4;margin-top:2px;">${BRAND.tagline}</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
+  return `<!DOCTYPE html>
+<html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no" />
+  <title>${escapeHtml(p.title)}</title>
+  <!--[if mso]><style>body,table,td,a{font-family:Arial,Helvetica,sans-serif !important;}</style><![endif]-->
+  <style>
+    body{margin:0;padding:0;width:100% !important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;background:${BRAND.ground};}
+    table{border-collapse:collapse;}
+    img{border:0;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}
+    a{text-decoration:none;}
+    @media only screen and (max-width:620px){
+      .sol-card{width:100% !important;border-radius:0 !important;border-left:0 !important;border-right:0 !important;}
+      .sol-pad{padding-left:26px !important;padding-right:26px !important;}
+      .sol-title{font-size:21px !important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:${BRAND.ground};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${escapeHtml(p.preheader)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.ground};">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
 
-        <!-- Corpo -->
-        <tr>
-          <td bgcolor="${BRAND.card}" style="background:${BRAND.card};padding:36px 32px 32px;">
-            <div style="font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${BRAND.primary};margin-bottom:10px;">${escapeHtml(p.eyebrow)}</div>
-            <h1 style="margin:0 0 14px;font-size:23px;line-height:1.3;font-weight:700;color:${BRAND.ink};">${escapeHtml(p.heading)}</h1>
-            <div style="width:44px;height:3px;border-radius:2px;background:${BRAND.cyan};margin:0 0 20px;"></div>
-            <p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:${BRAND.body};">${p.intro}</p>
+        <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" class="sol-card" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${BRAND.card};border:1px solid ${BRAND.border};border-radius:14px;">
 
-            <!-- Botão bulletproof -->
-            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-              <tr>
-                <td align="center" bgcolor="${BRAND.primary}" style="border-radius:10px;">
-                  <a href="${ctaUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">${escapeHtml(p.ctaLabel)} &rarr;</a>
-                </td>
-              </tr>
-            </table>
+          <!-- Logo -->
+          <tr>
+            <td class="sol-pad" align="center" style="padding:40px 48px 8px;">
+              <img src="${logo}" width="54" height="54" alt="Solentis" style="display:block;border-radius:12px;" />
+              <div style="font-family:${FONT};font-size:17px;font-weight:700;letter-spacing:.4px;color:${BRAND.ink};margin-top:12px;">Solentis</div>
+            </td>
+          </tr>
 
-            <!-- Fallback do link -->
-            <p style="margin:0 0 8px;font-size:12px;color:${BRAND.muted};">Se o botão não funcionar, copie e cole este link no navegador:</p>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 4px;">
-              <tr>
-                <td bgcolor="${BRAND.pill}" style="background:${BRAND.pill};border:1px solid ${BRAND.border};border-radius:8px;padding:11px 14px;font-size:12px;word-break:break-all;">
-                  <a href="${ctaUrl}" style="color:${BRAND.teal};text-decoration:none;">${ctaUrl}</a>
-                </td>
-              </tr>
-            </table>
+          <!-- Título + mensagem -->
+          <tr>
+            <td class="sol-pad" align="center" style="padding:20px 48px 0;">
+              <h1 class="sol-title" style="margin:0 0 14px;font-family:${FONT};font-size:24px;line-height:1.3;font-weight:700;color:${BRAND.ink};">${escapeHtml(p.title)}</h1>
+              <p style="margin:0 auto;max-width:420px;font-family:${FONT};font-size:15px;line-height:1.65;color:${BRAND.body};">${p.message}</p>
+            </td>
+          </tr>
 
-            ${p.note ? `<p style="margin:24px 0 0;padding-top:18px;border-top:1px solid ${BRAND.border};font-size:13px;line-height:1.6;color:${BRAND.muted};">${escapeHtml(p.note)}</p>` : ''}
-          </td>
-        </tr>
+          <!-- CTA -->
+          <tr>
+            <td class="sol-pad" align="center" style="padding:30px 48px 0;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" bgcolor="${BRAND.primary}" style="border-radius:8px;mso-padding-alt:15px 34px;">
+                    <a href="${ctaUrl}" target="_blank" style="display:inline-block;padding:15px 34px;font-family:${FONT};font-size:14px;font-weight:700;letter-spacing:.6px;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(p.ctaLabel)}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-        <!-- Footer -->
-        <tr>
-          <td bgcolor="${BRAND.card}" style="background:${BRAND.card};padding:0 32px 28px;">
-            <div style="border-top:1px solid ${BRAND.border};padding-top:18px;">
-              <p style="margin:0;font-size:12px;line-height:1.6;color:${BRAND.muted};">
-                <strong style="color:${BRAND.body};">${BRAND.name}</strong> — ${BRAND.tagline}<br/>
-                Esta é uma mensagem automática. Por favor, não responda a este e-mail.
+          ${p.complement ? `<tr>
+            <td class="sol-pad" align="center" style="padding:24px 48px 0;">
+              <p style="margin:0 auto;max-width:420px;font-family:${FONT};font-size:13px;line-height:1.6;color:${BRAND.muted};">${p.complement}</p>
+            </td>
+          </tr>` : ''}
+
+          ${showFallback ? `<tr>
+            <td class="sol-pad" align="center" style="padding:20px 48px 0;">
+              <p style="margin:0 0 8px;font-family:${FONT};font-size:12px;color:${BRAND.muted};">Ou copie e cole este link no navegador:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td bgcolor="${BRAND.pill}" style="background:${BRAND.pill};border:1px solid ${BRAND.border};border-radius:8px;padding:11px 14px;font-family:${FONT};font-size:12px;word-break:break-all;text-align:center;">
+                    <a href="${ctaUrl}" target="_blank" style="color:${BRAND.primary};text-decoration:none;">${ctaUrl}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>` : ''}
+
+          <!-- Divisor + rodapé -->
+          <tr>
+            <td class="sol-pad" style="padding:36px 48px 32px;">
+              <div style="border-top:1px solid ${BRAND.border};"></div>
+              <p style="margin:18px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${BRAND.muted};text-align:center;">
+                <strong style="color:${BRAND.body};">Solentis</strong> — Gestão operacional e ambiental<br/>
+                Este é um e-mail automático. Por favor, não responda a esta mensagem.<br/>
+                &copy; ${year} Solentis — Todos os direitos reservados.
               </p>
-            </div>
-          </td>
-        </tr>
+            </td>
+          </tr>
 
-      </table>
-    </td>
-  </tr>
-</table>`
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
 }
 
-/** Convite de novo usuário (define a própria senha). TTL 7 dias. */
+// ─── Convite de novo usuário (define a própria senha). TTL 7 dias. ────────────
 export function inviteEmailHtml({ name, url }: { name: string; url: string }): string {
   return renderEmailLayout({
-    preheader: 'Você foi convidado para o Solentis. Defina sua senha para acessar.',
-    eyebrow: 'Convite',
-    heading: 'Bem-vindo ao Solentis',
-    intro: `Olá, ${escapeHtml(name)}. Uma conta foi criada para você no Solentis. Para começar, defina sua senha de acesso clicando no botão abaixo. Por segurança, este convite expira em <strong>7 dias</strong>.`,
-    ctaLabel: 'Definir minha senha',
+    preheader: 'Você recebeu um convite para acessar o Solentis.',
+    title: 'Você foi convidado para o Solentis',
+    message: `Olá, ${escapeHtml(name)}. Você recebeu um convite para acessar o Solentis. Clique no botão abaixo para configurar sua conta e começar a utilizar a plataforma.`,
+    ctaLabel: 'ACEITAR CONVITE',
     ctaUrl: url,
-    note: 'Se você não esperava este convite, pode ignorar este e-mail com segurança — nenhuma ação será tomada.',
+    complement: 'Por segurança, este convite expira em 7 dias. Se você não esperava este e-mail, pode ignorá-lo.',
   })
 }
 
-/** Link de redefinição de senha. TTL 60 min. */
+// ─── Redefinição de senha (link de reset). TTL 60 min. ────────────────────────
 export function passwordResetEmailHtml({ url }: { url: string }): string {
   return renderEmailLayout({
-    preheader: 'Redefina a senha da sua conta Solentis. O link expira em 60 minutos.',
-    eyebrow: 'Redefinição de senha',
-    heading: 'Vamos redefinir sua senha',
-    intro: 'Recebemos um pedido para redefinir a senha da sua conta. Clique no botão abaixo para escolher uma nova senha. Por segurança, este link é válido por <strong>60 minutos</strong> e só pode ser usado uma vez.',
-    ctaLabel: 'Redefinir senha',
+    preheader: 'Redefina a senha da sua conta Solentis.',
+    title: 'Redefina sua senha',
+    message: 'Recebemos uma solicitação para redefinir a senha da sua conta Solentis. Clique abaixo para criar uma nova senha.',
+    ctaLabel: 'REDEFINIR SENHA',
     ctaUrl: url,
-    note: 'Se você não solicitou isso, ignore este e-mail — sua senha permanece a mesma.',
+    complement: 'O link é válido por 60 minutos e pode ser usado apenas uma vez. Se você não solicitou isso, ignore este e-mail — sua senha permanece a mesma.',
   })
 }
 
-/** Confirmação de senha alterada (aviso de segurança, sem ação obrigatória). */
+// ─── Confirmação de senha alterada (aviso de segurança, sem ação obrigatória). ─
 export function passwordChangedEmailHtml({ name, loginUrl }: { name?: string; loginUrl: string }): string {
   const saudacao = name ? `Olá, ${escapeHtml(name)}. ` : ''
   return renderEmailLayout({
     preheader: 'A senha da sua conta Solentis foi alterada.',
-    eyebrow: 'Segurança',
-    heading: 'Sua senha foi alterada',
-    intro: `${saudacao}A senha da sua conta Solentis foi alterada com sucesso. Se foi você, está tudo certo — não é preciso fazer mais nada.`,
-    ctaLabel: 'Acessar o Solentis',
+    title: 'Sua senha foi alterada',
+    message: `${saudacao}A senha da sua conta Solentis foi alterada recentemente.`,
+    ctaLabel: 'ACESSAR O SOLENTIS',
     ctaUrl: loginUrl,
-    note: 'Se você NÃO fez essa alteração, redefina sua senha imediatamente e avise o responsável pela sua planta.',
+    complement: 'Se você não realizou essa alteração, entre em contato com o responsável pelo sistema.',
+    showFallbackLink: false,
+  })
+}
+
+// ─── Templates prontos para fluxos FUTUROS (ainda não há envio no app). ───────
+// Mantidos aqui para padronização visual; nenhuma lógica de envio foi adicionada.
+
+/** Confirmação de cadastro / e-mail (quando um fluxo de verificação existir). */
+export function emailConfirmationHtml({ name, url }: { name?: string; url: string }): string {
+  const saudacao = name ? `Olá, ${escapeHtml(name)}. ` : ''
+  return renderEmailLayout({
+    preheader: 'Confirme seu e-mail para concluir seu cadastro no Solentis.',
+    title: 'Confirme seu e-mail',
+    message: `${saudacao}Para concluir seu cadastro no Solentis, confirme seu endereço de e-mail clicando no botão abaixo.`,
+    ctaLabel: 'CONFIRMAR E-MAIL',
+    ctaUrl: url,
+    complement: 'Se você não criou uma conta no Solentis, pode ignorar este e-mail.',
+  })
+}
+
+/** Confirmação de alteração de e-mail (quando um fluxo de troca de e-mail existir). */
+export function emailChangeHtml({ name, url }: { name?: string; url: string }): string {
+  const saudacao = name ? `Olá, ${escapeHtml(name)}. ` : ''
+  return renderEmailLayout({
+    preheader: 'Confirme o seu novo endereço de e-mail no Solentis.',
+    title: 'Confirme seu novo e-mail',
+    message: `${saudacao}Recebemos uma solicitação para alterar o e-mail da sua conta Solentis. Confirme o novo endereço clicando no botão abaixo.`,
+    ctaLabel: 'CONFIRMAR E-MAIL',
+    ctaUrl: url,
+    complement: 'Se você não solicitou essa alteração, ignore este e-mail e avise o responsável pelo sistema.',
   })
 }
