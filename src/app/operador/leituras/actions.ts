@@ -1,16 +1,14 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
-import { redirect } from 'next/navigation'
-import { sendPushToRole } from '@/lib/push-actions'
-import { saveUpload, saveImageUpload } from '@/lib/storage'
+import { saveImageUpload } from '@/lib/storage'
 import { handleNewOccurrence } from '@/lib/occurrences'
 import { getLogger } from '@/lib/logger'
 
@@ -21,13 +19,6 @@ function isUniqueViolation(err: unknown): boolean {
   return !!err && typeof err === 'object' && (err as { code?: string }).code === 'P2002'
 }
 
-async function requireOperator() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 const LeituraSchema = z
   .object({
@@ -73,7 +64,7 @@ export async function registrarLeitura(
   _prev: LeituraFormState,
   formData: FormData,
 ): Promise<LeituraFormState> {
-  const session = await requireOperator()
+  const ctx = await requirePermission('reading.create')
 
   const parsed = LeituraSchema.safeParse({
     collection_point_id: formData.get('collection_point_id'),
@@ -88,8 +79,7 @@ export async function registrarLeitura(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   // T-15: reenvio (fila offline, duplo toque, resposta perdida) → não duplica
   const clientId = parsed.data.client_id

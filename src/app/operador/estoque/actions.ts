@@ -1,24 +1,16 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { getActor, permissionError } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { lockProduct, saldoAtual } from '@/lib/stock-lock'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
-import { redirect } from 'next/navigation'
 
 
-async function requireOperator() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -46,8 +38,8 @@ const ContagemSchema = z.object({
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 export async function registrarSaida(_prev: unknown, formData: FormData) {
-  const session = await requireOperator()
-  if (!['OPERATOR', 'TECHNICIAN'].includes(session.user.role)) return { error: 'Apenas operadores ou técnicos podem registrar saídas.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'stock.move')) return { error: 'Apenas operadores ou técnicos podem registrar saídas.' }
 
   const parsed = SaidaSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -59,8 +51,7 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
   const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
   if (erroPosse) return { error: erroPosse }
 
-  const recorded_by = await resolveUserId(session.user.email!)
-  if (!recorded_by) return { error: 'Sessão inválida.' }
+  const recorded_by = ctx.userId
 
   const tenantId = await getTenantId()
 
@@ -100,8 +91,8 @@ export async function registrarSaida(_prev: unknown, formData: FormData) {
 }
 
 export async function registrarContagem(_prev: unknown, formData: FormData) {
-  const session = await requireOperator()
-  if (!['OPERATOR', 'TECHNICIAN'].includes(session.user.role)) return { error: 'Apenas operadores ou técnicos podem registrar contagens.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'stock.move')) return { error: 'Apenas operadores ou técnicos podem registrar contagens.' }
 
   const parsed = ContagemSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -109,8 +100,7 @@ export async function registrarContagem(_prev: unknown, formData: FormData) {
   }
 
   const { product_id, counted_quantity, notes, counted_at } = parsed.data
-  const recorded_by = await resolveUserId(session.user.email!)
-  if (!recorded_by) return { error: 'Sessão inválida.' }
+  const recorded_by = ctx.userId
 
   const tenantId = await getTenantId()
   const countedAtUTC = localInputToUTC(counted_at)

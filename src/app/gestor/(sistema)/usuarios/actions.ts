@@ -1,11 +1,10 @@
 'use server'
 
+import { requirePermission } from '@/server/auth/guards'
 import { randomInt } from 'crypto'
-import { requireRole } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword } from '@/lib/password'
-import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
@@ -16,16 +15,6 @@ import { sendEmail } from '@/lib/email'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
-async function resolveUserId(email: string, tenantId: string): Promise<string | null> {
-  const user = await prisma.user.findFirst({
-    where:  { 
-      email: { equals: email.trim(), mode: 'insensitive' }, 
-      tenant_id: tenantId 
-    },
-    select: { id: true },
-  })
-  return user?.id ?? null
-}
 
 
 
@@ -47,7 +36,7 @@ export async function criarUsuario(
   formData: FormData,
 ): Promise<UsuarioFormState> {
   try {
-    const session = await requireRole(['MANAGER'])
+    const ctx = await requirePermission('users.manage')
     const tenantId = await getTenantId()
 
     const parsed = UsuarioSchema.safeParse({
@@ -59,7 +48,7 @@ export async function criarUsuario(
       return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
     }
 
-    const managerId = await resolveUserId(session.user.email!, tenantId)
+    const managerId = ctx.userId
     if (!managerId) {
       return { error: 'Sessão inválida, faça login novamente.' }
     }
@@ -143,7 +132,7 @@ export async function editarUsuario(
   _prev: UsuarioFormState,
   formData: FormData,
 ): Promise<UsuarioFormState> {
-  const session = await requireRole(['MANAGER'])
+  const ctx = await requirePermission('users.manage')
   const tenantId = await getTenantId()
 
   const parsed = UsuarioSchema.safeParse({
@@ -155,8 +144,7 @@ export async function editarUsuario(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const managerId = await resolveUserId(session.user.email!, tenantId)
-  if (!managerId) return { error: 'Sessão inválida.' }
+  const managerId = ctx.userId
 
   const current = await prisma.user.findFirst({
     where: { id: userId, tenant_id: tenantId },
@@ -201,11 +189,10 @@ export async function editarUsuario(
 export async function toggleAtivo(
   userId: string,
 ): Promise<{ error?: string }> {
-  const session = await requireRole(['MANAGER'])
+  const ctx = await requirePermission('users.manage')
   const tenantId = await getTenantId()
 
-  const managerId = await resolveUserId(session.user.email!, tenantId)
-  if (!managerId) return { error: 'Sessão inválida.' }
+  const managerId = ctx.userId
 
   const user = await prisma.user.findFirst({
     where: { id: userId, tenant_id: tenantId },
@@ -245,11 +232,10 @@ export async function toggleAtivo(
 export async function resetarSenha(
   userId: string,
 ): Promise<{ error?: string; tempPassword?: string }> {
-  const session = await requireRole(['MANAGER'])
+  const ctx = await requirePermission('users.manage')
   const tenantId = await getTenantId()
 
-  const managerId = await resolveUserId(session.user.email!, tenantId)
-  if (!managerId) return { error: 'Sessão inválida.' }
+  const managerId = ctx.userId
 
   const user = await prisma.user.findFirst({
     where: { id: userId, tenant_id: tenantId },

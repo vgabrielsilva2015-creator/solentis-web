@@ -2,13 +2,10 @@
 export const SESSION_MAX_AGE_OPERATOR = 30 * 60         // 30 min em segundos
 export const SESSION_MAX_AGE_DEFAULT  = 60 * 60         // 60 min em segundos
 
-export const ROUTE_ACCESS: Record<string, string[]> = {
-  '/gestor':     ['MANAGER'],
-  '/tecnico':    ['TECHNICIAN', 'MANAGER'],
-  '/operador':   ['OPERATOR', 'TECHNICIAN', 'MANAGER'],
-  '/manutencao': ['MAINTENANCE', 'MANAGER'],
-  '/admin':      ['SUPER_ADMIN'],
-}
+import { AREA_ACCESS } from '@/server/auth/permissions'
+
+/** Acesso às áreas de tela — definido na matriz de permissões (T-20). */
+export const ROUTE_ACCESS: Record<string, readonly string[]> = AREA_ACCESS
 
 export function getSessionMaxAge(role: string): number {
   return role === 'OPERATOR' ? SESSION_MAX_AGE_OPERATOR : SESSION_MAX_AGE_DEFAULT

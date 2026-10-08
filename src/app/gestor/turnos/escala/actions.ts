@@ -1,19 +1,12 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
 import { assertOwned } from '@/lib/ownership'
 import { normalizarData } from '@/lib/shift-utils'
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Acesso não autorizado. Apenas gestores podem realizar esta ação.')
-  }
-  return session
-}
 
 export async function saveShiftScale(
   operatorId: string,
@@ -21,7 +14,7 @@ export async function saveShiftScale(
   dateStr: string,
   actionType: 'assign' | 'remove'
 ) {
-  await requireManager()
+  await requirePermission('shift.manage')
   const tenantId = await getTenantId()
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 
@@ -70,7 +63,7 @@ export async function saveShiftScale(
 }
 
 export async function toggleMaintenanceDay(dateStr: string, description?: string) {
-  const session = await requireManager()
+  const ctx = await requirePermission('shift.manage')
   const tenantId = await getTenantId()
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 
@@ -106,14 +99,11 @@ export async function addShiftTask(
   description?: string,
   assignedToId?: string
 ) {
-  const session = await requireManager()
+  const ctx = await requirePermission('shift.manage')
   const tenantId = await getTenantId()
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 
-  const managerUser = await prisma.user.findFirst({
-    where: { email: session.user.email!, tenant_id: tenantId }
-  })
-  if (!managerUser) throw new Error('Usuário gerente não encontrado.')
+  const managerUser = { id: ctx.userId }
 
   // Turno e operador vêm do cliente: precisam ser desta planta (T-05)
   await assertOwned(tenantId, [
@@ -175,7 +165,7 @@ export async function addShiftTask(
 }
 
 export async function deleteShiftTask(taskId: string) {
-  await requireManager()
+  await requirePermission('shift.manage')
   const tenantId = await getTenantId()
 
   const task = await prisma.shiftTask.findFirst({

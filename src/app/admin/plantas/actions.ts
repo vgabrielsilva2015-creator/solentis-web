@@ -1,5 +1,6 @@
 'use server'
 
+import { requirePermission } from '@/server/auth/guards'
 import { randomInt } from 'crypto'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -8,7 +9,6 @@ import { hashPassword } from '@/lib/password'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { getLogger } from '@/lib/logger'
 import { logAudit } from '@/lib/audit'
 import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
@@ -17,13 +17,6 @@ import { UsuarioSchema, type UsuarioFormState } from '@/app/gestor/(sistema)/usu
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
-async function requireSuperAdmin() {
-  const session = await auth()
-  if (!session || session.user.role !== 'SUPER_ADMIN') {
-    redirect('/login')
-  }
-  return session
-}
 
 function gerarSenhaProvisoria(): string {
   // CSPRNG (randomInt) em vez de Math.random(), que é previsível. 10 caracteres
@@ -53,7 +46,7 @@ export async function criarPlanta(
   _prev: PlantaFormState,
   formData: FormData,
 ): Promise<PlantaFormState> {
-  await requireSuperAdmin()
+  await requirePermission('platform.admin')
 
   const parsed = PlantaSchema.safeParse({
     tenantName:  formData.get('tenantName'),
@@ -119,13 +112,10 @@ export async function criarPlanta(
 export async function resetarSenhaUsuario(
   userId: string,
 ): Promise<{ error?: string; tempPassword?: string; userName?: string }> {
-  const session = await requireSuperAdmin()
+  const ctx = await requirePermission('platform.admin')
 
   // Ator (super admin) para o log de auditoria — resolvido pelo e-mail (único global).
-  const admin = await prisma.user.findFirst({
-    where:  { email: { equals: session.user.email ?? '', mode: 'insensitive' } },
-    select: { id: true },
-  })
+  const admin = { id: ctx.userId }
 
   // @tenant-safe: super admin opera entre plantas de propósito. O alvo é localizado
   // pela PK global do usuário e o acesso é restrito por requireSuperAdmin() acima.
@@ -168,12 +158,9 @@ export async function resetarSenhaUsuario(
 export async function toggleAtivoUsuario(
   userId: string,
 ): Promise<{ error?: string; isActive?: boolean }> {
-  const session = await requireSuperAdmin()
+  const ctx = await requirePermission('platform.admin')
 
-  const admin = await prisma.user.findFirst({
-    where:  { email: { equals: session.user.email ?? '', mode: 'insensitive' } },
-    select: { id: true },
-  })
+  const admin = { id: ctx.userId }
 
   // Trava de segurança: super admin não pode desativar a própria conta.
   if (admin?.id === userId) {
@@ -225,7 +212,7 @@ export async function criarUsuarioPlanta(
   formData: FormData,
 ): Promise<UsuarioFormState> {
   try {
-    const session = await requireSuperAdmin()
+    const ctx = await requirePermission('platform.admin')
 
     const parsed = UsuarioSchema.safeParse({
       name:  formData.get('name'),
@@ -241,10 +228,7 @@ export async function criarUsuarioPlanta(
     if (!tenant) return { error: 'Planta não encontrada.' }
 
     // Ator (super admin) para a auditoria — resolvido pelo e-mail (único global).
-    const admin = await prisma.user.findFirst({
-      where:  { email: { equals: session.user.email ?? '', mode: 'insensitive' } },
-      select: { id: true },
-    })
+    const admin = { id: ctx.userId }
 
     const tempPassword = gerarSenhaProvisoria()
     const passwordHash = await hashPassword(tempPassword)
@@ -321,12 +305,9 @@ export async function criarUsuarioPlanta(
 export async function toggleAtivoPlanta(
   tenantId: string,
 ): Promise<{ error?: string; isActive?: boolean }> {
-  const session = await requireSuperAdmin()
+  const ctx = await requirePermission('platform.admin')
 
-  const admin = await prisma.user.findFirst({
-    where:  { email: { equals: session.user.email ?? '', mode: 'insensitive' } },
-    select: { id: true, tenant_id: true },
-  })
+  const admin = { id: ctx.userId, tenant_id: ctx.tenantId }
 
   // Trava de segurança: super admin não pode desativar a própria planta.
   if (admin?.tenant_id === tenantId) {
@@ -385,7 +366,7 @@ export async function editarPlanta(
   _prev: EditPlantaFormState,
   formData: FormData,
 ): Promise<EditPlantaFormState> {
-  const session = await requireSuperAdmin()
+  const ctx = await requirePermission('platform.admin')
 
   const parsed = EditPlantaSchema.safeParse({
     name: formData.get('name'),
@@ -395,10 +376,7 @@ export async function editarPlanta(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const admin = await prisma.user.findFirst({
-    where:  { email: { equals: session.user.email ?? '', mode: 'insensitive' } },
-    select: { id: true },
-  })
+  const admin = { id: ctx.userId }
 
   const current = await prisma.tenant.findUnique({
     where:  { id: tenantId },

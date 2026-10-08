@@ -1,12 +1,12 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload, saveImageUpload } from '@/lib/storage'
+import { saveImageUpload } from '@/lib/storage'
 import { logAudit } from '@/lib/audit'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
@@ -16,13 +16,6 @@ import { handleNewOccurrence } from '@/lib/occurrences'
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 
-async function requireAuthenticated() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +54,7 @@ export async function registrarOcorrencia(
   _prev: OcorrenciaFormState,
   formData: FormData,
 ): Promise<OcorrenciaFormState> {
-  const session = await requireAuthenticated()
+  const ctx = await requirePermission('occurrence.create')
 
   const parsed = OcorrenciaSchema.safeParse({
     description: formData.get('description'),
@@ -75,8 +68,7 @@ export async function registrarOcorrencia(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   // Prazo calculado a partir da configuração de severidade
   const tenantId = await getTenantId()
@@ -149,7 +141,7 @@ export async function registrarOcorrencia(
     if (photoPayloads.length > 0) {
       await tx.occurrencePhoto.createMany({
         data: photoPayloads.map(p => ({
-          tenant_id:     session.user.tenantId,
+          tenant_id:     ctx.tenantId,
           occurrence_id: occurrence.id,
           filename:      p.filename,
           original_name: p.original_name,
@@ -215,9 +207,8 @@ export async function registrarOcorrencia(
 // ─── Resolver ocorrência ──────────────────────────────────────────────────────
 
 export async function resolverOcorrencia(formData: FormData) {
-  const session = await requireAuthenticated()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) throw new Error('Sessão inválida.')
+  const ctx = await requirePermission('occurrence.resolve')
+  const userId = ctx.userId
 
   const occurrenceId = formData.get('id') as string
   const notes = formData.get('notes') as string
@@ -260,10 +251,9 @@ export async function resolverOcorrencia(formData: FormData) {
 }
 
 export async function addOccurrenceComment(occurrenceId: string, text: string) {
-  const session = await requireAuthenticated()
+  const ctx = await requirePermission('occurrence.create')
   const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) throw new Error('Sessão inválida.')
+  const userId = ctx.userId
 
   if (!text || text.trim().length < 2) {
     throw new Error('Comentário deve ter pelo menos 2 caracteres.')
@@ -308,15 +298,16 @@ export async function updateOccurrenceStatus(
   newStatus: string,
   notes?: string
 ) {
-  const session = await requireAuthenticated()
+  const ctx = await requirePermission('occurrence.move')
   const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) throw new Error('Sessão inválida.')
+  const userId = ctx.userId
 
   const validStatuses = ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']
   if (!validStatuses.includes(newStatus)) {
     throw new Error('Status inválido.')
   }
+  // Arrastar para "Resolvida" é resolver: mesma permissão do botão Resolver
+  if (newStatus === 'RESOLVED') await requirePermission('occurrence.resolve')
 
   const occurrence = await prisma.occurrence.findFirst({
     where: { id: occurrenceId, tenant_id: tenantId }

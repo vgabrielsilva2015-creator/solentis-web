@@ -1,20 +1,14 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/login')
-  return session
-}
 
 const PrazosSchema = z.object({
   CRITICAL: numeroBR({ inteiro: true, min: 1, rotulo: 'O prazo (horas)', obrigatorio: 'Informe o prazo em horas' }),
@@ -32,7 +26,7 @@ export async function atualizarPrazos(
   _prev: PrazosFormState,
   formData: FormData,
 ): Promise<PrazosFormState> {
-  const session = await requireManager()
+  const ctx = await requirePermission('config.manage')
 
   const parsed = PrazosSchema.safeParse({
     CRITICAL: formData.get('deadline_CRITICAL'),
@@ -46,8 +40,7 @@ export async function atualizarPrazos(
   }
 
   // Resolver o ID do usuário logado para updated_by
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const tid = await getTenantId()
   await Promise.all(

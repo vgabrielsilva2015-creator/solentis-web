@@ -1,10 +1,10 @@
 'use server'
 
-import { requireRole } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
 
 export type ManutencaoFormState = {
@@ -24,7 +24,7 @@ export async function agendarPreventiva(
   _prev: ManutencaoFormState,
   formData: FormData,
 ): Promise<ManutencaoFormState> {
-  await requireRole(['MANAGER'])
+  await requirePermission('maintenance.plan')
   const tenantId = await getTenantId()
 
   const parsed = PreventivaSchema.safeParse({
@@ -73,7 +73,7 @@ export async function criarCorretiva(
   _prev: ManutencaoFormState,
   formData: FormData,
 ): Promise<ManutencaoFormState> {
-  const session = await requireRole(['MANAGER'])
+  const ctx = await requirePermission('maintenance.plan')
   const tenantId = await getTenantId()
 
   const parsed = CorretivaSchema.safeParse({
@@ -103,7 +103,7 @@ export async function criarCorretiva(
     })
     if (!resp) return { error: 'Responsável inválido.' }
   } else {
-    responsibleId = await resolveUserId(session.user.email!)
+    responsibleId = ctx.userId
   }
   if (!responsibleId) return { error: 'Sessão inválida.' }
 

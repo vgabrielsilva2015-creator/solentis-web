@@ -1,20 +1,15 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { logAudit } from '@/lib/audit'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/login')
-  return session
-}
 
 /**
  * Carrega um parâmetro (com método e pontos) para edição no Sheet.
@@ -22,7 +17,7 @@ async function requireManager() {
  * apenas movida para action, para o Sheet buscar sob demanda ao abrir.
  */
 export async function carregarParametro(id: string) {
-  await requireManager()
+  await requirePermission('config.manage')
   return prisma.qualityParameter.findFirst({
     where: { id, tenant_id: await getTenantId() },
     select: {
@@ -72,7 +67,7 @@ export async function criarParametro(
   _prev: ParametroFormState,
   formData: FormData,
 ): Promise<ParametroFormState> {
-  const session = await requireManager()
+  const ctx = await requirePermission('config.manage')
 
   const parsed = ParametroSchema.safeParse({
     name:            formData.get('name'),
@@ -89,8 +84,7 @@ export async function criarParametro(
   }
 
   const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const created = await prisma.$transaction(async (tx) => {
     let methodId = null
@@ -158,7 +152,7 @@ export async function editarParametro(
   _prev: ParametroFormState,
   formData: FormData,
 ): Promise<ParametroFormState> {
-  const session = await requireManager()
+  const ctx = await requirePermission('config.manage')
 
   const parsed = ParametroSchema.safeParse({
     name:            formData.get('name'),
@@ -179,7 +173,7 @@ export async function editarParametro(
     prisma.qualityParameter.findFirst({ where: { id: parametroId , tenant_id: tenantId },
       select: { name: true, unit: true, min_limit: true, max_limit: true, effective_date: true },
     }),
-    resolveUserId(session.user.email!),
+    ctx.userId,
   ])
 
   if (!current) return { error: 'Parâmetro não encontrado.' }
@@ -270,13 +264,13 @@ export async function editarParametro(
 export async function toggleAtivoParametro(
   parametroId: string,
 ): Promise<{ error?: string }> {
-  const session = await requireManager()
+  const ctx = await requirePermission('config.manage')
 
   const [param, userId] = await Promise.all([
     prisma.qualityParameter.findFirst({ where: { id: parametroId , tenant_id: (await getTenantId()) },
       select: { is_active: true },
     }),
-    resolveUserId(session.user.email!),
+    ctx.userId,
   ])
   if (!param) return { error: 'Parâmetro não encontrado.' }
 

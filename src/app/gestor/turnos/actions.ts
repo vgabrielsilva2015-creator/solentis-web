@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
@@ -10,10 +10,6 @@ import { getTenantId } from '@/lib/tenant'
 import { assertOwned } from '@/lib/ownership'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/login')
-}
 
 const TurnoSchema = z.object({
   name:                     z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -33,7 +29,7 @@ export async function criarTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  await requireManager()
+  await requirePermission('shift.manage')
 
   const parsed = TurnoSchema.safeParse({
     name:                     formData.get('name'),
@@ -82,7 +78,7 @@ export async function editarTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  await requireManager()
+  await requirePermission('shift.manage')
 
   const parsed = TurnoSchema.safeParse({
     name:                     formData.get('name'),
@@ -126,7 +122,7 @@ export async function editarTurno(
 }
 
 export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> {
-  await requireManager()
+  await requirePermission('shift.manage')
   const turno = await prisma.shift.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
   if (!turno) return { error: 'Turno não encontrado.' }
   await prisma.shift.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !turno.is_active } })
@@ -136,7 +132,7 @@ export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> 
 }
 
 export async function toggleDaySchedule(shiftId: string, days_of_week: number[]) {
-  await requireManager()
+  await requirePermission('shift.manage')
   const tenant_id = await getTenantId()
   await assertOwned(tenant_id, { model: 'shift', id: shiftId, message: 'Turno não encontrado.' })
 

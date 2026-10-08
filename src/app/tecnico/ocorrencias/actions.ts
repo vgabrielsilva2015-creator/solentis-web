@@ -1,21 +1,13 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { logAudit } from '@/lib/audit'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
 
-async function requireTechnicianOrManager() {
-  const session = await auth()
-  if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 const ResolucaoSchema = z.object({
   resolution_notes: z.string().min(5, 'Descreva a resolução em pelo menos 5 caracteres'),
@@ -34,7 +26,7 @@ export async function resolverOcorrencia(
   _prev: ResolucaoFormState,
   formData: FormData,
 ): Promise<ResolucaoFormState> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('occurrence.resolve')
 
   const parsed = ResolucaoSchema.safeParse({
     resolution_notes: formData.get('resolution_notes'),
@@ -43,8 +35,7 @@ export async function resolverOcorrencia(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const occurrence = await prisma.occurrence.findFirst({ where: { id: ocorrenciaId , tenant_id: (await getTenantId()) },
     select: { status: true, severity: true },

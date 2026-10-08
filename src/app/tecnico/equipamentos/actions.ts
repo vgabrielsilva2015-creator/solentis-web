@@ -1,25 +1,17 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { permissionError, requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR, numeroBROpcional } from '@/lib/zod-ptbr'
 import { INVALIDO, parseNumeroBR } from '@/lib/number-ptbr'
 import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
-import { redirect } from 'next/navigation'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
 
 
-async function requireTechnicianOrManager() {
-  const session = await auth()
-  if (!session || !['TECHNICIAN', 'MANAGER', 'MAINTENANCE'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -88,7 +80,7 @@ export async function criarEquipamento(
   _prev: EquipamentoFormState,
   formData: FormData,
 ): Promise<EquipamentoFormState> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
   const parsed = EquipamentoSchema.safeParse({
     name:                      formData.get('name'),
@@ -106,8 +98,7 @@ export async function criarEquipamento(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const erroPosse = await checkOwnership(await getTenantId(), [
     { model: 'equipmentCategory', id: parsed.data.category_id },
@@ -191,7 +182,7 @@ export async function editarEquipamento(
   _prev: EquipamentoFormState,
   formData: FormData,
 ): Promise<EquipamentoFormState> {
-  await requireTechnicianOrManager()
+  await requirePermission('equipment.maintain')
 
   const parsed = EquipamentoSchema.safeParse({
     name:                      formData.get('name'),
@@ -281,7 +272,7 @@ export async function editarEquipamento(
 export async function toggleAtivoEquipamento(
   equipamentoId: string,
 ): Promise<{ error?: string }> {
-  await requireTechnicianOrManager()
+  await requirePermission('equipment.maintain')
 
   const equipment = await prisma.equipment.findFirst({ where: { id: equipamentoId , tenant_id: (await getTenantId()) },
     select: { is_active: true },
@@ -303,10 +294,9 @@ export async function toggleAtivoEquipamento(
 export async function concluirPreventiva(
   preventivaId: string,
 ): Promise<{ error?: string }> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const preventiva = await prisma.preventiveMaintenance.findFirst({ where: { id: preventivaId , tenant_id: (await getTenantId()) },
     include: { equipment: { select: { id: true, preventive_frequency_days: true } } },
@@ -332,7 +322,7 @@ export async function concluirPreventiva(
         equipment_id:   preventiva.equipment.id,
         type:           'PREVENTIVE',
         description:    preventiva.notes || 'Manutenção preventiva periódica concluída.',
-        performed_by:   session.user.name || session.user.email!,
+        performed_by:   ctx.name || ctx.email,
       }
     })
 
@@ -360,7 +350,7 @@ export async function registrarCorretiva(
   _prev: CorretivaFormState,
   formData: FormData,
 ): Promise<CorretivaFormState> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
   const parsed = CorretivaSchema.safeParse({
     description:    formData.get('description'),
@@ -373,8 +363,7 @@ export async function registrarCorretiva(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const erroPosse = await checkOwnership(await getTenantId(), [
     { model: 'equipment', id: equipamentoId, message: 'Equipamento não encontrado.' },
@@ -417,10 +406,9 @@ export async function atualizarStatusCorretiva(
     notes?: string
   }
 ): Promise<{ error?: string }> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const tenantId = await getTenantId()
 
@@ -439,7 +427,7 @@ export async function atualizarStatusCorretiva(
   if (!corretiva) return { error: 'Corretiva não encontrada.' }
 
   // Restrição de papéis
-  if (status === 'VALIDATED' && session.user.role !== 'MANAGER') {
+  if (status === 'VALIDATED' && permissionError(ctx, 'maintenance.validate')) {
     return { error: 'Apenas Gestores podem validar Ordens de Serviço concluídas.' }
   }
 

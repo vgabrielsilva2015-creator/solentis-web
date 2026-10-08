@@ -1,33 +1,19 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { lockProduct } from '@/lib/stock-lock'
 import { redirect } from 'next/navigation'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    redirect('/login')
-  }
-  return session
-}
 
-async function requireManagerOrTechnician() {
-  const session = await auth()
-  if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -74,7 +60,7 @@ function resolveUnit(unit_select: string, unit_custom: string | null): string {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 export async function criarProduto(_prev: unknown, formData: FormData) {
-  const session = await requireManager()
+  const ctx = await requirePermission('config.manage')
 
   const parsed = ProdutoSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -86,8 +72,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
 
   if (!unit) return { error: 'Informe a unidade de medida' }
 
-  const recorded_by = await resolveUserId(session.user.email!)
-  if (!recorded_by) return { error: 'Sessão inválida.' }
+  const recorded_by = ctx.userId
 
   await prisma.chemicalProduct.create({
     data: { tenant_id: (await getTenantId()), name, unit, min_stock, description, created_by: recorded_by },
@@ -99,7 +84,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
 }
 
 export async function editarProduto(_prev: unknown, formData: FormData) {
-  await requireManager()
+  await requirePermission('config.manage')
 
   const id = formData.get('id') as string
   if (!id) return { error: 'ID inválido' }
@@ -124,7 +109,7 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 }
 
 export async function toggleAtivoProduto(id: string, is_active: boolean) {
-  await requireManager()
+  await requirePermission('config.manage')
 
   await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data:  { is_active },
   })
@@ -135,7 +120,7 @@ export async function toggleAtivoProduto(id: string, is_active: boolean) {
 }
 
 export async function registrarEntrada(_prev: unknown, formData: FormData) {
-  const session = await requireManagerOrTechnician()
+  const ctx = await requirePermission('stock.receive')
 
   const parsed = EntradaSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -143,8 +128,7 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
   }
 
   const { product_id, quantity, supplier, invoice_number, notes, received_at } = parsed.data
-  const recorded_by = await resolveUserId(session.user.email!)
-  if (!recorded_by) return { error: 'Sessão inválida.' }
+  const recorded_by = ctx.userId
 
   const erroPosse = await checkOwnership(await getTenantId(), [{ model: 'chemicalProduct', id: product_id }])
   if (erroPosse) return { error: erroPosse }
@@ -177,7 +161,7 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
 }
 
 export async function excluirProduto(id: string) {
-  await requireManager()
+  await requirePermission('config.manage')
   const tenantId = await getTenantId()
 
   const [entries, exits, counts] = await Promise.all([

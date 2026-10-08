@@ -1,9 +1,9 @@
 'use server'
 
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { assertOwned, OwnershipError } from '@/lib/ownership'
-import { requireRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { executorFor, parseMonitoringScheduleForm, primeiraMensagem } from '@/lib/monitoring-schedule'
@@ -14,7 +14,7 @@ function voltarComErro(msg: string): never {
 }
 
 export async function createMonitoringSchedule(formData: FormData) {
-  const session = await requireRole(['MANAGER'])
+  const ctx = await requirePermission('config.manage')
   const tenant_id = await getTenantId()
 
   // T-18 (B-07): tipo, frequência e dias validados; nada de texto livre ou NaN
@@ -34,8 +34,7 @@ export async function createMonitoringSchedule(formData: FormData) {
   }
 
   // Autor = usuário logado (antes era o primeiro usuário qualquer da planta)
-  const created_by = await resolveUserId(session.user.email!)
-  if (!created_by) throw new OwnershipError('Sessão inválida.')
+  const created_by = ctx.userId
 
   await prisma.monitoringSchedule.create({
     data: {

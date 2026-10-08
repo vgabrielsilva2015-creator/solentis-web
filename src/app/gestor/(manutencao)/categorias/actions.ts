@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
@@ -9,10 +9,6 @@ import { redirect } from 'next/navigation'
 import { getTenantId } from '@/lib/tenant'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/login')
-}
 
 const CategoriaSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -32,7 +28,7 @@ export async function criarCategoria(
   _prev: CategoriaFormState,
   formData: FormData,
 ): Promise<CategoriaFormState> {
-  await requireManager()
+  await requirePermission('config.manage')
 
   const parsed = CategoriaSchema.safeParse({
     name:        formData.get('name'),
@@ -62,7 +58,7 @@ export async function editarCategoria(
   _prev: CategoriaFormState,
   formData: FormData,
 ): Promise<CategoriaFormState> {
-  await requireManager()
+  await requirePermission('config.manage')
 
   const parsed = CategoriaSchema.safeParse({
     name:        formData.get('name'),
@@ -88,7 +84,7 @@ export async function editarCategoria(
 }
 
 export async function toggleAtivoCategoria(id: string): Promise<{ error?: string }> {
-  await requireManager()
+  await requirePermission('config.manage')
   const cat = await prisma.equipmentCategory.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
   if (!cat) return { error: 'Categoria não encontrada.' }
   await prisma.equipmentCategory.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !cat.is_active } })

@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { NextResponse } from 'next/server'
+import { can } from '@/server/auth/permissions'
 
 // Neutraliza formula/CSV injection: uma célula iniciada por = + - @ (ou tab/CR)
 // é interpretada como fórmula pelo Excel/Sheets. Prefixamos com apóstrofo e
@@ -14,9 +15,8 @@ function csvSafe(value: unknown): string {
 
 export async function GET(request: Request) {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    return new NextResponse('Unauthorized', { status: 401 })
-  }
+  if (!session) return new NextResponse('Unauthorized', { status: 401 })
+  if (!can(session.user.role, 'data.export')) return new NextResponse('Forbidden', { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type')

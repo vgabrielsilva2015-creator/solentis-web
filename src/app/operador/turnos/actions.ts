@@ -1,14 +1,12 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { getActor, permissionError } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload, saveImageUpload } from '@/lib/storage'
-import { randomUUID } from 'crypto'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { saveImageUpload } from '@/lib/storage'
+import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
-import { redirect } from 'next/navigation'
 import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
 import { aguardandoConfirmacao, STATUS_AGUARDANDO } from '@/lib/handover-status'
 
@@ -17,13 +15,6 @@ const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
 
 // ─── Guards + helpers ─────────────────────────────────────────────────────────
 
-async function requireOperator() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // Normaliza para meia-noite local — data do calendário independe da hora
 function normalizarData(date: Date): Date {
@@ -96,8 +87,8 @@ export async function abrirTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem abrir turnos.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem abrir turnos.' }
 
   const parsed = AbrirTurnoSchema.safeParse({
     shift_id: formData.get('shift_id'),
@@ -106,8 +97,7 @@ export async function abrirTurno(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const today = normalizarData(new Date())
 
@@ -240,8 +230,8 @@ export async function iniciarPassagem(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem iniciar passagens.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem iniciar passagens.' }
 
   const parsed = IniciarPassagemSchema.safeParse({
     pending_items:         formData.get('pending_items'),
@@ -252,8 +242,7 @@ export async function iniciarPassagem(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const instance = await prisma.shiftInstance.findFirst({ where: { id: instanceId , tenant_id: (await getTenantId()) },
     include: {
@@ -323,8 +312,8 @@ export async function confirmarPassagem(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem confirmar passagens.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem confirmar passagens.' }
 
   const parsed = ConfirmarPassagemSchema.safeParse({
     incoming_observations: formData.get('incoming_observations'),
@@ -334,8 +323,7 @@ export async function confirmarPassagem(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const handover = await prisma.shiftHandover.findFirst({ where: { id: handoverId , tenant_id: (await getTenantId()) },
     include: { shift_instance: { select: { id: true, tenant_id: true } } },
@@ -466,8 +454,8 @@ export async function concluirTarefa(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem concluir tarefas.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem concluir tarefas.' }
 
   const parsed = ConcluirTarefaSchema.safeParse({
     completion_notes: formData.get('completion_notes'),
@@ -476,8 +464,7 @@ export async function concluirTarefa(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const task = await prisma.shiftTask.findFirst({
     where:   { id: taskId, tenant_id: (await getTenantId()) },
@@ -552,8 +539,8 @@ export async function concluirTarefa(
 // ─── Pular tarefa ─────────────────────────────────────────────────────────────
 
 export async function pularTarefa(taskId: string): Promise<void> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return
 
   const task = await prisma.shiftTask.findFirst({
     where:   { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
@@ -578,8 +565,8 @@ export async function assumirPosto(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem assumir postos.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem assumir postos.' }
 
   const parsed = AssumirPostoSchema.safeParse({
     old_instance_id: formData.get('old_instance_id'),
@@ -589,8 +576,7 @@ export async function assumirPosto(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const tenantId = await getTenantId()
 
@@ -733,11 +719,10 @@ export async function repetirTarefa(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem repetir tarefas.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem repetir tarefas.' }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const tenant_id = await getTenantId()
 

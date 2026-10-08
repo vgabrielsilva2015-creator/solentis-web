@@ -1,14 +1,11 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 
 export async function getReportData(startDate: string, endDate: string) {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Acesso negado')
-  }
+  await requirePermission('dashboard.view')
 
   const tenantId = await getTenantId()
   const start = new Date(startDate)

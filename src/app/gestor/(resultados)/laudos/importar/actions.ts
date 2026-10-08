@@ -1,8 +1,8 @@
 'use server'
 
+import { getActor, permissionError, requirePermission } from '@/server/auth/guards'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
-import { revalidatePath } from 'next/cache'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -11,11 +11,7 @@ function delay(ms: number) {
 export async function extractDataFromPDF(base64Data: string, mimeType: string) {
   // Server Actions são endpoints públicos: estar sob /gestor não protege.
   // Sem este guard, qualquer sessão poderia queimar a cota paga do Gemini.
-  const { auth } = await import('@/lib/auth')
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Não autorizado.')
-  }
+  await requirePermission('lab.import')
   if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType)) {
     throw new Error('Tipo de arquivo inválido.')
   }
@@ -119,10 +115,7 @@ export async function getMappingContext() {
   const { getTenantId } = await import('@/lib/tenant')
   const { auth } = await import('@/lib/auth')
 
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Não autorizado.')
-  }
+  await requirePermission('lab.import')
 
   const tenantId = await getTenantId()
   
@@ -151,15 +144,11 @@ export async function createParameterFromImport(data: { name: string; unit: stri
   const { getTenantId } = await import('@/lib/tenant')
   const { auth } = await import('@/lib/auth')
   
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') return { success: false, error: 'Não autorizado.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'lab.import')) return { success: false, error: 'Não autorizado.' }
   
   const tenantId = await getTenantId()
-  const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: tenantId, email: session.user.email! } },
-    select: { id: true }
-  })
-  if (!user) return { success: false, error: 'Usuário não encontrado.' }
+  const user = { id: ctx.userId }
 
   try {
     const param = await prisma.qualityParameter.create({
@@ -200,16 +189,12 @@ export async function saveMappedReadings(data: {
   const { auth } = await import('@/lib/auth')
   const { calcularNaoConformidade } = await import('@/lib/readings-utils')
   
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') return { success: false, error: 'Não autorizado.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'lab.import')) return { success: false, error: 'Não autorizado.' }
   
   const tenantId = await getTenantId()
 
-  const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: tenantId, email: session.user.email! } },
-    select: { id: true }
-  })
-  if (!user) return { success: false, error: 'Usuário não encontrado.' }
+  const user = { id: ctx.userId }
 
   // Buscar a matriz do ponto para verificação multi-matriz.
   // Rejeita ponto inexistente/de outro tenant — a FK é global, então sem este

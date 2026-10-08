@@ -1,22 +1,14 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
-import { redirect } from 'next/navigation'
 
 
-async function requireManagerOrTechnician() {
-  const session = await auth()
-  if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -51,7 +43,7 @@ export async function criarTemplate(
   _prev: TemplateFormState,
   formData: FormData,
 ): Promise<TemplateFormState> {
-  const session = await requireManagerOrTechnician()
+  const ctx = await requirePermission('shift.assign')
 
   const parsed = TemplateSchema.safeParse({
     title:          formData.get('title'),
@@ -65,8 +57,7 @@ export async function criarTemplate(
   }
 
   const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const shift = await prisma.shift.findFirst({
     where:  { id: shiftId, tenant_id: tenantId },
@@ -105,7 +96,7 @@ export async function atualizarTemplate(
   _prev: TemplateFormState,
   formData: FormData,
 ): Promise<TemplateFormState> {
-  await requireManagerOrTechnician()
+  await requirePermission('shift.assign')
 
   const parsed = TemplateSchema.safeParse({
     title:          formData.get('title'),
@@ -153,7 +144,7 @@ export async function atualizarTemplate(
 // de gerar novas tarefas nas próximas aberturas de turno.
 
 export async function desativarTemplate(templateId: string): Promise<void> {
-  await requireManagerOrTechnician()
+  await requirePermission('shift.assign')
   const tenantId = await getTenantId()
 
   const template = await prisma.shiftTaskTemplate.findFirst({
