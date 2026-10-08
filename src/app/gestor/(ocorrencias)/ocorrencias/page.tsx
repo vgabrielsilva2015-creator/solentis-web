@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getTenantId } from '@/lib/tenant'
-import { Download, LayoutGrid, Table, Clock, ShieldAlert, CheckCircle2, BarChart2 } from 'lucide-react'
+import { LayoutGrid, Table, Clock, ShieldAlert, CheckCircle2, BarChart2 } from 'lucide-react'
 import { OccurrencesKanban } from '@/components/occurrences-kanban'
 import { OccurrencesPieChart } from '@/components/ui/occurrences-pie-chart'
 
 import { SEVERITY_LABEL, SEVERITY_COLOR, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
+import { ExportCsvMenu } from '@/components/export-csv-menu'
 
 const PAGE_SIZE  = 25
 
@@ -143,12 +144,7 @@ export default async function OcorrenciasGestorPage({
             </Button>
           </Link>
 
-          <Link href={`/api/export?type=occurrences${showAll ? '&status=all' : ''}`} target="_blank">
-            <Button variant="outline" className="border-border bg-muted text-foreground hover:bg-secondary text-xs h-8">
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              Exportar CSV
-            </Button>
-          </Link>
+          <ExportCsvMenu type="occurrences" status={showAll ? 'all' : undefined} />
 
           <Link
             href={`/gestor/ocorrencias?view=${view}`}
