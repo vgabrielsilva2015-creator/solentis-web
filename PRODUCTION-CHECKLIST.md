@@ -28,6 +28,8 @@ Rodar `scripts/ops/production-readonly-checks.sql` no SQL Editor do Supabase e c
 | 1.12 | Restore testado | restaurar o backup mais recente em um projeto separado e abrir o app apontando para ele | restore feito, com data registrada | ❓ |
 | 1.13 | Plano Supabase | Settings → Billing | Pro (o Free pausa por inatividade e não tem PITR) | ❓ |
 | 1.14 | Senha do banco rotacionada após a auditoria | Settings → Database → Reset password (ver T-08) | sim | ❓ |
+| 1.15 | Dados dentro das regras de domínio (T-19) | `scripts/ops/t19-preflight.sql` (só leitura), **antes** do `migrate deploy` que inclui `20261007070100_domain_checks_validate` | nenhuma linha retornada | ❓ |
+| 1.16 | Turnos presos por passagem vencida (T-18) | `SELECT count(*) FROM shift_handovers WHERE status='TIMED_OUT'` | número anotado: são as passagens que voltam a aparecer para confirmação | ❓ |
 
 ## 2. Vercel
 

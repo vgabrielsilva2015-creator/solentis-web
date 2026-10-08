@@ -62,6 +62,11 @@ Depois do passo 8, `npx prisma migrate deploy` aplica as que vieram depois do ba
 - `20261007010000_auth_rate_events` (T-10): tabela nova.
 - `20261007020000_rls_deny_all` (T-14): liga o RLS em todas as tabelas e tira os privilégios de `anon`/`authenticated`. Se o RLS já estiver ligado, só reforça.
 
+- `20261007030000`/`030100`, `040000`, `050000` (T-15 a T-17): coluna `client_id` + índice único, `revoked_sessions`, busca sem acento.
+- `20261007060000` a `060500` (T-19): 6 índices, **um por migration**, com `CREATE INDEX CONCURRENTLY` (não travam gravações). Medições em `docs/DB-INDEXES.md`.
+- `20261007070000_domain_checks` (T-19): 24 regras `CHECK` com `NOT VALID`. Valem para toda linha nova ou alterada e não conferem as antigas, então não falham por dado antigo.
+- `20261007070100_domain_checks_validate` (T-19): confere as linhas antigas. **Antes de aplicar em produção, rode `scripts/ops/t19-preflight.sql` (só leitura) e confirme que não volta nenhuma linha.** Se voltar, corrija os dados (com backup e sua aprovação) ou ajuste a lista na migration. Se o `migrate deploy` falhar nesta migration, as regras da anterior continuam valendo. Corrija o dado, rode `npx prisma migrate resolve --rolled-back 20261007070100_domain_checks_validate` e depois o `deploy` de novo.
+
 **Tabela nova daqui para frente:** a mesma migration precisa ter `ALTER TABLE "x" ENABLE ROW LEVEL SECURITY`. O teste `migrations-schema.test.ts` cobra isso.
 
 ## 5. Processo daqui para frente
@@ -71,6 +76,10 @@ Depois do passo 8, `npx prisma migrate deploy` aplica as que vieram depois do ba
 4. `npx prisma migrate dev`, só local.
 5. Produção: dump (INFRA §3.1) e depois `npx prisma migrate deploy` com a `DIRECT_URL`.
 6. **Nada de `db push` nem de SQL avulso em produção.** Se for inevitável, transforme em migration no mesmo dia.
+
+**Objetos que o Prisma não modela.** Se o SQL gerado no passo 2 tiver `DROP` de algum destes, apague essa linha antes de aplicar: os índices parciais `uniq_shift_instance_ativa` e `uniq_turno_ativo_por_operador`, as regras `chk_*` (T-19), a função `f_unaccent` e as extensões (T-17), e o RLS e as políticas (T-14). Índice comum novo vai **no schema** (`@@index`). O teste `db-constraints.test.ts` falha se uma migration criar um índice que não está no schema.
+
+**Valor novo em coluna de domínio** (papel, status, severidade, frequência...): além do código, crie uma migration que troca a regra (`DROP CONSTRAINT` + `ADD CONSTRAINT ... NOT VALID` + `VALIDATE`). O teste `db-constraints.test.ts` falha se o código gravar um valor que a regra do banco não aceita.
 
 O teste `src/lib/__tests__/migrations-schema.test.ts` falha se uma tabela ou coluna do schema não for criada por nenhuma migration, se uma migration tiver `DROP TABLE/COLUMN`/`TRUNCATE` sem o marcador `-- revisado: destrutivo`, ou se houver `;` em comentário.
 
