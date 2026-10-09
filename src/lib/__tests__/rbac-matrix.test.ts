@@ -26,16 +26,16 @@ const AREAS = {
 // Verdade esperada do negócio (matriz de permissões).
 const EXPECTED: Record<keyof typeof AREAS, Record<Role, boolean>> = {
   '/gestor/dashboard': {
-    OPERATOR: false, TECHNICIAN: false, MANAGER: true, MAINTENANCE: false, SUPER_ADMIN: true,
+    OPERATOR: false, TECHNICIAN: false, MANAGER: true, MAINTENANCE: false, SUPER_ADMIN: false,
   },
   '/tecnico/analises': {
-    OPERATOR: false, TECHNICIAN: true, MANAGER: true, MAINTENANCE: false, SUPER_ADMIN: true,
+    OPERATOR: false, TECHNICIAN: true, MANAGER: true, MAINTENANCE: false, SUPER_ADMIN: false,
   },
   '/operador/leituras': {
-    OPERATOR: true, TECHNICIAN: true, MANAGER: true, MAINTENANCE: false, SUPER_ADMIN: true,
+    OPERATOR: true, TECHNICIAN: true, MANAGER: true, MAINTENANCE: false, SUPER_ADMIN: false,
   },
   '/manutencao/preventivas': {
-    OPERATOR: false, TECHNICIAN: false, MANAGER: true, MAINTENANCE: true, SUPER_ADMIN: true,
+    OPERATOR: false, TECHNICIAN: false, MANAGER: true, MAINTENANCE: true, SUPER_ADMIN: false,
   },
   '/admin/plantas': {
     OPERATOR: false, TECHNICIAN: false, MANAGER: false, MAINTENANCE: false, SUPER_ADMIN: true,
@@ -52,10 +52,13 @@ describe('RBAC — matriz completa de acesso por área × perfil', () => {
     }
   }
 
-  it('SUPER_ADMIN acessa qualquer rota (inclusive áreas de outros perfis)', () => {
-    expect(isRouteAllowedForRole('/gestor/usuarios', 'SUPER_ADMIN')).toBe(true)
-    expect(isRouteAllowedForRole('/operador/turnos', 'SUPER_ADMIN')).toBe(true)
-    expect(isRouteAllowedForRole('/manutencao/corretivas', 'SUPER_ADMIN')).toBe(true)
+  it('SUPER_ADMIN só entra na área /admin e em rotas sem área; as telas dos perfis de planta ficam fora', () => {
+    for (const rota of ['/gestor/usuarios', '/operador/turnos', '/tecnico/analises', '/manutencao/corretivas']) {
+      expect(isRouteAllowedForRole(rota, 'SUPER_ADMIN'), rota).toBe(false)
+    }
+    for (const rota of ['/admin/plantas', '/admin/auditoria', '/trocar-senha', '/acesso-negado', '/api/logs']) {
+      expect(isRouteAllowedForRole(rota, 'SUPER_ADMIN'), rota).toBe(true)
+    }
   })
 
   it('MANAGER NÃO acessa a área de SUPER_ADMIN (/admin)', () => {

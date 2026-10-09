@@ -1,81 +1,64 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { permissionError, requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR, numeroBROpcional } from '@/lib/zod-ptbr'
+import { INVALIDO, parseNumeroBR } from '@/lib/number-ptbr'
 import { revalidatePath } from 'next/cache'
 import { addDays } from '@/lib/equipment-utils'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
+import { MAX_MANUAL_BYTES, mb } from '@/lib/upload-limits'
 
 
-async function requireTechnicianOrManager() {
-  const session = await auth()
-  if (!session || !['TECHNICIAN', 'MANAGER', 'MAINTENANCE'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const EquipamentoSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  category_id: z.string().min(1, 'Selecione a categoria'),
+  name: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  category_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione a categoria'),
   serial_number: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   location: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   installation_date: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').nullable(),
   ),
-  preventive_frequency_days: z.preprocess(
-    (v) => {
-      if (v === '' || v == null) return null
-      const n = parseInt(String(v), 10)
-      return isNaN(n) ? null : n
-    },
-    z.number({ error: 'Informe a frequência em dias' }).int().min(1, 'Mínimo de 1 dia'),
-  ),
+  preventive_frequency_days: numeroBR({ inteiro: true, min: 1, rotulo: 'A frequência', obrigatorio: 'Informe a frequência em dias' }),
   manufacturer: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   model_name: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   status: z.enum(['OPERATING', 'MAINTENANCE', 'INACTIVE', 'SCRAPPED']).default('OPERATING'),
   responsible_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
 })
 
 const CorretivaSchema = z.object({
-  description: z.string().min(5, 'Descreva o problema em pelo menos 5 caracteres'),
+  description: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(5, 'Descreva o problema em pelo menos 5 caracteres'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
     error: 'Selecione a prioridade',
   }),
-  start_date: z.string().min(1, 'Informe a data de início'),
+  start_date: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data de início'),
   notes: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(2000).nullable(),
   ),
-  estimated_cost: z.preprocess(
-    (v) => {
-      if (v === '' || v == null) return null
-      const n = parseFloat(String(v))
-      return isNaN(n) ? null : String(n)
-    },
-    z.string().nullable(),
-  ),
+  // T-16: antes "1.500,00" virava 1,5 (e texto inválido era ignorado em silêncio)
+  estimated_cost: numeroBROpcional({ min: 0, rotulo: 'O custo estimado' }).transform((n) => (n == null ? null : String(n))),
 })
 
 // ─── Form state types ─────────────────────────────────────────────────────────
@@ -98,7 +81,7 @@ export async function criarEquipamento(
   _prev: EquipamentoFormState,
   formData: FormData,
 ): Promise<EquipamentoFormState> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
   const parsed = EquipamentoSchema.safeParse({
     name:                      formData.get('name'),
@@ -116,8 +99,13 @@ export async function criarEquipamento(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
+
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'equipmentCategory', id: parsed.data.category_id },
+    { model: 'user', id: parsed.data.responsible_id, optional: true, message: 'Responsável inválido ou não autorizado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   // Trata upload de arquivos
   const photoFile = formData.get('photo_file') as File | null
@@ -128,15 +116,15 @@ export async function criarEquipamento(
 
   if (photoFile && photoFile.size > 0) {
     try {
-      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024)
+      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024, await getTenantId())
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
     }
   }
 
   if (manualFile && manualFile.size > 0) {
-    if (manualFile.size > 10 * 1024 * 1024) {
-      return { error: 'O manual deve ter no máximo 10 MB.' }
+    if (manualFile.size > MAX_MANUAL_BYTES) {
+      return { error: `O manual deve ter no máximo ${mb(MAX_MANUAL_BYTES)} (limite de envio da plataforma). Reduza o PDF e tente de novo.` }
     }
     const buffer = Buffer.from(await manualFile.arrayBuffer())
     // Confere a assinatura "%PDF" no início do arquivo, não só o Content-Type.
@@ -144,7 +132,7 @@ export async function criarEquipamento(
       return { error: 'O manual deve ser um arquivo PDF válido.' }
     }
     const filename = `${crypto.randomUUID()}.pdf`
-    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf')
+    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf', await getTenantId())
   }
 
   const firstScheduledDate = addDays(new Date(), parsed.data.preventive_frequency_days)
@@ -195,7 +183,7 @@ export async function editarEquipamento(
   _prev: EquipamentoFormState,
   formData: FormData,
 ): Promise<EquipamentoFormState> {
-  await requireTechnicianOrManager()
+  await requirePermission('equipment.maintain')
 
   const parsed = EquipamentoSchema.safeParse({
     name:                      formData.get('name'),
@@ -219,6 +207,12 @@ export async function editarEquipamento(
   })
   if (!equipment) return { error: 'Equipamento não encontrado.' }
 
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'equipmentCategory', id: parsed.data.category_id },
+    { model: 'user', id: parsed.data.responsible_id, optional: true, message: 'Responsável inválido ou não autorizado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
+
   // Trata upload de arquivos
   const photoFile = formData.get('photo_file') as File | null
   const manualFile = formData.get('manual_file') as File | null
@@ -228,15 +222,15 @@ export async function editarEquipamento(
 
   if (photoFile && photoFile.size > 0) {
     try {
-      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024)
+      photo_url = await saveImageUpload(photoFile, 'equipments', 5 * 1024 * 1024, await getTenantId())
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : 'Erro no upload da foto.' }
     }
   }
 
   if (manualFile && manualFile.size > 0) {
-    if (manualFile.size > 10 * 1024 * 1024) {
-      return { error: 'O manual deve ter no máximo 10 MB.' }
+    if (manualFile.size > MAX_MANUAL_BYTES) {
+      return { error: `O manual deve ter no máximo ${mb(MAX_MANUAL_BYTES)} (limite de envio da plataforma). Reduza o PDF e tente de novo.` }
     }
     const buffer = Buffer.from(await manualFile.arrayBuffer())
     // Confere a assinatura "%PDF" no início do arquivo, não só o Content-Type.
@@ -244,7 +238,7 @@ export async function editarEquipamento(
       return { error: 'O manual deve ser um arquivo PDF válido.' }
     }
     const filename = `${crypto.randomUUID()}.pdf`
-    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf')
+    manual_url = await saveUpload('equipments', filename, buffer, 'application/pdf', await getTenantId())
   }
 
   await prisma.equipment.updateMany({
@@ -279,7 +273,7 @@ export async function editarEquipamento(
 export async function toggleAtivoEquipamento(
   equipamentoId: string,
 ): Promise<{ error?: string }> {
-  await requireTechnicianOrManager()
+  await requirePermission('equipment.maintain')
 
   const equipment = await prisma.equipment.findFirst({ where: { id: equipamentoId , tenant_id: (await getTenantId()) },
     select: { is_active: true },
@@ -301,10 +295,9 @@ export async function toggleAtivoEquipamento(
 export async function concluirPreventiva(
   preventivaId: string,
 ): Promise<{ error?: string }> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const preventiva = await prisma.preventiveMaintenance.findFirst({ where: { id: preventivaId , tenant_id: (await getTenantId()) },
     include: { equipment: { select: { id: true, preventive_frequency_days: true } } },
@@ -330,7 +323,7 @@ export async function concluirPreventiva(
         equipment_id:   preventiva.equipment.id,
         type:           'PREVENTIVE',
         description:    preventiva.notes || 'Manutenção preventiva periódica concluída.',
-        performed_by:   session.user.name || session.user.email!,
+        performed_by:   ctx.name || ctx.email,
       }
     })
 
@@ -358,7 +351,7 @@ export async function registrarCorretiva(
   _prev: CorretivaFormState,
   formData: FormData,
 ): Promise<CorretivaFormState> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
   const parsed = CorretivaSchema.safeParse({
     description:    formData.get('description'),
@@ -371,8 +364,12 @@ export async function registrarCorretiva(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
+
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'equipment', id: equipamentoId, message: 'Equipamento não encontrado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   // Calcular data limite da OS baseada na prioridade
   const hoursMap = { LOW: 72, MEDIUM: 48, HIGH: 24, CRITICAL: 12 }
@@ -402,6 +399,8 @@ export async function registrarCorretiva(
 
 // ─── Corretiva: concluir ou cancelar ─────────────────────────────────────────
 
+const STATUS_CORRETIVA = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'VALIDATED', 'CANCELLED']
+
 export async function atualizarStatusCorretiva(
   corretivaId: string,
   status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'VALIDATED' | 'CANCELLED',
@@ -410,12 +409,25 @@ export async function atualizarStatusCorretiva(
     notes?: string
   }
 ): Promise<{ error?: string }> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('equipment.maintain')
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
+
+  // T-21: o tipo do TypeScript não vale em tempo de execução; a action é chamada pelo cliente
+  if (!STATUS_CORRETIVA.includes(status)) return { error: 'Status inválido.' }
+  if (payload?.notes && payload.notes.length > 2000) {
+    return { error: 'Nota muito longa (máximo 2000 caracteres).' }
+  }
 
   const tenantId = await getTenantId()
+
+  // T-16: custo digitado em português ("1.500,00"); antes ia cru para o Decimal e quebrava
+  let actualCost: string | undefined
+  if (payload?.actual_cost) {
+    const n = parseNumeroBR(payload.actual_cost)
+    if (n === INVALIDO || (n !== null && n < 0)) return { error: 'Custo inválido. Use, por exemplo, 1.500,00 ou 1500.00.' }
+    actualCost = n === null ? undefined : String(n)
+  }
 
   const corretiva = await prisma.correctiveMaintenance.findFirst({
     where: { id: corretivaId, tenant_id: tenantId },
@@ -424,7 +436,7 @@ export async function atualizarStatusCorretiva(
   if (!corretiva) return { error: 'Corretiva não encontrada.' }
 
   // Restrição de papéis
-  if (status === 'VALIDATED' && session.user.role !== 'MANAGER') {
+  if (status === 'VALIDATED' && permissionError(ctx, 'maintenance.validate')) {
     return { error: 'Apenas Gestores podem validar Ordens de Serviço concluídas.' }
   }
 
@@ -435,7 +447,7 @@ export async function atualizarStatusCorretiva(
       data: {
         status,
         end_date: (status === 'COMPLETED' || status === 'VALIDATED') ? new Date() : undefined,
-        actual_cost: payload?.actual_cost ? payload.actual_cost : undefined,
+        actual_cost: actualCost,
         notes: payload?.notes ? payload.notes : undefined,
       },
     })
@@ -452,7 +464,7 @@ export async function atualizarStatusCorretiva(
           equipment_id:   corretiva.equipment_id,
           type:           'CORRECTIVE',
           description:    `OS Concluída: ${corretiva.description}` + (payload?.notes ? ` (Resolução: ${payload.notes})` : ''),
-          cost:           payload?.actual_cost ? payload.actual_cost : (corretiva.estimated_cost ? String(corretiva.estimated_cost) : null),
+          cost:           actualCost ?? (corretiva.estimated_cost ? String(corretiva.estimated_cost) : null),
           performed_by:   respUser?.name || 'Responsável',
         }
       })

@@ -22,8 +22,8 @@ type Equipment = {
   model_name:                string | null
   status:                    string
   responsible_id:            string | null
-  photo_url:                 string | null
-  manual_url:                string | null
+  has_photo:                 boolean
+  has_manual:                boolean
 }
 
 const INITIAL: EquipamentoFormState = {}

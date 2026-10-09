@@ -6,7 +6,8 @@ import {
   LayoutDashboard,
   Wrench,
   AlertTriangle,
-  CalendarDays
+  CalendarDays,
+  Megaphone,
 } from 'lucide-react'
 
 type NavItem = {
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { type: 'title',   label: 'Operação' },
   { type: 'link',    label: 'Preventivas',         href: '/manutencao/preventivas', icon: <Wrench className="w-4 h-4" /> },
   { type: 'link',    label: 'Corretivas',          href: '/manutencao/corretivas', icon: <AlertTriangle className="w-4 h-4" /> },
+  { type: 'link',    label: 'Ocorrências',         href: '/manutencao/ocorrencias', icon: <Megaphone className="w-4 h-4" /> },
 
   { type: 'divider' },
 

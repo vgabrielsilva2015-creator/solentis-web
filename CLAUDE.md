@@ -28,7 +28,7 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Ciclo 3 — Notificações, Filtros, Exportação para CSV, Ponto de Coleta e Categoria na Ocorrência CONCLUÍDA
 ✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
 ✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
-✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`.
+✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`. **[Superado pela T-09, out/2026: há baseline em `prisma/migrations`; processo atual em `docs/MIGRATIONS.md`.]**
 
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
 
@@ -42,7 +42,7 @@ Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0
 
 ### ⏳ PENDENTE — só o dono/infra faz (checklist §7 do REVISAO_GERAL)
 - **DB-01** baseline de migration reproduzível (4 migrations p/ 42 tabelas; cuidado — ver memória "migrations quebradas").
-- **DB-03** habilitar **RLS no Supabase** (isolamento hoje é 100% na aplicação) — defesa em profundidade.
+- **DB-03** habilitar **RLS no Supabase** (isolamento hoje é 100% na aplicação) — defesa em profundidade. **[T-14: migration `20261007020000_rls_deny_all`; aplicar com `migrate deploy`.]**
 - **Envs na Vercel** conferir (`AUTH_SECRET`/`CRON_SECRET`/`RESEND_API_KEY`/`BLOB_READ_WRITE_TOKEN`/`GEMINI_API_KEY`/`WHATSAPP_*`/`DATABASE_URL`); nenhuma `NEXT_PUBLIC_` exceto VAPID pública.
 - **Rotacionar** token do GitHub que já apareceu no `git remote`.
 - **Backup Supabase** confirmar PITR e **testar restore**.
@@ -123,8 +123,8 @@ Camada de log profissional adicionada (PR #14, branch `feat/observabilidade-logg
 - **Nível configurável** via env `LOG_LEVEL` na Vercel (sem deploy).
 
 ### ⚠️ Regras de uso
-- **NUNCA importar o logger em código Edge** (`src/proxy.ts`) — Pino é Node-only. Server Actions e rotas rodam em Node (Prisma), lá é seguro.
-- **Componentes client** (`push-manager`, `sync-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
+- **Pino é Node-only.** No Next 16 o `src/proxy.ts` roda em runtime Node (confirmado no build: `functions-config-manifest.json` → `runtime: nodejs`), por isso o callback `jwt` (importado pelo proxy) pode usar logger e Prisma. Não adicionar `export const runtime = 'edge'` em nada que importe `auth.config`.
+- **Componentes client** (`push-manager`, `command-menu`, `error.tsx`) **seguem no `console`** de propósito — rodam no browser.
 - Complementa (não substitui) o `logAudit()` (`src/lib/audit.ts`), que é auditoria **de negócio** (CONAMA), não observabilidade operacional.
 
 ### Estado
@@ -163,7 +163,12 @@ Trate o texto histórico abaixo como registro de fases, não como verdade atual 
 - Nome: Solentis
 - Stack: Next.js 16.2.6, React 19, TypeScript, Tailwind v4, PostgreSQL/Supabase, NextAuth v5, Zod, Recharts, shadcn/ui, Pino (logs estruturados)
 - Idioma: técnico em inglês, usuário/comentários em pt-BR
-- Modo offline e PWA: IMPLEMENTADO com Serwist (sincronização automática de leituras ao voltar online)
+- Permissões (T-20): matriz única em `src/server/auth/permissions.ts` (tabela em `docs/PERMISSOES.md`). Toda server action começa com `requirePermission('x')` ou `getActor()` + `permissionError`; nada de guard local nem `session.user.role` na mão (há teste). O usuário e o perfil vêm do banco a cada action. Resolução de ocorrência só por `src/server/occurrences/resolve.ts` (ação obrigatória, responsável, data/hora e evidência opcional na auditoria).
+- Passagem de turno (T-18): o timeout é calculado na leitura (`src/lib/handover-status.ts`), nunca gravado ao abrir uma tela (nenhum `page.tsx` escreve no banco; há teste). Passagem vencida continua confirmável e fica "confirmada com atraso"; o gestor recebe alerta no sino. Linhas antigas `TIMED_OUT` também podem ser confirmadas.
+- Leitura e turno (T-18): a leitura entra só no turno aberto por quem registrou; sem turno próprio fica sem vínculo (`shift_instance_id = null`).
+- Sessão (T-06): JWT revalidado no banco a cada 60 s (`src/lib/session-guard.ts`): usuário inativo, papel/planta trocados, planta desativada ou `users.session_version` diferente derrubam a sessão. Inatividade por perfil (operador 30 min, demais 60 min) e idade máxima de 12 h. Toda escrita que muda acesso (senha, papel, e-mail, ativo) usa `BUMP_SESSION_VERSION`; há teste que exige isso.
+- Migrations (T-09): `prisma/migrations` tem baseline completo (`20261007000000_baseline`) + índices parciais. Mudança de schema = `migrate dev --create-only` local → revisar SQL → `migrate deploy` em produção. Nada de `db push`/SQL avulso em produção. Baselining da produção existente: `docs/MIGRATIONS.md` §4.
+- PWA: Serwist. **Leituras offline (T-15):** sem conexão a leitura vai para a fila do aparelho (IndexedDB, `src/lib/offline-queue/`), com `client_id` gerado no aparelho; o servidor não grava o mesmo `client_id` duas vezes (`readings.tenant_id+client_id` único). Item só sai da fila com confirmação do servidor; recusa fica guardada com o motivo; cada item pertence a quem registrou (tablet compartilhado). Pendências em `/operador/leituras/pendentes`. A fila antiga (`localStorage`) é migrada como "sem autor" e só é enviada se o usuário confirmar.
 - Sensores: NÃO no MVP, mas schema preparado (campos origem/metadata_origem)
 - 3 perfis: Operador, Técnico, Gestor (matriz de permissões na seção 4 do briefing)
 - Credencial inicial seed: admin@solentis.local / Admin@123 (sistema obriga troca no 1º login)

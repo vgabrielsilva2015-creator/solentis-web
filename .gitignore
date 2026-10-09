@@ -22,6 +22,12 @@
 .env*
 !.env.example
 
+# Segredos locais que NUNCA podem ir para o Git (T-08)
+docs/recovery-codes.txt
+*recovery-codes*
+*.pem
+*.key
+
 # Banco de dados
 *.db
 *.db-journal
@@ -39,6 +45,8 @@ uploads/
 
 # Backups locais
 backups/
+# dumps de banco (pg_dump) — contêm dados pessoais, nunca versionar
+*.dump
 
 # Debug
 npm-debug.log*
@@ -66,3 +74,7 @@ next-env.d.ts
 .vercel
 
 /src/generated/prisma
+
+# Códigos de recuperação/segredos pessoais: nunca versionar
+docs/recovery-codes.txt
+*recovery-codes*

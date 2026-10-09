@@ -3,8 +3,8 @@ const path = require('path');
 
 try {
   const handoff = fs.readFileSync('C:/Users/Vitor/Downloads/SOLENTIS-HANDOFF.md', 'utf8');
-  let claude = fs.readFileSync(path.resolve(__dirname, '../CLAUDE.md'), 'utf8');
-  let exportCompleto = fs.readFileSync(path.resolve(__dirname, '../docs/EXPORT_COMPLETO.md'), 'utf8');
+  const claude = fs.readFileSync(path.resolve(__dirname, '../CLAUDE.md'), 'utf8');
+  const exportCompleto = fs.readFileSync(path.resolve(__dirname, '../docs/EXPORT_COMPLETO.md'), 'utf8');
 
   const newClaude = claude + '\n\n' + handoff;
   fs.writeFileSync(path.resolve(__dirname, '../CLAUDE.md'), newClaude);

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils'
 import { MapPin, Beaker } from 'lucide-react'
 import { compressFilesInInput, sumBytes, MAX_TOTAL_UPLOAD_BYTES, formatMB } from '@/lib/compress-image'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
+import { newClientId, type QueuedReading } from '@/lib/offline-queue/core'
+import { idbAvailable, idbStore } from '@/lib/offline-queue/idb-store'
+import { numeroOuNaN } from '@/lib/number-ptbr'
 
 const DRAFT_KEY = 'reading_draft'
 
@@ -23,6 +26,8 @@ type Parameter = {
 }
 
 type Props = {
+  /** T-15: dono das leituras guardadas na fila offline deste aparelho */
+  userId:           string
   collectionPoints: CollectionPoint[]
   parameters:       Parameter[]
   // ponto de coleta → ids de parâmetros configurados pelo gestor (cronograma)
@@ -59,6 +64,7 @@ const chipActive = (active: boolean) =>
     : 'bg-muted border-border text-foreground'
 
 export function ReadingForm({
+  userId,
   collectionPoints,
   parameters,
   allowedParams,
@@ -70,7 +76,11 @@ export function ReadingForm({
   presetParamUnit,
 }: Props) {
   const router = useRouter()
-  const [state, formAction, isPending] = useActionState(registrarLeitura, initialState)
+  const [state, setState]          = useState<LeituraFormState>(initialState)
+  const [isPending, startTransition] = useTransition()
+  // T-15: id desta leitura, gerado no aparelho. Reenviar o mesmo id não duplica.
+  const [clientId, setClientId]      = useState(() => newClientId())
+  const [guardadaOffline, setGuardadaOffline] = useState(false)
 
   // Controle de hidratação: impede salvar rascunho com estado vazio antes de carregar o draft
   const [mounted, setMounted]     = useState(false)
@@ -82,6 +92,53 @@ export function ReadingForm({
   const [recordedAt, setRecordedAt]               = useState('')
   const [compressing, setCompressing]             = useState(false)
   const [totalError, setTotalError]               = useState<string | null>(null)
+  const [offlineError, setOfflineError]           = useState(false)
+
+  // ── T-15: sem conexão, a leitura vai para a fila do aparelho ───────────────
+  async function guardarNaFila(fd: FormData): Promise<boolean> {
+    if (!idbAvailable()) return false
+    const fields: Record<string, string> = {}
+    fd.forEach((v, k) => { if (typeof v === 'string' && k !== 'client_id') fields[k] = v })
+    const foto = fd.get('photo')
+    const item: QueuedReading = {
+      client_id:   clientId,
+      owner:       userId,
+      fields,
+      photo:       foto instanceof File && foto.size > 0 ? foto : null,
+      photo_name:  foto instanceof File && foto.size > 0 ? foto.name : null,
+      created_at:  Date.now(),
+      attempts:    0,
+      next_try_at: 0,
+      status:      'pendente',
+    }
+    try {
+      await idbStore.put(item)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  function limparParaProxima() {
+    localStorage.removeItem(DRAFT_KEY)
+    setValueStr('')
+    setNotes('')
+    setRecordedAt(formatDatetimeLocal(new Date()))
+    setClientId(newClientId())
+    const foto = document.getElementById('photo') as HTMLInputElement | null
+    if (foto) foto.value = ''
+  }
+
+  async function onOffline(fd: FormData) {
+    if (await guardarNaFila(fd)) {
+      setOfflineError(false)
+      setGuardadaOffline(true)
+      limparParaProxima()
+    } else {
+      // aparelho sem IndexedDB (modo privado antigo): comportamento seguro da T-01
+      setOfflineError(true)
+    }
+  }
 
   // ── Carregar rascunho do localStorage na montagem ──────────────────────────
   useEffect(() => {
@@ -156,7 +213,7 @@ export function ReadingForm({
   const nonConformant: boolean | null = (() => {
     if (!selectedParam || valueStr === '') return null
     // Aceita vírgula decimal (padrão brasileiro): "7,2" → 7.2
-    const v = parseFloat(valueStr.replace(',', '.'))
+    const v = numeroOuNaN(valueStr)
     if (isNaN(v)) return null
     return calcularNaoConformidade(v, selectedParam.min_limit, selectedParam.max_limit) ?? null
   })()
@@ -171,10 +228,6 @@ export function ReadingForm({
 
   return (
     <div className="space-y-5">
-      <Link href="/operador/leituras" className="inline-block text-sm text-muted-foreground hover:text-foreground">
-        ← Voltar para leituras
-      </Link>
-
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">
           {lockedMode ? 'Registrar Leitura' : 'Nova leitura'}
@@ -187,38 +240,31 @@ export function ReadingForm({
       </div>
 
       <form
-        action={formAction}
         onSubmit={(e) => {
-          if (compressing) { e.preventDefault(); return }
-          if (!navigator.onLine) {
-            e.preventDefault()
-            const offlineQueueRaw = localStorage.getItem('solentis_offline_leituras')
-            const queue = offlineQueueRaw ? JSON.parse(offlineQueueRaw) : []
-            
-            queue.push({
-              collection_point_id: collectionPointId,
-              parameter_id: parameterId,
-              value: valueStr,
-              unit: selectedParam?.unit,
-              notes,
-              recorded_at: recordedAt
-            })
-            
-            localStorage.setItem('solentis_offline_leituras', JSON.stringify(queue))
-            localStorage.removeItem(DRAFT_KEY)
-            
-            alert('Você está offline. Leitura salva localmente e será sincronizada assim que a internet voltar.')
-            router.push('/operador/leituras')
-            return
-          }
-          // Online: o Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL antes de enviar.
+          e.preventDefault()
+          if (compressing || isPending) return
+          setGuardadaOffline(false)
+          // O Vercel rejeita requisições acima de 4,5 MB; valida o TOTAL antes de enviar.
           const input = e.currentTarget.elements.namedItem('photo') as HTMLInputElement | null
           const files = input?.files ? Array.from(input.files) : []
           const total = sumBytes(files)
           if (total > MAX_TOTAL_UPLOAD_BYTES) {
-            e.preventDefault()
             setTotalError(`A foto tem ${formatMB(total)} e o limite por envio é ${formatMB(MAX_TOTAL_UPLOAD_BYTES)}. Tente outra foto.`)
+            return
           }
+          const fd = new FormData(e.currentTarget)
+          fd.set('client_id', clientId)
+          if (!navigator.onLine) { void onOffline(fd); return }
+          setOfflineError(false)
+          startTransition(async () => {
+            try {
+              setState(await registrarLeitura(initialState, fd))
+            } catch {
+              // a rede caiu durante o envio: guarda com o MESMO client_id; se o
+              // servidor chegou a gravar, o reenvio não duplica.
+              await onOffline(fd)
+            }
+          })
         }}
         className="space-y-5"
       >
@@ -439,6 +485,20 @@ export function ReadingForm({
             <p className="rounded-md border border-red-800/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">{totalError}</p>
           )}
         </div>
+
+        {offlineError && (
+          <p aria-live="polite" className="rounded-md border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-400">
+            Sem conexão com a internet. A leitura não foi enviada. Os dados continuam preenchidos: envie de novo quando a conexão voltar.
+          </p>
+        )}
+
+        {guardadaOffline && (
+          <p aria-live="polite" data-testid="leitura-guardada" className="rounded-md border border-sky-900/50 bg-sky-950/30 px-3 py-2 text-sm text-sky-300">
+            Sem conexão: a leitura ficou guardada neste aparelho e será enviada sozinha quando a internet voltar.
+            Acompanhe em{' '}
+            <Link href="/operador/leituras/pendentes" className="underline">leituras pendentes</Link>.
+          </p>
+        )}
 
         {/* ── Submit ─────────────────────────────────────────────────────── */}
         <Button

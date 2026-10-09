@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Bell, AlertTriangle, CheckSquare, Wrench } from 'lucide-react'
+import { Bell, AlertTriangle, CheckSquare, Wrench, ArrowLeftRight } from 'lucide-react'
 import Link from 'next/link'
 import { getNotifications, type NotificationItem } from '@/app/actions/notifications'
 import { cn } from '@/lib/utils'
@@ -79,11 +79,13 @@ export function NotificationBell() {
                         "mt-0.5 shrink-0 rounded-full p-1.5",
                         item.type === 'OCCURRENCE' && "bg-red-900/50 text-red-400",
                         item.type === 'TASK' && "bg-amber-900/50 text-amber-400",
-                        item.type === 'MAINTENANCE' && "bg-sky-900/50 text-sky-400"
+                        item.type === 'MAINTENANCE' && "bg-sky-900/50 text-sky-400",
+                        item.type === 'HANDOVER' && "bg-orange-900/50 text-orange-400"
                       )}>
                         {item.type === 'OCCURRENCE' && <AlertTriangle className="h-4 w-4" />}
                         {item.type === 'TASK' && <CheckSquare className="h-4 w-4" />}
                         {item.type === 'MAINTENANCE' && <Wrench className="h-4 w-4" />}
+                        {item.type === 'HANDOVER' && <ArrowLeftRight className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 space-y-1">
                         <p className="text-xs font-medium text-foreground">

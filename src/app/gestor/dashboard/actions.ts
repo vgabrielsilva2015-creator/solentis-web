@@ -1,14 +1,12 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 
 export async function obterDetalhesPonto(pontoId: string) {
-  const session = await auth()
-  if (!session) {
-    throw new Error('Não autorizado')
-  }
+  // T-20: antes aceitava qualquer perfil logado (o painel é só do gestor)
+  await requirePermission('dashboard.view')
   const tenant_id = await getTenantId()
 
   const ponto = await prisma.collectionPoint.findFirst({
@@ -95,7 +93,7 @@ export async function obterDetalhesPonto(pontoId: string) {
 
   let sparklineData: { value: number; date: Date }[] = []
   let parameterName = 'Parâmetro'
-  let limits = { min: null as number | null, max: null as number | null }
+  const limits = { min: null as number | null, max: null as number | null }
 
   if (parametroMaisComum.length > 0 && parametroMaisComum[0].parameter_id) {
     const paramId = parametroMaisComum[0].parameter_id

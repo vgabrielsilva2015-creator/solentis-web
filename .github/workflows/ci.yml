@@ -57,3 +57,114 @@ jobs:
 
       - name: Verificação de tipos (TypeScript)
         run: npx tsc --noEmit
+
+      # T-29: lint passa a bloquear (0 erros; os avisos continuam listados). Antes tinha 192 erros.
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      # T-29: o build também bloqueia o merge. Variáveis abaixo são só placeholders para o build
+      # não reclamar de env ausente; não conectam a lugar nenhum.
+      - name: Build (Next.js)
+        run: npm run build
+        env:
+          AUTH_SECRET: ci-placeholder-nao-e-segredo-real-0123456789abcdef
+          NEXTAUTH_URL: http://localhost:3000
+
+  # T-28 — testes de integração: Postgres de verdade, migrations aplicadas do zero.
+  # O banco é efêmero (serviço do próprio job); os testes se recusam a rodar em outro lugar
+  # (src/test/db.ts: host local + nome terminando em _int/_test/_ci).
+  integracao:
+    name: Integração (Postgres + migrations)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: solentis_int
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d solentis_int"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # placeholders para o Prisma; o banco real dos testes vem de INTEGRATION_DATABASE_URL
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/solentis_int?schema=public"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/solentis_int?schema=public"
+      INTEGRATION_DATABASE_URL: "postgresql://ci:ci@localhost:5432/solentis_int?schema=public"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Aplicar as migrations do zero (valida o baseline)
+        run: npx prisma migrate deploy
+      - name: Testes de integração
+        run: npm run test:integration
+
+  # T-29 — varredura de segredos no histórico e revisão de dependências novas em PRs.
+  seguranca:
+    name: Segurança (segredos + dependências)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks (segredos no código e no histórico)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Revisão de dependências (só em PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  # T-29 — E2E (Playwright) contra o app construído neste job, com Postgres de serviço e o seed.
+  # NÃO VERIFICADO: ainda não rodou no GitHub. Por isso `continue-on-error`: aparece no PR mas não
+  # bloqueia. Quando a primeira execução ficar verde, remova a linha para torná-lo obrigatório.
+  e2e:
+    name: E2E (smoke)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: solentis_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d solentis_e2e_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/solentis_e2e_test?schema=public"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/solentis_e2e_test?schema=public"
+      AUTH_SECRET: ci-placeholder-nao-e-segredo-real-0123456789abcdef
+      NEXTAUTH_URL: http://localhost:3000
+      CRON_SECRET: ci-cron-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npx prisma db seed
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Subir o app e rodar o smoke
+        run: |
+          npm run start &
+          npx --yes wait-on http://localhost:3000/login --timeout 60000
+          npx playwright test smoke

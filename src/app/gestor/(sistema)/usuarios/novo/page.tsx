@@ -118,6 +118,8 @@ export default function NovoUsuarioPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="w-full flex-1 border-border text-foreground hover:bg-muted">
+                {/* <a> de propósito: recarrega a página e zera o formulário (um <Link> para a mesma rota manteria o estado) */}
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                 <a href="/gestor/usuarios/novo">
                   Criar outro
                 </a>

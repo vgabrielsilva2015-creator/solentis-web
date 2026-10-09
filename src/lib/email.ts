@@ -34,7 +34,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams): Promise
 
     // Dev: simula o envio para não bloquear o fluxo local.
     logger.info(
-      { to, subject, htmlPreview: html.slice(0, 120), component: 'email' },
+      { toDomains: [to].flat().map((a) => a.split('@')[1] ?? null), subject, component: 'email' },
       'Envio de e-mail simulado (RESEND_API_KEY ausente em dev)',
     )
     return { success: true, simulated: true }

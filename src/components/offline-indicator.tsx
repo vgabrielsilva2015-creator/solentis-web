@@ -28,7 +28,7 @@ export function OfflineIndicator() {
   return (
     <div className="bg-red-500/90 text-white px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium z-50 sticky top-0">
       <WifiOff className="w-4 h-4" />
-      <span>Você está offline. O modo de leitura local está ativado.</span>
+      <span>Sem conexão. Leituras e registros só podem ser enviados quando a internet voltar.</span>
     </div>
   )
 }

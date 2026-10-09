@@ -57,6 +57,7 @@ export default async function NovaLeituraPage({
     <main className="mx-auto max-w-lg px-4 py-6 space-y-4">
       <BackButton href="/operador/leituras" label="Leituras" />
       <ReadingForm
+        userId={session.user.id!}
         collectionPoints={collectionPoints}
         parameters={parameters}
         allowedParams={allowedParams}

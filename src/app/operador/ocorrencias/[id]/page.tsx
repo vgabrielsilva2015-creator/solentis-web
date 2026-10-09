@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Clock, AlertTriangle, User, CheckCircle2, History, MapPin } from 'lucide-react'
+import { ArrowLeft, Clock, AlertTriangle, User, History, MapPin } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { SEVERITY_LABEL, OCCURRENCE_STATUS_LABEL, OCCURRENCE_STATUS_COLOR } from '@/lib/labels'
-import { resolverOcorrencia } from '../actions'
+import { ResolveForm } from '@/components/occurrences/resolve-form'
 import { OccurrenceTimeline } from '@/components/occurrence-timeline'
 import { PhotoGallery } from '@/components/ui/photo-gallery'
 
@@ -23,7 +23,8 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
       responsible: { select: { name: true } },
       resolver: { select: { name: true } },
       collection_point: { select: { name: true } },
-      photos: { select: { id: true }, take: 3 },
+      photos: { where: { kind: 'REPORT' }, select: { id: true }, take: 3 },
+      _count: { select: { photos: { where: { kind: 'RESOLUTION' } } } },
       comments: {
         include: {
           user: { select: { name: true, role: true } }
@@ -119,32 +120,11 @@ export default async function OperadorOcorrenciaDetailPage(props: { params: Prom
               resolvedAt={occurrence.resolved_at}
               resolverName={occurrence.resolver?.name}
               resolutionNotes={occurrence.resolution_notes}
+              evidenceUrl={occurrence._count.photos > 0 ? `/api/occurrences/${occurrence.id}/photo?kind=RESOLUTION` : null}
               comments={occurrence.comments}
             />
 
-            {/* Formulário de Resolução via Server Action */}
-            {occurrence.status !== 'RESOLVED' && (
-              <div className="mt-6 pt-6 border-t border-border">
-                <form className="space-y-4" action={resolverOcorrencia}>
-                  <input type="hidden" name="id" value={occurrence.id} />
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Adicionar Notas de Resolução</label>
-                    <textarea 
-                      name="notes"
-                      className="w-full p-3 rounded-lg border border-border bg-card text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-xs" 
-                      rows={3} 
-                      placeholder="Descreva o que foi feito para resolver o problema..."
-                    ></textarea>
-                  </div>
-                  <div className="flex justify-end">
-                    <button type="submit" className="px-4 py-2 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Marcar como Resolvida
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
+            {occurrence.status !== 'RESOLVED' && <ResolveForm ocorrenciaId={occurrence.id} />}
           </div>
         </div>
 

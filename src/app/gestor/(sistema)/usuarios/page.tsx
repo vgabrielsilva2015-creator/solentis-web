@@ -44,6 +44,7 @@ export default async function UsuariosPage({
   const totalCount = await prisma.user.count({
     where: {
       tenant_id,
+      role: { not: 'SUPER_ADMIN' }, // contas da plataforma não são do cliente
       ...(search
         ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }] }
         : {}),
@@ -55,6 +56,7 @@ export default async function UsuariosPage({
   const users = await prisma.user.findMany({
     where: {
       tenant_id,
+      role: { not: 'SUPER_ADMIN' }, // contas da plataforma não são do cliente
       ...(search
         ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }] }
         : {}),

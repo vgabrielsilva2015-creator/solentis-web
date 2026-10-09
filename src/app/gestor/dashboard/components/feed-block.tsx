@@ -1,5 +1,6 @@
 'use client'
 
+import type { DashboardFeedItem, DashboardMaintenanceItem } from '../types'
 import React from 'react'
 import { F, cardFrame, miniEmpty, icon } from './ui-helpers'
 import Link from 'next/link'
@@ -10,8 +11,8 @@ interface FeedBlockProps {
     internal: { done: number; scheduled: number }
     external: { done: number; scheduled: number }
   }
-  dbFeed: any[]
-  dbMaintenance: any[]
+  dbFeed: DashboardFeedItem[]
+  dbMaintenance: DashboardMaintenanceItem[]
 }
 
 export function FeedBlock({

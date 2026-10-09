@@ -5,6 +5,7 @@ import { BackButton } from '@/components/back-button'
 import { ConcludeButton } from '@/app/tecnico/equipamentos/[id]/conclude-button'
 import { StatusButton } from '@/app/tecnico/equipamentos/[id]/status-button'
 import { getTenantId } from '@/lib/tenant'
+import type { ComponentProps } from 'react'
 
 function formatDate(d: Date | null): string {
   if (!d) return '—'
@@ -275,7 +276,7 @@ export default async function ManutencaoEquipamentoDetailPage({
 
                     <StatusButton
                       corretivaId={c.id}
-                      currentStatus={c.status as any}
+                      currentStatus={c.status as ComponentProps<typeof StatusButton>['currentStatus']}
                       userRole={session.user.role}
                       estimatedCost={c.estimated_cost ? Number(c.estimated_cost) : null}
                       initialNotes={c.notes}

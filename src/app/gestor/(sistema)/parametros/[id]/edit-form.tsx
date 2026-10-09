@@ -106,7 +106,7 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
                 Limite mínimo <span className="text-muted-foreground font-normal">(opcional)</span>
               </label>
               <Input
-                id="min_limit" name="min_limit" type="number" step="0.01"
+                id="min_limit" name="min_limit" type="text" autoComplete="off" inputMode="decimal"
                 defaultValue={parametro.min_limit ?? ''}
                 disabled={isPending}
                 className="border-border bg-muted text-foreground focus-visible:ring-ring"
@@ -118,7 +118,7 @@ export function EditParametroForm({ parametro }: { parametro: Parametro }) {
                 Limite máximo <span className="text-muted-foreground font-normal">(opcional)</span>
               </label>
               <Input
-                id="max_limit" name="max_limit" type="number" step="0.01"
+                id="max_limit" name="max_limit" type="text" autoComplete="off" inputMode="decimal"
                 defaultValue={parametro.max_limit ?? ''}
                 disabled={isPending}
                 className="border-border bg-muted text-foreground focus-visible:ring-ring"

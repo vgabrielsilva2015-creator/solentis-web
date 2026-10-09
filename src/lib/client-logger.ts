@@ -9,7 +9,7 @@
 
 type LogPayload = {
   message: string
-  err?: any
+  err?: unknown
   context?: Record<string, unknown>
 }
 
@@ -55,6 +55,6 @@ async function sendLogToServer(level: 'info' | 'warn' | 'error' | 'fatal', paylo
 export const clientLogger = {
   info: (message: string, context?: Record<string, unknown>) => sendLogToServer('info', { message, context }),
   warn: (message: string, context?: Record<string, unknown>) => sendLogToServer('warn', { message, context }),
-  error: (message: string, err?: any, context?: Record<string, unknown>) => sendLogToServer('error', { message, err, context }),
-  fatal: (message: string, err?: any, context?: Record<string, unknown>) => sendLogToServer('fatal', { message, err, context }),
+  error: (message: string, err?: unknown, context?: Record<string, unknown>) => sendLogToServer('error', { message, err, context }),
+  fatal: (message: string, err?: unknown, context?: Record<string, unknown>) => sendLogToServer('fatal', { message, err, context }),
 }

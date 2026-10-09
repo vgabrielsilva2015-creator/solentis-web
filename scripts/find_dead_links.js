@@ -13,7 +13,7 @@ function findRoutes(dir) {
     if (fs.statSync(fullPath).isDirectory()) {
       findRoutes(fullPath);
     } else if (file === 'page.tsx') {
-      let route = fullPath.replace(appDir, '').replace(/\\\\/g, '/').replace('/page.tsx', '') || '/';
+      const route = fullPath.replace(appDir, '').replace(/\\\\/g, '/').replace('/page.tsx', '') || '/';
       routes.add(route);
     }
   }
@@ -56,11 +56,11 @@ console.log(Array.from(links).sort().join('\n'));
 // check which links do not match any route
 const deadLinks = [];
 links.forEach(link => {
-  let cleanLink = link.split('?')[0];
+  const cleanLink = link.split('?')[0];
   let matched = false;
   for (const route of routes) {
-    let regexStr = '^' + route.replace(/\[.*?\]/g, '[^/]+') + '$';
-    let regex = new RegExp(regexStr);
+    const regexStr = '^' + route.replace(/\[.*?\]/g, '[^/]+') + '$';
+    const regex = new RegExp(regexStr);
     if (regex.test(cleanLink)) {
       matched = true;
       break;

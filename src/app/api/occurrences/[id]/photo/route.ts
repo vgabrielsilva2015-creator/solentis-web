@@ -19,10 +19,14 @@ export async function GET(
   const indexStr = reqUrl.searchParams.get('index') || '0'
   const index = parseInt(indexStr, 10)
 
+  // T-20: ?kind=RESOLUTION abre a evidência da resolução; sem parâmetro, as fotos do registro
+  const kind = reqUrl.searchParams.get('kind') === 'RESOLUTION' ? 'RESOLUTION' : 'REPORT'
+
   const photos = await prisma.occurrencePhoto.findMany({
     where: {
       occurrence_id: id,
       tenant_id:     (await getTenantId()),
+      kind,
     },
     select: { filename: true, mime_type: true },
     orderBy: { uploaded_at: 'asc' }
@@ -34,7 +38,7 @@ export async function GET(
     return NextResponse.json({ error: 'Foto não encontrada' }, { status: 404 })
   }
 
-  const buffer = await readUpload('occurrences', photo.filename)
+  const buffer = await readUpload('occurrences', photo.filename, await getTenantId())
   if (!buffer) {
     return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 })
   }

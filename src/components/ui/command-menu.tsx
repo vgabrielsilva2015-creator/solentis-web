@@ -1,5 +1,6 @@
 'use client'
 
+import type { SearchHit } from '@/lib/search'
 import * as React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Command } from 'cmdk'
@@ -25,7 +26,7 @@ export function CommandMenu() {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const debouncedSearch = useDebounce(search, 300)
-  const [results, setResults] = React.useState<any[]>([])
+  const [results, setResults] = React.useState<SearchHit[]>([])
   const [loading, setLoading] = React.useState(false)
 
   // Toggle the menu when ⌘K is pressed
@@ -83,8 +84,9 @@ export function CommandMenu() {
   const isGestor = pathname.startsWith('/gestor')
   const isTecnico = pathname.startsWith('/tecnico')
   const isOperador = pathname.startsWith('/operador')
+  const isManutencao = pathname.startsWith('/manutencao')
 
-  if (!isGestor && !isTecnico && !isOperador) return null
+  if (!isGestor && !isTecnico && !isOperador && !isManutencao) return null
 
   const getIconForType = (type: string) => {
     if (type === 'equipment') return <Wrench className="h-4 w-4" />
@@ -121,7 +123,7 @@ export function CommandMenu() {
 
           {!loading && search.length >= 2 && results.length === 0 && (
             <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-              Nenhum resultado encontrado para "{search}".
+              Nenhum resultado encontrado para &quot;{search}&quot;.
             </Command.Empty>
           )}
 
@@ -186,7 +188,7 @@ export function CommandMenu() {
                   <Command.Item onSelect={() => runCommand(() => router.push('/gestor/relatorios'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <FileText className="h-4 w-4 text-emerald-500" /> Gerar Relatório de Auditoria
                   </Command.Item>
-                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/laudos/importar'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
+                  <Command.Item onSelect={() => runCommand(() => router.push('/gestor/importacao'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">
                     <UploadCloud className="h-4 w-4 text-blue-500" /> Importar Laudos com IA
                   </Command.Item>
                   <Command.Item onSelect={() => runCommand(() => router.push('/gestor/ocorrencias'))} className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-muted rounded-md aria-selected:bg-muted">

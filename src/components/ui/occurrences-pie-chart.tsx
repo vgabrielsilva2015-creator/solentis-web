@@ -26,7 +26,7 @@ export function OccurrencesPieChart({ data }: { data: OccurrencesData[] }) {
     )
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ name: string; value: number; payload: OccurrencesData }> }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-card border border-border p-2 rounded shadow-xl text-sm">

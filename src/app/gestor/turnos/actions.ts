@@ -1,27 +1,22 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getTenantId } from '@/lib/tenant'
+import { assertOwned } from '@/lib/ownership'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/login')
-}
 
 const TurnoSchema = z.object({
-  name:                     z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  start_time:               z.string().regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
-  end_time:                 z.string().regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
+  name:                     z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  start_time:               z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
+  end_time:                 z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').regex(/^\d{2}:\d{2}$/, 'Formato inválido (HH:MM)'),
   crosses_midnight:         z.preprocess((v) => v === 'on', z.boolean()),
-  handover_timeout_minutes: z.preprocess(
-    (v) => parseInt(String(v), 10),
-    z.number().int().min(30, 'Mínimo 30 minutos').max(480, 'Máximo 480 minutos (8h)'),
-  ),
+  handover_timeout_minutes: numeroBR({ inteiro: true, min: 30, max: 480, rotulo: 'O tempo de passagem (min)', obrigatorio: 'Informe o tempo de passagem em minutos' }),
 })
 
 export type TurnoFormState = {
@@ -34,7 +29,7 @@ export async function criarTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  await requireManager()
+  await requirePermission('shift.manage')
 
   const parsed = TurnoSchema.safeParse({
     name:                     formData.get('name'),
@@ -83,7 +78,7 @@ export async function editarTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  await requireManager()
+  await requirePermission('shift.manage')
 
   const parsed = TurnoSchema.safeParse({
     name:                     formData.get('name'),
@@ -127,7 +122,7 @@ export async function editarTurno(
 }
 
 export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> {
-  await requireManager()
+  await requirePermission('shift.manage')
   const turno = await prisma.shift.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
   if (!turno) return { error: 'Turno não encontrado.' }
   await prisma.shift.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !turno.is_active } })
@@ -137,8 +132,9 @@ export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> 
 }
 
 export async function toggleDaySchedule(shiftId: string, days_of_week: number[]) {
-  await requireManager()
+  await requirePermission('shift.manage')
   const tenant_id = await getTenantId()
+  await assertOwned(tenant_id, { model: 'shift', id: shiftId, message: 'Turno não encontrado.' })
 
   const schedule = await prisma.shiftSchedule.findFirst({
     where: { shift_id: shiftId, tenant_id }

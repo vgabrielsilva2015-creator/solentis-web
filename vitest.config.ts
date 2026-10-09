@@ -6,6 +6,8 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['src/**/*.test.ts'],
+    // integração (T-28) tem config e comando próprios: precisa de Postgres
+    exclude: ['**/node_modules/**', 'src/**/*.int.test.ts'],
     // bcrypt custo 12 pode estourar o default (5s) quando as suítes rodam em
     // paralelo (ex.: no CI com --no-cache). Margem maior evita falha flaky.
     testTimeout: 20000,

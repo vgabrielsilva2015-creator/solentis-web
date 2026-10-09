@@ -1,0 +1,267 @@
+{
+ "(auth)/actions.ts#resetPassword": "PUBLICO",
+ "(auth)/actions.ts#sendPasswordResetLink": "PUBLICO",
+ "(auth)/login/actions.ts#loginAction": "PUBLICO",
+ "(auth)/trocar-senha/actions.ts#trocarSenhaAction": "LOGADO",
+ "actions/notifications.ts#getNotifications": "LOGADO",
+ "admin/plantas/actions.ts#criarPlanta": [
+  "SUPER_ADMIN"
+ ],
+ "admin/plantas/actions.ts#criarUsuarioPlanta": [
+  "SUPER_ADMIN"
+ ],
+ "admin/plantas/actions.ts#editarPlanta": [
+  "SUPER_ADMIN"
+ ],
+ "admin/plantas/actions.ts#resetarSenhaUsuario": [
+  "SUPER_ADMIN"
+ ],
+ "admin/plantas/actions.ts#toggleAtivoPlanta": [
+  "SUPER_ADMIN"
+ ],
+ "admin/plantas/actions.ts#toggleAtivoUsuario": [
+  "SUPER_ADMIN"
+ ],
+ "components/sign-out-action.ts#handleSignOut": "LOGADO",
+ "gestor/(manutencao)/categorias/actions.ts#criarCategoria": [
+  "MANAGER"
+ ],
+ "gestor/(manutencao)/categorias/actions.ts#editarCategoria": [
+  "MANAGER"
+ ],
+ "gestor/(manutencao)/categorias/actions.ts#toggleAtivoCategoria": [
+  "MANAGER"
+ ],
+ "gestor/(manutencao)/manutencao/actions.ts#agendarPreventiva": [
+  "MANAGER"
+ ],
+ "gestor/(manutencao)/manutencao/actions.ts#criarCorretiva": [
+  "MANAGER"
+ ],
+ "gestor/(ocorrencias)/prazos-ocorrencia/actions.ts#atualizarPrazos": [
+  "MANAGER"
+ ],
+ "gestor/importacao/actions.ts#createParameterFromImport": [
+  "MANAGER"
+ ],
+ "gestor/importacao/actions.ts#extractDataFromPDF": [
+  "MANAGER"
+ ],
+ "gestor/importacao/actions.ts#getMappingContext": [
+  "MANAGER"
+ ],
+ "gestor/importacao/actions.ts#saveMappedReadings": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/cronograma/actions.ts#deleteMonitoringSchedule": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/cronograma/actions.ts#toggleMonitoringSchedule": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/cronograma/novo/actions.ts#createMonitoringSchedule": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/parametros/actions.ts#carregarParametro": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/parametros/actions.ts#criarParametro": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/parametros/actions.ts#editarParametro": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/parametros/actions.ts#toggleAtivoParametro": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/pontos-de-coleta/actions.ts#criarPontoColeta": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/pontos-de-coleta/actions.ts#editarPontoColeta": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/pontos-de-coleta/actions.ts#toggleAtivoPontoColeta": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/relatorios/actions.ts#getReportData": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/usuarios/actions.ts#criarUsuario": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/usuarios/actions.ts#editarUsuario": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/usuarios/actions.ts#resetarSenha": [
+  "MANAGER"
+ ],
+ "gestor/(sistema)/usuarios/actions.ts#toggleAtivo": [
+  "MANAGER"
+ ],
+ "gestor/dashboard/actions.ts#obterDetalhesPonto": "LOGADO",
+ "gestor/produtos-quimicos/actions.ts#criarProduto": [
+  "MANAGER"
+ ],
+ "gestor/produtos-quimicos/actions.ts#editarProduto": [
+  "MANAGER"
+ ],
+ "gestor/produtos-quimicos/actions.ts#excluirProduto": [
+  "MANAGER"
+ ],
+ "gestor/produtos-quimicos/actions.ts#registrarEntrada": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "gestor/produtos-quimicos/actions.ts#toggleAtivoProduto": [
+  "MANAGER"
+ ],
+ "gestor/turnos/[id]/tarefas-padrao/actions.ts#atualizarTemplate": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "gestor/turnos/[id]/tarefas-padrao/actions.ts#criarTemplate": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "gestor/turnos/[id]/tarefas-padrao/actions.ts#desativarTemplate": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "gestor/turnos/actions.ts#criarTurno": [
+  "MANAGER"
+ ],
+ "gestor/turnos/actions.ts#editarTurno": [
+  "MANAGER"
+ ],
+ "gestor/turnos/actions.ts#toggleAtivoTurno": [
+  "MANAGER"
+ ],
+ "gestor/turnos/actions.ts#toggleDaySchedule": [
+  "MANAGER"
+ ],
+ "gestor/turnos/escala/actions.ts#addShiftTask": [
+  "MANAGER"
+ ],
+ "gestor/turnos/escala/actions.ts#deleteShiftTask": [
+  "MANAGER"
+ ],
+ "gestor/turnos/escala/actions.ts#saveShiftScale": [
+  "MANAGER"
+ ],
+ "gestor/turnos/escala/actions.ts#toggleMaintenanceDay": [
+  "MANAGER"
+ ],
+ "gestor/turnos/tarefas/[id]/task-actions.ts#atribuirTarefa": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "gestor/turnos/tarefas/[id]/task-actions.ts#removerTarefa": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "gestor/turnos/tarefas/actions.ts#editarPassagem": [
+  "MANAGER"
+ ],
+ "gestor/turnos/tarefas/actions.ts#preAgendarTurno": [
+  "MANAGER"
+ ],
+ "lib/push-actions.ts#sendPushToRole": "PUBLICO",
+ "lib/push-actions.ts#sendPushToUsers": "PUBLICO",
+ "lib/push-actions.ts#subscribeUser": "LOGADO",
+ "lib/push-actions.ts#unsubscribeUser": "LOGADO",
+ "operador/estoque/actions.ts#registrarContagem": [
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/estoque/actions.ts#registrarSaida": [
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/leituras/actions.ts#registrarLeitura": [
+  "MANAGER",
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/ocorrencias/actions.ts#addOccurrenceComment": [
+  "MANAGER",
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/ocorrencias/actions.ts#registrarOcorrencia": [
+  "MANAGER",
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/ocorrencias/actions.ts#resolverOcorrencia": [
+  "MANAGER",
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/ocorrencias/actions.ts#updateOccurrenceStatus": [
+  "MANAGER",
+  "OPERATOR",
+  "TECHNICIAN"
+ ],
+ "operador/turnos/actions.ts#abrirTurno": [
+  "OPERATOR"
+ ],
+ "operador/turnos/actions.ts#assumirPosto": [
+  "OPERATOR"
+ ],
+ "operador/turnos/actions.ts#concluirTarefa": [
+  "OPERATOR"
+ ],
+ "operador/turnos/actions.ts#confirmarPassagem": [
+  "OPERATOR"
+ ],
+ "operador/turnos/actions.ts#iniciarPassagem": [
+  "OPERATOR"
+ ],
+ "operador/turnos/actions.ts#pularTarefa": [
+  "OPERATOR"
+ ],
+ "operador/turnos/actions.ts#repetirTarefa": [
+  "OPERATOR"
+ ],
+ "tecnico/analises/actions.ts#aprovarAnalise": [
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/analises/actions.ts#registrarAnalise": [
+  "TECHNICIAN"
+ ],
+ "tecnico/equipamentos/actions.ts#atualizarStatusCorretiva": [
+  "MAINTENANCE",
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/equipamentos/actions.ts#concluirPreventiva": [
+  "MAINTENANCE",
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/equipamentos/actions.ts#criarEquipamento": [
+  "MAINTENANCE",
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/equipamentos/actions.ts#editarEquipamento": [
+  "MAINTENANCE",
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/equipamentos/actions.ts#registrarCorretiva": [
+  "MAINTENANCE",
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/equipamentos/actions.ts#toggleAtivoEquipamento": [
+  "MAINTENANCE",
+  "MANAGER",
+  "TECHNICIAN"
+ ],
+ "tecnico/ocorrencias/actions.ts#resolverOcorrencia": [
+  "MANAGER",
+  "TECHNICIAN"
+ ]
+}

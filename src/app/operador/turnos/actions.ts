@@ -1,27 +1,20 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { getActor, permissionError } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload, saveImageUpload } from '@/lib/storage'
-import { randomUUID } from 'crypto'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { saveImageUpload } from '@/lib/storage'
+import { getTenantId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
+import { aguardandoConfirmacao, STATUS_AGUARDANDO } from '@/lib/handover-status'
 
 const MAX_PHOTOS_TASK = 3
 const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
 
 // ─── Guards + helpers ─────────────────────────────────────────────────────────
 
-async function requireOperator() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // Normaliza para meia-noite local — data do calendário independe da hora
 function normalizarData(date: Date): Date {
@@ -48,15 +41,15 @@ function mensagemP2002Turno(e: unknown): string {
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const AbrirTurnoSchema = z.object({
-  shift_id: z.string().min(1, 'Selecione o turno'),
+  shift_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o turno'),
 })
 
 const IniciarPassagemSchema = z.object({
   pending_items: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-  outgoing_observations: z.string().min(5, 'A observação do turno deve ter pelo menos 5 caracteres.'),
+  outgoing_observations: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(5, 'A observação do turno deve ter pelo menos 5 caracteres.'),
   confirm: z.literal('on', {
     error: 'É obrigatório confirmar a passagem do turno.'
   }),
@@ -65,11 +58,11 @@ const IniciarPassagemSchema = z.object({
 const ConfirmarPassagemSchema = z.object({
   incoming_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
   shift_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
 })
 
@@ -88,29 +81,14 @@ export type TurnoFormState = {
   success?: boolean
 }
 
-// ─── Lazy timeout (chamado em Server Components ao renderizar a página) ────────
-// Não é uma Server Action de formulário — é chamada direto no page.tsx
-
-export async function aplicarTimeouts(): Promise<void> {
-  const now = new Date()
-  await prisma.shiftHandover.updateMany({
-    where: {
-      tenant_id:  await getTenantId(),
-      status:     'PENDING',
-      timeout_at: { lt: now },
-    },
-    data: { status: 'TIMED_OUT' },
-  })
-}
-
 // ─── Abrir turno ──────────────────────────────────────────────────────────────
 
 export async function abrirTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem abrir turnos.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem abrir turnos.' }
 
   const parsed = AbrirTurnoSchema.safeParse({
     shift_id: formData.get('shift_id'),
@@ -119,8 +97,7 @@ export async function abrirTurno(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const today = normalizarData(new Date())
 
@@ -253,8 +230,8 @@ export async function iniciarPassagem(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem iniciar passagens.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem iniciar passagens.' }
 
   const parsed = IniciarPassagemSchema.safeParse({
     pending_items:         formData.get('pending_items'),
@@ -265,8 +242,7 @@ export async function iniciarPassagem(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const instance = await prisma.shiftInstance.findFirst({ where: { id: instanceId , tenant_id: (await getTenantId()) },
     include: {
@@ -328,13 +304,16 @@ export async function iniciarPassagem(
 
 // ─── Confirmar passagem (Etapa 2 — operador entrante) ─────────────────────────
 
+/** Outro entrante confirmou primeiro (só usado dentro da transação abaixo). */
+class PassagemJaConfirmada extends Error {}
+
 export async function confirmarPassagem(
   handoverId: string,
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem confirmar passagens.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem confirmar passagens.' }
 
   const parsed = ConfirmarPassagemSchema.safeParse({
     incoming_observations: formData.get('incoming_observations'),
@@ -344,8 +323,7 @@ export async function confirmarPassagem(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const handover = await prisma.shiftHandover.findFirst({ where: { id: handoverId , tenant_id: (await getTenantId()) },
     include: { shift_instance: { select: { id: true, tenant_id: true } } },
@@ -353,7 +331,9 @@ export async function confirmarPassagem(
   if (!handover || handover.shift_instance.tenant_id !== (await getTenantId())) {
     return { error: 'Passagem não encontrada.' }
   }
-  if (handover.status !== 'PENDING') {
+  // Vencida (PENDING com prazo esgotado, ou TIMED_OUT gravado pela versão antiga)
+  // ainda pode ser confirmada: o timeout é alerta para o gestor, não bloqueio.
+  if (!aguardandoConfirmacao(handover.status)) {
     return { error: 'Esta passagem já foi encerrada.' }
   }
   // Sainte não pode confirmar a própria passagem
@@ -370,18 +350,27 @@ export async function confirmarPassagem(
     return { error: 'Você já tem um turno aberto. Passe o seu turno antes de receber este.' }
   }
 
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'shift', id: parsed.data.shift_id, optional: true, where: { is_active: true }, message: 'Turno não encontrado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
+
   const now = new Date()
 
   try {
   await prisma.$transaction(async (tx) => {
-    // Confirma a passagem
-    await tx.shiftHandover.updateMany({ where: { id: handoverId , tenant_id: (await getTenantId()) }, data: {
+    // Confirma a passagem. A condição de status torna a confirmação única: se
+    // dois entrantes confirmarem ao mesmo tempo, só o primeiro fecha o turno.
+    const confirmada = await tx.shiftHandover.updateMany({
+      where: { id: handoverId, tenant_id: (await getTenantId()), status: { in: [...STATUS_AGUARDANDO] } },
+      data: {
         status:                'CONFIRMED',
         confirmed_at:          now,
         incoming_user_id:      userId,
         incoming_observations: parsed.data.incoming_observations,
       },
     })
+    if (confirmada.count !== 1) throw new PassagemJaConfirmada()
     // Fecha o turno anterior
     await tx.shiftInstance.updateMany({ where: { id: handover.shift_instance.id , tenant_id: (await getTenantId()) }, data:  { status: 'CLOSED', closed_at: now },
     })
@@ -449,6 +438,7 @@ export async function confirmarPassagem(
     }
   })
   } catch (e: unknown) {
+    if (e instanceof PassagemJaConfirmada) return { error: 'Esta passagem já foi confirmada por outro operador.' }
     if (isP2002(e)) return { error: 'Você já tem um turno aberto. Passe o seu turno antes de receber este.' }
     throw e
   }
@@ -464,8 +454,8 @@ export async function concluirTarefa(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem concluir tarefas.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem concluir tarefas.' }
 
   const parsed = ConcluirTarefaSchema.safeParse({
     completion_notes: formData.get('completion_notes'),
@@ -474,8 +464,7 @@ export async function concluirTarefa(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const task = await prisma.shiftTask.findFirst({
     where:   { id: taskId, tenant_id: (await getTenantId()) },
@@ -508,7 +497,7 @@ export async function concluirTarefa(
     for (const file of files) {
       let stored: string
       try {
-        stored = await saveImageUpload(file, 'tasks', MAX_FILE_SIZE)
+        stored = await saveImageUpload(file, 'tasks', MAX_FILE_SIZE, ctx.tenantId)
       } catch (err: unknown) {
         return { error: err instanceof Error ? err.message : `Erro no upload de ${file.name}` }
       }
@@ -550,8 +539,8 @@ export async function concluirTarefa(
 // ─── Pular tarefa ─────────────────────────────────────────────────────────────
 
 export async function pularTarefa(taskId: string): Promise<void> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return
 
   const task = await prisma.shiftTask.findFirst({
     where:   { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
@@ -568,16 +557,16 @@ export async function pularTarefa(taskId: string): Promise<void> {
 // ─── Assumir posto (turno anterior esquecido) ─────────────────────────────────
 
 const AssumirPostoSchema = z.object({
-  old_instance_id: z.string().min(1, 'ID do turno anterior obrigatório'),
-  new_shift_id: z.string().min(1, 'Selecione o turno a abrir'),
+  old_instance_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'ID do turno anterior obrigatório'),
+  new_shift_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o turno a abrir'),
 })
 
 export async function assumirPosto(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem assumir postos.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem assumir postos.' }
 
   const parsed = AssumirPostoSchema.safeParse({
     old_instance_id: formData.get('old_instance_id'),
@@ -587,8 +576,7 @@ export async function assumirPosto(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const tenantId = await getTenantId()
 
@@ -610,6 +598,11 @@ export async function assumirPosto(
   if (jaAtivo) {
     return { error: 'Você já tem um turno aberto. Passe o turno atual antes de abrir outro.' }
   }
+
+  const erroPosse = await checkOwnership(tenantId, [
+    { model: 'shift', id: parsed.data.new_shift_id, where: { is_active: true }, message: 'Turno não encontrado.' },
+  ])
+  if (erroPosse) return { error: erroPosse }
 
   const now = new Date()
   const today = normalizarData(new Date())
@@ -726,11 +719,10 @@ export async function repetirTarefa(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  const session = await requireOperator()
-  if (session.user.role !== 'OPERATOR') return { error: 'Apenas operadores podem repetir tarefas.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'shift.operate')) return { error: 'Apenas operadores podem repetir tarefas.' }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const tenant_id = await getTenantId()
 

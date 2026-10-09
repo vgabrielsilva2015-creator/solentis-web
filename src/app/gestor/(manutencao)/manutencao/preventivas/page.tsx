@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Calendar, CheckCircle2, AlertCircle, Download } from 'lucide-react'
+import { Plus, Calendar, CheckCircle2, AlertCircle } from 'lucide-react'
 import { PageHeader } from '@/components/ui/page-header'
 import { MAINTENANCE_STATUS_LABEL, MAINTENANCE_STATUS_COLOR } from '@/lib/labels'
 import { DataTable } from '@/components/ui/data-table'
 import { SearchInput } from '@/components/ui/search-input'
+import { ExportCsvMenu } from '@/components/export-csv-menu'
 
 export default async function PreventiveMaintenancePage(props: { searchParams: Promise<{ q?: string }> }) {
   const searchParams = await props.searchParams
@@ -68,13 +69,7 @@ export default async function PreventiveMaintenancePage(props: { searchParams: P
         <div className="flex flex-col sm:flex-row gap-3">
           <SearchInput placeholder="Buscar equipamento..." className="w-full sm:w-auto" />
           <div className="flex gap-2">
-            <Link 
-              href="/api/export?type=preventives" target="_blank"
-              className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-surface-2 text-foreground text-sm font-medium rounded-lg hover:bg-surface-2/80 transition-all shadow-sm border border-border"
-            >
-              <Download className="w-4 h-4" />
-              Exportar CSV
-            </Link>
+            <ExportCsvMenu type="preventives" />
             <Link 
               href="/gestor/manutencao/preventivas/novo" 
               className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:brightness-105 transition-all shadow-sm whitespace-nowrap"

@@ -6,6 +6,7 @@ import { BottomNav, type NavItem } from '@/components/ui/bottom-nav'
 import { NotificationBell } from '@/components/ui/notification-bell'
 import { Logo } from '@/components/logo'
 import { PushManager } from '@/components/push-manager'
+import { OfflineSync } from '@/components/operador/offline-sync'
 
 export default async function OperadorLayout({
   children,
@@ -40,6 +41,7 @@ export default async function OperadorLayout({
             <span className="hidden sm:block text-sm text-muted-foreground">
               {session.user.name ?? session.user.email}
             </span>
+            {session.user.id && <OfflineSync userId={session.user.id} />}
             <NotificationBell />
             <PushManager />
             <SignOutButton />

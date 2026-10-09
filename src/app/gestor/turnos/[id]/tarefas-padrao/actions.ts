@@ -1,20 +1,14 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 
 
-async function requireManagerOrTechnician() {
-  const session = await auth()
-  if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -28,16 +22,10 @@ const TemplateSchema = z.object({
   ),
   assigned_to_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
   requires_photo: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
-  sort_order: z.preprocess(
-    (v) => {
-      const n = parseInt(String(v ?? ''), 10)
-      return isNaN(n) ? 0 : n
-    },
-    z.number().int().min(0).max(999),
-  ),
+  sort_order: numeroBROpcional({ inteiro: true, min: 0, max: 999, rotulo: 'A ordem' }).transform((n) => n ?? 0),
 })
 
 // ─── Form state ───────────────────────────────────────────────────────────────
@@ -48,16 +36,6 @@ export type TemplateFormState = {
   success?: boolean
 }
 
-// Valida que o operador designado pertence ao tenant e é OPERATOR ativo
-async function validarAssignee(assigneeId: string | null, tenantId: string): Promise<boolean> {
-  if (!assigneeId) return true
-  const assignee = await prisma.user.findFirst({
-    where:  { id: assigneeId, tenant_id: tenantId, is_active: true, role: 'OPERATOR' },
-    select: { id: true },
-  })
-  return !!assignee
-}
-
 // ─── Criar template ─────────────────────────────────────────────────────────
 
 export async function criarTemplate(
@@ -65,7 +43,7 @@ export async function criarTemplate(
   _prev: TemplateFormState,
   formData: FormData,
 ): Promise<TemplateFormState> {
-  const session = await requireManagerOrTechnician()
+  const ctx = await requirePermission('shift.assign')
 
   const parsed = TemplateSchema.safeParse({
     title:          formData.get('title'),
@@ -79,8 +57,7 @@ export async function criarTemplate(
   }
 
   const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const shift = await prisma.shift.findFirst({
     where:  { id: shiftId, tenant_id: tenantId },
@@ -88,9 +65,12 @@ export async function criarTemplate(
   })
   if (!shift) return { error: 'Turno não encontrado.' }
 
-  if (!(await validarAssignee(parsed.data.assigned_to_id, tenantId))) {
-    return { error: 'Operador selecionado não encontrado ou inativo.' }
-  }
+  const erroPosse = await checkOwnership(tenantId, [{
+    model: 'user', id: parsed.data.assigned_to_id, optional: true,
+    where: { is_active: true, role: 'OPERATOR' },
+    message: 'Operador selecionado não encontrado ou inativo.',
+  }])
+  if (erroPosse) return { error: erroPosse }
 
   await prisma.shiftTaskTemplate.create({
     data: {
@@ -116,7 +96,7 @@ export async function atualizarTemplate(
   _prev: TemplateFormState,
   formData: FormData,
 ): Promise<TemplateFormState> {
-  await requireManagerOrTechnician()
+  await requirePermission('shift.assign')
 
   const parsed = TemplateSchema.safeParse({
     title:          formData.get('title'),
@@ -137,9 +117,12 @@ export async function atualizarTemplate(
   })
   if (!template) return { error: 'Template não encontrado.' }
 
-  if (!(await validarAssignee(parsed.data.assigned_to_id, tenantId))) {
-    return { error: 'Operador selecionado não encontrado ou inativo.' }
-  }
+  const erroPosse = await checkOwnership(tenantId, [{
+    model: 'user', id: parsed.data.assigned_to_id, optional: true,
+    where: { is_active: true, role: 'OPERATOR' },
+    message: 'Operador selecionado não encontrado ou inativo.',
+  }])
+  if (erroPosse) return { error: erroPosse }
 
   await prisma.shiftTaskTemplate.updateMany({
     where: { id: templateId, tenant_id: tenantId },
@@ -161,7 +144,7 @@ export async function atualizarTemplate(
 // de gerar novas tarefas nas próximas aberturas de turno.
 
 export async function desativarTemplate(templateId: string): Promise<void> {
-  await requireManagerOrTechnician()
+  await requirePermission('shift.assign')
   const tenantId = await getTenantId()
 
   const template = await prisma.shiftTaskTemplate.findFirst({

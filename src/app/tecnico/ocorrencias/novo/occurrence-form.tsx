@@ -35,7 +35,14 @@ const EMPTY_DRAFT: Draft = {
   immediate_action: ''
 }
 
-export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoints?: {id: string, name: string, location: string | null}[] }) {
+export function TecnicoOccurrenceForm({
+  collectionPoints = [],
+  redirectTo = '/tecnico/ocorrencias',
+}: {
+  collectionPoints?: {id: string, name: string, location: string | null}[]
+  /** Para onde voltar depois de registrar (a área Manutenção reusa este formulário) */
+  redirectTo?: string
+}) {
   const router   = useRouter()
   const [state, action, isPending] = useActionState(registrarOcorrencia, INITIAL)
   const [isMutating, startTransition] = useTransition()
@@ -78,9 +85,9 @@ export function TecnicoOccurrenceForm({ collectionPoints = [] }: { collectionPoi
     if (state.success) {
       localStorage.removeItem(DRAFT_KEY)
       photoPreviews.forEach(url => URL.revokeObjectURL(url))
-      router.push('/tecnico/ocorrencias')
+      router.push(redirectTo)
     }
-  }, [state.success, router, photoPreviews])
+  }, [state.success, router, photoPreviews, redirectTo])
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhotoError(null)

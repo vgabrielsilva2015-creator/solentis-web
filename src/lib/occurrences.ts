@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { webpush } from '@/lib/web-push'
 import { getLogger } from '@/lib/logger'
 import { Prisma } from '@prisma/client'
+import { errorStatusCode } from '@/lib/error-utils'
 
 // O TransactionClient é o tipo que o prisma fornece dentro de um $transaction
 type TxClient = Omit<
@@ -58,8 +59,9 @@ export async function handleNewOccurrence(tx: TxClient, occurrence: {
                 endpoint: sub.endpoint,
                 keys: { p256dh: sub.p256dh, auth: sub.auth }
               }, payload)
-            } catch (err: any) {
-              if (err.statusCode === 404 || err.statusCode === 410) {
+            } catch (err: unknown) {
+              const status = errorStatusCode(err)
+              if (status === 404 || status === 410) {
                 // Subscription expirada
                 await prisma.pushSubscription.delete({ where: { endpoint: sub.endpoint } })
               } else {

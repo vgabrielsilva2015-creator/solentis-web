@@ -54,7 +54,7 @@ export default async function OcorrenciasTecnicoPage({
       where,
       include: {
         reporter: { select: { name: true } },
-        photos:   { select: { id: true } },
+        photos:   { where: { kind: 'REPORT' }, select: { id: true } },
       },
       orderBy: [{ status: 'asc' }, { deadline: 'asc' }],
       take: view === 'list' ? PAGE_SIZE : 100,

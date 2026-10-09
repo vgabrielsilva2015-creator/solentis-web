@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { plantasDeClientes } from '@/server/admin/plataforma'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -18,14 +19,8 @@ export default async function AdminPlantasPage() {
     redirect('/login')
   }
 
-  const tenants = await prisma.tenant.findMany({
-    orderBy: { created_at: 'desc' },
-    include: {
-      _count: {
-        select: { users: true }
-      }
-    }
-  })
+  // A planta da plataforma (onde moram os super admins) não aparece nem entra nas contagens.
+  const tenants = await plantasDeClientes(prisma)
 
   // KPIs
   const totalPlantas = tenants.filter(t => t.is_active).length

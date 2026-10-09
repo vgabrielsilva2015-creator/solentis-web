@@ -10,6 +10,7 @@ import { LayoutGrid, Table } from 'lucide-react'
 const PAGE_SIZE  = 20
 
 import { SEVERITY_LABEL, SEVERITY_COLOR, OCCURRENCE_STATUS_LABEL } from '@/lib/labels'
+import type { Prisma } from '@prisma/client'
 
 function formatDatetime(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -38,7 +39,7 @@ export default async function OcorrenciasOperadorPage({
 
   if (!userId) redirect('/login')
 
-  const where: any = { tenant_id: (await getTenantId()), reported_by: userId, deleted_at: null }
+  const where: Prisma.OccurrenceWhereInput = { tenant_id: (await getTenantId()), reported_by: userId, deleted_at: null }
   if (filter === 'open') {
     where.status = { in: ['OPEN', 'IN_PROGRESS', 'WAITING'] }
   } else if (filter === 'resolved') {
@@ -52,7 +53,7 @@ export default async function OcorrenciasOperadorPage({
       where,
       include: {
         reporter: { select: { name: true } },
-        photos: { select: { id: true } },
+        photos: { where: { kind: 'REPORT' }, select: { id: true } },
       },
       orderBy: { created_at: 'desc' },
       take: view === 'list' ? PAGE_SIZE : 100,

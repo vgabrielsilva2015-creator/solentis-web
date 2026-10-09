@@ -4,12 +4,12 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
 import { getLogger } from '@/lib/logger'
-import {
-  RATE_LIMIT_WINDOW_MS,
-  RATE_LIMIT_MAX_ATTEMPTS,
-  isRateLimited,
-} from '@/lib/auth-utils'
+import { clientIp, decideLogin, loginCounts, recordLoginFailure, sleep } from '@/lib/rate-limit'
 import { authConfig } from '@/lib/auth.config'
+import { LOGIN_MFA_INVALID_CODE, LOGIN_MFA_REQUIRED_CODE, LOGIN_RATE_LIMITED_CODE, LOGIN_UNAVAILABLE_CODE } from '@/lib/user-errors'
+import { mfaMode, type MfaClaim } from '@/lib/mfa/config'
+import { lerChave } from '@/lib/mfa/crypto'
+import { estadoMfa, verificarSegundoFator } from '@/server/mfa/service'
 
 // ─── Augmentação de tipos do NextAuth ────────────────────────────────────────
 declare module 'next-auth' {
@@ -17,12 +17,18 @@ declare module 'next-auth' {
     role: string
     mustChangePassword: boolean
     tenantId: string
+    sessionVersion: number
+    mfa: MfaClaim
   }
   interface Session {
+    /** id da sessão (estável entre renovações), usado pelo "Sair" */
+    sid?: string
     user: {
       role: string
       mustChangePassword: boolean
       tenantId: string
+      /** 2º fator (só SUPER_ADMIN): 'ok' entrou com o código, 'pending' sem TOTP cadastrado, 'none' MFA desligado */
+      mfa: MfaClaim
     } & DefaultSession['user']
   }
 }
@@ -32,14 +38,22 @@ declare module '@auth/core/jwt' {
     role: string
     mustChangePassword: boolean
     tenantId: string
+    sid?: string
+    mfa?: MfaClaim
+    sv?: number
+    loginAt?: number
+    lastSeen?: number
+    checkedAt?: number
   }
 }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
-  email: z.string().email().transform((v) => v.trim().toLowerCase()),
-  password: z.string().min(1),
+  email: z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email().transform((v) => v.trim().toLowerCase()),
+  password: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).').min(1),
+  // código do autenticador (6 dígitos) ou de recuperação; só é lido para SUPER_ADMIN
+  totp: z.string().max(32).optional().transform((v) => (v ?? '').trim()),
 })
 
 // ─── Configuração NextAuth ────────────────────────────────────────────────────
@@ -50,21 +64,51 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email:    { label: 'Email', type: 'email' },
         password: { label: 'Senha', type: 'password' },
+        totp:     { label: 'Código', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const { email, password } = parsed.data
+        const { email, password, totp } = parsed.data
         const log = await getLogger({ action: 'login' })
+        const ip = clientIp(request?.headers)
+
+        // T-10: limite ANTES de qualquer consulta ao usuário, igual para e-mail
+        // existente ou não. Bloqueia IP e par e-mail+IP; o e-mail sozinho só
+        // atrasa (sem lockout que um terceiro possa provocar na conta alheia).
+        try {
+          const decision = decideLogin(await loginCounts(email, ip))
+          if (decision.blocked) throw new Error(LOGIN_RATE_LIMITED_CODE)
+          if (decision.delayMs > 0) await sleep(decision.delayMs)
+        } catch (error) {
+          if (error instanceof Error && error.message === LOGIN_RATE_LIMITED_CODE) throw error
+          // ⚠️ FAIL-OPEN (decisão mantida): sem banco, o login segue sem limite.
+          log.warn({ err: error, ip }, 'Falha ao checar limite de tentativas — login prosseguindo sem limite')
+        }
+
+        // Toda falha (senha errada, e-mail inexistente, conta/planta inativa) conta.
+        const falhou = async () => {
+          await recordLoginFailure(email, ip).catch((err) =>
+            log.warn({ err, ip }, 'Falha ao registrar tentativa no limitador'))
+          return null
+        }
 
         // Para evitar timing attacks, consultamos o usuário primeiro,
         // mas sempre verificamos a senha mesmo que ele não exista (com um hash dummy).
         // O email é globalmente único no schema Prisma, portanto findUnique é seguro.
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: { tenant: { select: { is_active: true } } },
-        })
+        let user
+        try {
+          user = await prisma.user.findUnique({
+            where: { email },
+            include: { tenant: { select: { is_active: true } } },
+          })
+        } catch (error) {
+          // Banco indisponível: registra o detalhe e devolve um código neutro.
+          // A mensagem original do Prisma (host/porta) nunca deve chegar ao cliente.
+          log.error({ err: error }, 'Falha ao consultar usuário no login')
+          throw new Error(LOGIN_UNAVAILABLE_CODE)
+        }
 
         // Hash bcrypt REAL (custo 12) de uma senha aleatória descartada. Precisa
         // ser um hash válido: bcrypt.compare contra um hash malformado retorna
@@ -75,37 +119,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // Usuário não existe: gastamos o MESMO tempo de um bcrypt custo 12 para
           // que a resposta seja indistinguível de um e-mail existente (anti-timing).
           await verifyPassword(password, dummyHash).catch(() => {})
-          return null
+          return falhou()
         }
 
         const tenantIdForLog = user.tenant_id
-
-        const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS)
-        try {
-          const recentFailures = await prisma.loginAttempt.count({
-            where: {
-              tenant_id: tenantIdForLog,
-              email,
-              success: false,
-              attempted_at: { gte: windowStart },
-            },
-          })
-
-          if (isRateLimited(recentFailures)) {
-            throw new Error('RATE_LIMITED')
-          }
-        } catch (error) {
-          if (error instanceof Error && error.message === 'RATE_LIMITED') {
-            throw error // Propaga apenas o bloqueio
-          }
-          // ⚠️ FAIL-OPEN: se a checagem falhar, o login segue SEM proteção de brute-force.
-          // Mantido de propósito (não travar todos os logins num soluço do banco),
-          // mas registrado em WARN para ficar visível caso vire recorrente.
-          log.warn(
-            { err: error, tenantId: tenantIdForLog, attemptedEmail: email },
-            'Falha ao checar rate limit — login prosseguindo sem proteção de brute-force',
-          )
-        }
 
         const isValid = await verifyPassword(password, user.password_hash)
 
@@ -115,6 +132,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             data: {
               tenant_id: tenantIdForLog,
               email,
+              ip_address: ip,
               success: isValid,
             },
           })
@@ -125,7 +143,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           )
         }
 
-        if (!isValid) return null
+        if (!isValid) return falhou()
 
         // Conta desativada (soft-delete) não autentica, mesmo com senha correta.
         // Garante que "desativar usuário" revogue o acesso de fato.
@@ -134,7 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             { tenantId: tenantIdForLog, userId: user.id },
             'Login bloqueado: conta desativada',
           )
-          return null
+          return falhou()
         }
 
         // Planta (tenant) desativada bloqueia TODOS os seus usuários — exceto o
@@ -145,7 +163,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             { tenantId: tenantIdForLog, userId: user.id },
             'Login bloqueado: planta desativada',
           )
-          return null
+          return falhou()
+        }
+
+        // ── Segundo fator (Fase 2 do Super Admin) ─────────────────────────────
+        // Só SUPER_ADMIN, e só quando MFA_ENFORCE != off. Roda DEPOIS da senha e das checagens
+        // de conta, e ANTES de qualquer efeito de login (last_login_at, sessão).
+        let mfa: MfaClaim = 'none'
+        if (user.role === 'SUPER_ADMIN' && mfaMode() !== 'off') {
+          let estado
+          try { estado = await estadoMfa(prisma, user.id) } catch (error) {
+            log.error({ err: error, userId: user.id }, 'Falha ao consultar o segundo fator')
+            throw new Error(LOGIN_UNAVAILABLE_CODE) // fail-closed: sem saber o estado, não entra
+          }
+          if (estado === 'enabled') {
+            if (!totp) throw new Error(LOGIN_MFA_REQUIRED_CODE)
+            let ok = false
+            let bloqueado = false
+            try {
+              const r = await verificarSegundoFator(prisma, { userId: user.id, entrada: totp, key: lerChave(), nowMs: Date.now() })
+              ok = r.ok
+              bloqueado = !r.ok && r.motivo === 'bloqueado'
+            } catch (error) {
+              // chave ausente/errada ou banco fora: NUNCA deixa passar sem o código (alavanca: MFA_ENFORCE=off)
+              log.error({ err: error, userId: user.id }, 'Falha ao verificar o segundo fator')
+              throw new Error(LOGIN_UNAVAILABLE_CODE)
+            }
+            if (bloqueado) throw new Error(LOGIN_RATE_LIMITED_CODE)
+            if (!ok) {
+              await falhou()
+              log.warn({ tenantId: tenantIdForLog, userId: user.id }, 'Login bloqueado: segundo fator inválido')
+              throw new Error(LOGIN_MFA_INVALID_CODE)
+            }
+            mfa = 'ok'
+          } else {
+            mfa = 'pending'
+          }
         }
 
         try {
@@ -168,29 +221,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role:                user.role,
           mustChangePassword:  user.must_change_password,
           tenantId:            user.tenant_id,
+          sessionVersion:      user.session_version,
+          mfa,
         }
       },
     }),
   ],
 })
 
-import { redirect } from 'next/navigation'
-
-export async function requireRole(roles: string[]) {
-  // ─── NOTA SOBRE RBAC ──────────────────────────────────────────────────────────
-  // Decisão Arquitetural: O sistema de Controle de Acesso Baseado em Papéis (RBAC) 
-  // atual utiliza um modelo simples onde as roles são validadas em funções utilitárias 
-  // (`requireRole`, `requireTechnicianOrManager`, etc.) ou diretamente nas páginas.
-  // 
-  // Esta abordagem foi escolhida pois atende completamente às necessidades do MVP. 
-  // Sistemas mais complexos (como CASL, ou verificação per-entity em um middleware 
-  // centralizado) foram considerados overkill neste momento. A segurança se apoia 
-  // fortemente no Tenant Isolation (garantido no `src/lib/tenant.ts`) e na 
-  // simplicidade dos papéis (OPERATOR, TECHNICIAN, MANAGER, MAINTENANCE).
-  // ─────────────────────────────────────────────────────────────────────────────
-  const session = await auth()
-  if (!session || !roles.includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}

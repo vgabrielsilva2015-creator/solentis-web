@@ -49,11 +49,13 @@ export const OCCURRENCE_SEVERITIES = {
   CRITICAL: 'CRITICAL',
 } as const satisfies Record<OccurrenceSeverity, OccurrenceSeverity>
 
-export type OccurrenceStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
+// WAITING ("Aguardando") é usado pelo kanban de ocorrências (T-19: estava faltando aqui)
+export type OccurrenceStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'RESOLVED'
 
 export const OCCURRENCE_STATUSES = {
   OPEN:        'OPEN',
   IN_PROGRESS: 'IN_PROGRESS',
+  WAITING:     'WAITING',
   RESOLVED:    'RESOLVED',
 } as const satisfies Record<OccurrenceStatus, OccurrenceStatus>
 

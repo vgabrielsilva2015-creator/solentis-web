@@ -25,6 +25,8 @@ import {
   UserCheck
 } from 'lucide-react'
 import { saveShiftScale, toggleMaintenanceDay, addShiftTask, deleteShiftTask } from './actions'
+import { errorMessage } from '@/lib/error-utils'
+import type { EscalaCorrective, EscalaMaintenanceDay, EscalaOccurrence, EscalaOperator, EscalaPreventive, EscalaScale, EscalaSchedule, EscalaShift, EscalaShiftInstance, EscalaTask } from './escala-types'
 
 // Shift color/style maps
 const SHIFT_CLASSES: Record<string, { border: string; bg: string; text: string; dot: string; label: string; abbreviation: string }> = {
@@ -57,15 +59,15 @@ const SHIFT_CLASSES: Record<string, { border: string; bg: string; text: string; 
 interface EscalaGestorClientProps {
   currentYear: number
   currentMonth: number
-  scales: any[]
-  maintenanceDays: any[]
-  shiftInstances: any[]
-  preventives: any[]
-  correctives: any[]
-  occurrences: any[]
-  schedules: any[]
-  shifts: any[]
-  operators: any[]
+  scales: EscalaScale[]
+  maintenanceDays: EscalaMaintenanceDay[]
+  shiftInstances: EscalaShiftInstance[]
+  preventives: EscalaPreventive[]
+  correctives: EscalaCorrective[]
+  occurrences: EscalaOccurrence[]
+  schedules: EscalaSchedule[]
+  shifts: EscalaShift[]
+  operators: EscalaOperator[]
 }
 
 const MONTH_NAMES = [
@@ -196,7 +198,7 @@ export function EscalaGestorClient({
     let doneTasks = 0
     dayInstances.forEach(inst => {
       totalTasks += inst.shift_tasks.length
-      doneTasks += inst.shift_tasks.filter((t: any) => t.status === 'DONE').length
+      doneTasks += inst.shift_tasks.filter((t: EscalaTask) => t.status === 'DONE').length
     })
 
     // Preventive Maintenance scheduled on this date
@@ -270,8 +272,8 @@ export function EscalaGestorClient({
           }
           await saveShiftScale(opId, shiftId, selectedDateStr, 'assign')
         }
-      } catch (err: any) {
-        alert(err.message || 'Erro ao salvar escala.')
+      } catch (err: unknown) {
+        alert(errorMessage(err) || 'Erro ao salvar escala.')
       }
     })
   }
@@ -283,8 +285,8 @@ export function EscalaGestorClient({
       try {
         await toggleMaintenanceDay(selectedDateStr, maintenanceDesc)
         setMaintenanceDesc('')
-      } catch (err: any) {
-        alert(err.message || 'Erro ao alterar dia de manutenção.')
+      } catch (err: unknown) {
+        alert(errorMessage(err) || 'Erro ao alterar dia de manutenção.')
       }
     })
   }
@@ -305,8 +307,8 @@ export function EscalaGestorClient({
         setNewTaskTitles(prev => ({ ...prev, [shiftId]: '' }))
         setNewTaskDescs(prev => ({ ...prev, [shiftId]: '' }))
         setNewTaskAssignees(prev => ({ ...prev, [shiftId]: 'any' }))
-      } catch (err: any) {
-        alert(err.message || 'Erro ao adicionar tarefa.')
+      } catch (err: unknown) {
+        alert(errorMessage(err) || 'Erro ao adicionar tarefa.')
       }
     })
   }
@@ -317,8 +319,8 @@ export function EscalaGestorClient({
     startTransition(async () => {
       try {
         await deleteShiftTask(taskId)
-      } catch (err: any) {
-        alert(err.message || 'Erro ao excluir tarefa.')
+      } catch (err: unknown) {
+        alert(errorMessage(err) || 'Erro ao excluir tarefa.')
       }
     })
   }
@@ -426,7 +428,7 @@ export function EscalaGestorClient({
                 {/* Shifts scale mini-list */}
                 <div className="mt-2 w-full space-y-1">
                   {!isMaintenanceDay ? (
-                    dayScales.map((s: any) => {
+                    dayScales.map((s: EscalaScale) => {
                       const style = SHIFT_CLASSES[s.shift.name]
                       if (!style) return null
                       return (
@@ -605,7 +607,7 @@ export function EscalaGestorClient({
                           {/* Existing Tasks */}
                           {tasksList.length > 0 ? (
                             <div className="space-y-2">
-                              {tasksList.map((task: any) => (
+                              {tasksList.map((task: EscalaTask) => (
                                 <div key={task.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/80 bg-card/50">
                                   <div className="min-w-0 flex-1">
                                     <p className="text-xs font-bold text-foreground truncate">{task.title}</p>

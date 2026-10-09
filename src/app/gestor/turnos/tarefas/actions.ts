@@ -1,33 +1,25 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { logAudit } from '@/lib/audit'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const EditHandoverSchema = z.object({
-  justification: z.string().min(10, 'Justificativa deve ter ao menos 10 caracteres'),
+  justification: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(10, 'Justificativa deve ter ao menos 10 caracteres'),
   outgoing_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
   incoming_observations: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
 })
 
@@ -46,7 +38,7 @@ export async function editarPassagem(
   _prev: EditHandoverFormState,
   formData: FormData,
 ): Promise<EditHandoverFormState> {
-  const session = await requireManager()
+  const ctx = await requirePermission('shift.manage')
 
   const parsed = EditHandoverSchema.safeParse({
     justification:         formData.get('justification'),
@@ -57,8 +49,7 @@ export async function editarPassagem(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const handover = await prisma.shiftHandover.findFirst({ where: { id: handoverId , tenant_id: (await getTenantId()) },
     include: { shift_instance: { select: { tenant_id: true } } },
@@ -95,8 +86,8 @@ export async function editarPassagem(
 // ─── Pré-agendar turno (criar instância futura com status SCHEDULED) ──────────
 
 const PreAgendarSchema = z.object({
-  shift_id: z.string().min(1, 'Selecione o turno'),
-  date:     z.string().min(1, 'Informe a data'),
+  shift_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o turno'),
+  date:     z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data'),
 })
 
 export type PreAgendarFormState = {
@@ -110,7 +101,7 @@ export async function preAgendarTurno(
   _prev: PreAgendarFormState,
   formData: FormData,
 ): Promise<PreAgendarFormState> {
-  const session = await requireManager()
+  const ctx = await requirePermission('shift.manage')
 
   const parsed = PreAgendarSchema.safeParse({
     shift_id: formData.get('shift_id'),
@@ -120,8 +111,7 @@ export async function preAgendarTurno(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const shift = await prisma.shift.findFirst({
     where:  { id: parsed.data.shift_id, tenant_id: (await getTenantId()), is_active: true },

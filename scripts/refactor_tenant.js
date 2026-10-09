@@ -3,8 +3,8 @@ const path = require('path');
 
 function walkDir(dir, callback) {
   fs.readdirSync(dir).forEach(f => {
-    let dirPath = path.join(dir, f);
-    let isDirectory = fs.statSync(dirPath).isDirectory();
+    const dirPath = path.join(dir, f);
+    const isDirectory = fs.statSync(dirPath).isDirectory();
     isDirectory ? 
       walkDir(dirPath, callback) : callback(path.join(dir, f));
   });
@@ -15,7 +15,7 @@ function processFile(filePath) {
   if (filePath.includes('node_modules') || filePath.includes('.next')) return;
   
   let content = fs.readFileSync(filePath, 'utf8');
-  let originalContent = content;
+  const originalContent = content;
   
   // Replace `const TENANT_ID      = 'default'` variations
   if (/const TENANT_ID\s*=\s*'default'/.test(content)) {

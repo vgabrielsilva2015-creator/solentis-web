@@ -76,6 +76,8 @@ model User {
   role                 String
   must_change_password Boolean   @default(true)
   is_active            Boolean   @default(true)
+  // T-06: incrementada quando o acesso muda; invalida todas as sessões abertas
+  session_version      Int       @default(0)
   receive_nc_push      Boolean   @default(true)
   last_login_at        DateTime?
   created_at           DateTime  @default(now())
@@ -84,10 +86,12 @@ model User {
   deleted_at           DateTime?
 
   // — identidade
-  tenant        Tenant    @relation(fields: [tenant_id], references: [id])
-  creator       User?     @relation("CreatedBy", fields: [created_by], references: [id])
-  created_users User[]    @relation("CreatedBy")
-  sessions      Session[]
+  tenant             Tenant            @relation(fields: [tenant_id], references: [id])
+  creator            User?             @relation("CreatedBy", fields: [created_by], references: [id])
+  created_users      User[]            @relation("CreatedBy")
+  sessions           Session[]
+  mfa                UserMfa?
+  mfa_recovery_codes MfaRecoveryCode[]
 
   // — configuração (1 FK por model → sem nome de relação)
   quality_parameters        QualityParameter[]
@@ -149,6 +153,64 @@ model PasswordResetToken {
 
   @@index([user_id])
   @@map("password_reset_tokens")
+}
+
+// T-10: contadores de tentativa de login/reset. Sem tenant_id de propósito: a
+// checagem acontece antes de o e-mail ser resolvido para uma planta. O bucket
+// guarda IP e hash do e-mail, nunca o e-mail em texto. Linhas > 24 h são apagadas.
+model AuthRateEvent {
+  id         String   @id @default(cuid())
+  bucket     String
+  created_at DateTime @default(now())
+
+  @@index([bucket, created_at])
+  @@index([created_at])
+  @@map("auth_rate_events")
+}
+
+// Sessões encerradas pelo "Sair" (sid do JWT). A revalidação periódica (T-06)
+// derruba cópias desse cookie. Linhas expiradas podem ser apagadas.
+model RevokedSession {
+  sid        String   @id
+  user_id    String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([expires_at])
+  @@map("revoked_sessions")
+}
+
+// Fase 2 do Super Admin: segundo fator (TOTP). Escopo de usuário, sem tenant_id.
+// `secret_enc` é AES-256-GCM (chave em MFA_ENCRYPTION_KEY, fora do banco).
+// `enabled_at` nulo = cadastro iniciado e ainda não confirmado com um código.
+// `last_step` é o último passo de 30 s aceito (anti-replay).
+model UserMfa {
+  user_id     String    @id
+  secret_enc  String
+  key_version Int       @default(1)
+  enabled_at  DateTime?
+  last_step   BigInt    @default(0)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_mfa")
+}
+
+// Códigos de recuperação: só o hash fica guardado; uso único (`used_at`).
+model MfaRecoveryCode {
+  id         String    @id @default(cuid())
+  user_id    String
+  code_hash  String
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, code_hash])
+  @@index([user_id])
+  @@map("mfa_recovery_codes")
 }
 
 model LoginAttempt {
@@ -466,6 +528,8 @@ model Reading {
   origin              String   @default("MANUAL")
   metadata_origin     String?
   photo_filename      String?
+  // T-15: id gerado no aparelho; reenvio da fila offline não duplica a leitura
+  client_id           String?
   recorded_by         String
   recorded_at         DateTime
   created_at          DateTime @default(now())
@@ -476,11 +540,14 @@ model Reading {
   shift_instance   ShiftInstance?    @relation(fields: [shift_instance_id], references: [id])
   recorder         User              @relation(fields: [recorded_by], references: [id])
 
+  @@unique([tenant_id, client_id])
   @@index([tenant_id, recorded_at])
   @@index([collection_point_id])
   @@index([parameter_id])
   @@index([shift_instance_id])
   @@index([tenant_id, is_non_conformant, created_at])
+  @@index([tenant_id, parameter_id, created_at])
+  @@index([tenant_id, collection_point_id, parameter_id, recorded_at], map: "readings_tenant_point_param_recorded_at_idx")
   @@map("readings")
 }
 
@@ -519,6 +586,7 @@ model Analysis {
   @@index([collection_point_id])
   @@index([recorded_by])
   @@index([collected_at])
+  @@index([tenant_id, collection_point_id, collected_at])
   @@map("analyses")
 }
 
@@ -660,6 +728,7 @@ model Occurrence {
   @@index([tenant_id, severity, status])
   @@index([deadline])
   @@index([reported_by])
+  @@index([collection_point_id])
   @@map("occurrences")
 }
 
@@ -673,6 +742,8 @@ model OccurrencePhoto {
   size_bytes    Int
   uploaded_by   String
   uploaded_at   DateTime @default(now())
+  /// REPORT = foto do registro; RESOLUTION = evidência da resolução (T-20)
+  kind          String   @default("REPORT")
 
   tenant     Tenant     @relation(fields: [tenant_id], references: [id])
   occurrence Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
@@ -913,6 +984,7 @@ model MaintenanceLog {
   tenant    Tenant    @relation(fields: [tenant_id], references: [id])
   equipment Equipment @relation(fields: [equipment_id], references: [id], onDelete: Cascade)
 
+  @@index([equipment_id])
   @@map("maintenance_logs")
 }
 
@@ -926,6 +998,7 @@ model OccurrenceComment {
   occurrence Occurrence @relation(fields: [occurrence_id], references: [id], onDelete: Cascade)
   user       User       @relation(fields: [user_id], references: [id])
 
+  @@index([occurrence_id])
   @@map("occurrence_comments")
 }
 

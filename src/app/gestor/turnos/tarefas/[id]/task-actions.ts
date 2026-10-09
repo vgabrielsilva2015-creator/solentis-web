@@ -1,20 +1,12 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
-import { redirect } from 'next/navigation'
+import { getTenantId } from '@/lib/tenant'
 
 
-async function requireManagerOrTechnician() {
-  const session = await auth()
-  if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -28,7 +20,7 @@ const AtribuirTarefaSchema = z.object({
   ),
   assigned_to_id: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable(),
   ),
 })
 
@@ -47,7 +39,7 @@ export async function atribuirTarefa(
   _prev: TaskFormState,
   formData: FormData,
 ): Promise<TaskFormState> {
-  const session = await requireManagerOrTechnician()
+  const ctx = await requirePermission('shift.assign')
 
   const parsed = AtribuirTarefaSchema.safeParse({
     title:          formData.get('title'),
@@ -58,8 +50,7 @@ export async function atribuirTarefa(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const instance = await prisma.shiftInstance.findFirst({
     where:  { id: instanceId, tenant_id: (await getTenantId()) },
@@ -97,7 +88,7 @@ export async function atribuirTarefa(
 // Só PENDING pode ser removida — tarefas DONE/SKIPPED são histórico operacional
 
 export async function removerTarefa(taskId: string): Promise<void> {
-  await requireManagerOrTechnician()
+  await requirePermission('shift.assign')
 
   const task = await prisma.shiftTask.findFirst({
     where:  { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },

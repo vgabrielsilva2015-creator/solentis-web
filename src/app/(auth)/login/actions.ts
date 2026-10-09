@@ -3,14 +3,19 @@
 import { signIn } from '@/lib/auth'
 import { AuthError } from 'next-auth'
 import { z } from 'zod'
+import { getLogger } from '@/lib/logger'
+import { LOGIN_MESSAGES, LOGIN_MFA_INVALID_CODE, LOGIN_MFA_REQUIRED_CODE, loginErrorMessage } from '@/lib/user-errors'
 
 const LoginSchema = z.object({
-  email:    z.string().email().transform(v => v.trim().toLowerCase()),
-  password: z.string().min(1),
+  email:    z.string().max(254, 'Texto muito longo (máximo 254 caracteres).').email().transform(v => v.trim().toLowerCase()),
+  password: z.string().max(128, 'Texto muito longo (máximo 128 caracteres).').min(1),
+  totp:     z.string().max(32).optional(),
 })
 
 export type LoginState = {
   error?: string
+  /** senha certa, falta o código do autenticador: a tela mostra o campo do código */
+  needsCode?: boolean
 }
 
 export async function loginAction(
@@ -20,33 +25,31 @@ export async function loginAction(
   const parsed = LoginSchema.safeParse({
     email:    formData.get('email'),
     password: formData.get('password'),
+    totp:     formData.get('totp') ?? undefined,
   })
 
   if (!parsed.success) {
-    return { error: 'Preencha e-mail e senha.' }
+    return { error: LOGIN_MESSAGES.invalidInput }
   }
 
   try {
     await signIn('credentials', {
       email:       parsed.data.email,
       password:    parsed.data.password,
+      totp:        parsed.data.totp ?? '',
       redirectTo:  '/',
     })
   } catch (err) {
     if (err instanceof AuthError) {
-      switch (err.type) {
-        case 'CredentialsSignin':
-          return { error: 'E-mail ou senha incorretos.' }
-        case 'CallbackRouteError':
-          // Rate limit ou conta inativa — mensagem do authorize()
-          const msg = err.cause?.err?.message
-          if (msg === 'RATE_LIMITED') {
-            return { error: 'Muitas tentativas falhas. Tente novamente mais tarde.' }
-          }
-          return { error: msg ?? 'Acesso bloqueado temporariamente.' }
-        default:
-          return { error: 'Erro ao tentar entrar. Tente novamente.' }
+      const causeCode = err.cause?.err?.message ?? null
+      const message = loginErrorMessage(err.type, causeCode)
+      const needsCode = err.type === 'CallbackRouteError' && (causeCode === LOGIN_MFA_REQUIRED_CODE || causeCode === LOGIN_MFA_INVALID_CODE)
+      // Falha inesperada (banco fora, configuração): detalhe só no log do servidor.
+      if (message === LOGIN_MESSAGES.unavailable) {
+        const log = await getLogger({ action: 'login' })
+        log.error({ err, authErrorType: err.type }, 'Falha inesperada no login')
       }
+      return needsCode ? { needsCode: true, error: causeCode === LOGIN_MFA_INVALID_CODE ? message : undefined } : { error: message }
     }
     // signIn lança NEXT_REDIRECT internamente — relançar para o Next processar
     throw err

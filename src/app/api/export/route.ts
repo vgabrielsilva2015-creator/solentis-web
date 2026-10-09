@@ -2,198 +2,128 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { NextResponse } from 'next/server'
+import { can } from '@/server/auth/permissions'
+import { csvStream, lerPeriodo, type FonteCsv, type Periodo } from '@/lib/export-csv'
 
-// Neutraliza formula/CSV injection: uma célula iniciada por = + - @ (ou tab/CR)
-// é interpretada como fórmula pelo Excel/Sheets. Prefixamos com apóstrofo e
-// escapamos aspas. Aplicar em TODA célula que vai ao CSV.
-function csvSafe(value: unknown): string {
-  const s = String(value ?? '')
-  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
-  return `"${safe.replace(/"/g, '""')}"`
+// T-22: período obrigatório (máx. 366 dias) e resposta em partes. Antes: ocorrências sem limite
+// (tabela inteira na memória) e as demais cortadas em silêncio em 1000 linhas.
+
+type Fonte = { arquivo: string; fonte: FonteCsv<{ id: string }> }
+
+// Dentro de cada fonte, TODA consulta filtra por tenant_id e pelo período.
+function fonteDoTipo(type: string, tenantId: string, p: Periodo, status: string | null): Fonte | null {
+  const intervalo = { gte: p.from, lt: p.to }
+  const arquivo = (nome: string) => `${nome}_${p.fromStr}_a_${p.toStr}.csv`
+
+  if (type === 'occurrences') {
+    const where = { tenant_id: tenantId, created_at: intervalo, ...(status === 'all' ? {} : { status: { in: ['OPEN', 'IN_PROGRESS'] } }) }
+    return {
+      arquivo: arquivo('ocorrencias'),
+      fonte: {
+        headers: ['ID', 'Data Criação', 'Severidade', 'Categoria', 'Ponto de Coleta', 'Status', 'Prazo', 'Reportado por', 'Descrição'],
+        pagina: (cursor, take) => prisma.occurrence.findMany({
+          where, take, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          include: { reporter: { select: { name: true } }, collection_point: { select: { name: true } } },
+          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        }),
+        linha: (o) => {
+          const oc = o as Awaited<ReturnType<typeof prisma.occurrence.findMany<{ include: { reporter: { select: { name: true } }; collection_point: { select: { name: true } } } }>>>[number]
+          return [oc.id, oc.created_at.toISOString(), oc.severity, oc.category ?? '', oc.collection_point?.name ?? '', oc.status, oc.deadline.toISOString(), oc.reporter.name, oc.description]
+        },
+      },
+    }
+  }
+  if (type === 'readings') {
+    return {
+      arquivo: arquivo('leituras'),
+      fonte: {
+        headers: ['Data', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Registrado por', 'Não Conforme'],
+        pagina: (cursor, take) => prisma.reading.findMany({
+          where: { tenant_id: tenantId, recorded_at: intervalo }, take, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          include: { recorder: { select: { name: true } }, collection_point: { select: { name: true } }, parameter: { select: { name: true, unit: true } } },
+          orderBy: [{ recorded_at: 'desc' }, { id: 'desc' }],
+        }),
+        linha: (x) => {
+          const r = x as Awaited<ReturnType<typeof prisma.reading.findMany<{ include: { recorder: { select: { name: true } }; collection_point: { select: { name: true } }; parameter: { select: { name: true; unit: true } } } }>>>[number]
+          return [r.recorded_at.toISOString(), r.collection_point.name, r.parameter?.name ?? '', r.value ?? '', r.parameter?.unit ?? r.unit ?? '', r.recorder.name, r.is_non_conformant ? 'SIM' : 'NÃO']
+        },
+      },
+    }
+  }
+  if (type === 'analyses') {
+    return {
+      arquivo: arquivo('analises'),
+      fonte: {
+        headers: ['Data Coleta', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Registrado por', 'Não Conforme'],
+        pagina: (cursor, take) => prisma.analysis.findMany({
+          where: { tenant_id: tenantId, collected_at: intervalo }, take, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          include: { recorder: { select: { name: true } }, collection_point: { select: { name: true } }, parameter: { select: { name: true, unit: true } } },
+          orderBy: [{ collected_at: 'desc' }, { id: 'desc' }],
+        }),
+        linha: (x) => {
+          const a = x as Awaited<ReturnType<typeof prisma.analysis.findMany<{ include: { recorder: { select: { name: true } }; collection_point: { select: { name: true } }; parameter: { select: { name: true; unit: true } } } }>>>[number]
+          return [a.collected_at.toISOString(), a.collection_point.name, a.parameter.name, a.value ?? '', a.parameter.unit, a.recorder.name, a.is_non_conformant ? 'SIM' : 'NÃO']
+        },
+      },
+    }
+  }
+  if (type === 'preventives') {
+    return {
+      arquivo: arquivo('preventivas'),
+      fonte: {
+        headers: ['ID', 'Equipamento', 'Serial', 'Data Agendada', 'Data Conclusão', 'Status', 'Responsável', 'Notas'],
+        pagina: (cursor, take) => prisma.preventiveMaintenance.findMany({
+          where: { tenant_id: tenantId, scheduled_date: intervalo }, take, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          include: { equipment: { select: { name: true, serial_number: true } }, completer: { select: { name: true } } },
+          orderBy: [{ scheduled_date: 'desc' }, { id: 'desc' }],
+        }),
+        linha: (x) => {
+          const m = x as Awaited<ReturnType<typeof prisma.preventiveMaintenance.findMany<{ include: { equipment: { select: { name: true; serial_number: true } }; completer: { select: { name: true } } } }>>>[number]
+          return [m.id, m.equipment.name, m.equipment.serial_number ?? '', m.scheduled_date.toISOString(), m.completed_date ? m.completed_date.toISOString() : '', m.status, m.completer?.name ?? '', m.notes ?? '']
+        },
+      },
+    }
+  }
+  if (type === 'external_analyses') {
+    return {
+      arquivo: arquivo('laudos_externos'),
+      fonte: {
+        headers: ['ID', 'Data Coleta', 'Laboratório', 'Laudo', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Coletado por', 'Status', 'Não Conforme'],
+        pagina: (cursor, take) => prisma.externalAnalysis.findMany({
+          where: { tenant_id: tenantId, collected_at: intervalo }, take, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          include: { collector: { select: { name: true } }, collection_point: { select: { name: true } }, parameter: { select: { name: true, unit: true } } },
+          orderBy: [{ collected_at: 'desc' }, { id: 'desc' }],
+        }),
+        linha: (x) => {
+          const a = x as Awaited<ReturnType<typeof prisma.externalAnalysis.findMany<{ include: { collector: { select: { name: true } }; collection_point: { select: { name: true } }; parameter: { select: { name: true; unit: true } } } }>>>[number]
+          return [a.id, a.collected_at.toISOString(), a.laboratory_name ?? '', a.laudo_number ?? '', a.collection_point.name, a.parameter.name, a.value ?? '', a.parameter.unit, a.collector.name,
+            a.status === 'COMPLETED' ? 'CONCLUÍDO' : 'AGUARDANDO LAUDO', a.is_non_conformant ? 'SIM' : (a.is_non_conformant === false ? 'NÃO' : '')]
+        },
+      },
+    }
+  }
+  return null
 }
 
 export async function GET(request: Request) {
   const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    return new NextResponse('Unauthorized', { status: 401 })
-  }
+  if (!session) return new NextResponse('Unauthorized', { status: 401 })
+  if (!can(session.user.role, 'data.export')) return new NextResponse('Forbidden', { status: 403 })
 
   const { searchParams } = new URL(request.url)
-  const type = searchParams.get('type')
+  const type = searchParams.get('type') ?? ''
+  const { periodo, erro } = lerPeriodo(searchParams.get('from'), searchParams.get('to'))
+  if (!periodo) return new NextResponse(erro, { status: 400 })
+
   const tenantId = await getTenantId()
+  const f = fonteDoTipo(type, tenantId, periodo, searchParams.get('status'))
+  if (!f) return new NextResponse('Invalid type', { status: 400 })
 
-  let csv = ''
-  let filename = ''
-
-  if (type === 'occurrences') {
-    const statusFilter = searchParams.get('status')
-    const showAll = statusFilter === 'all'
-
-    const where = {
-      tenant_id: tenantId,
-      ...(showAll ? {} : { status: { in: ['OPEN', 'IN_PROGRESS'] } }),
-    }
-
-    const occurrences = await prisma.occurrence.findMany({
-      where,
-      include: {
-        reporter: { select: { name: true } },
-        collection_point: { select: { name: true } },
-      },
-      orderBy: { created_at: 'desc' },
-    })
-
-    const headers = ['ID', 'Data Criação', 'Severidade', 'Categoria', 'Ponto de Coleta', 'Status', 'Prazo', 'Reportado por', 'Descrição']
-    csv += headers.join(';') + '\n'
-
-    for (const oc of occurrences) {
-      const row = [
-        oc.id,
-        oc.created_at.toISOString(),
-        oc.severity,
-        oc.category ?? '',
-        oc.collection_point?.name ?? '',
-        oc.status,
-        oc.deadline.toISOString(),
-        oc.reporter.name,
-        oc.description,
-      ]
-      csv += row.map(csvSafe).join(';') + '\n'
-    }
-
-    filename = `ocorrencias_${new Date().toISOString().slice(0, 10)}.csv`
-  } else if (type === 'readings') {
-    // Add logic for readings if needed
-    const readings = await prisma.reading.findMany({
-      where: { tenant_id: tenantId },
-      include: {
-        recorder: { select: { name: true } },
-        collection_point: { select: { name: true } },
-        parameter: { select: { name: true, unit: true } },
-      },
-      orderBy: { recorded_at: 'desc' },
-      take: 1000 // Limit to prevent massive loads
-    })
-
-    const headers = ['Data', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Registrado por', 'Não Conforme']
-    csv += headers.join(';') + '\n'
-
-    for (const r of readings) {
-      const row = [
-        r.recorded_at.toISOString(),
-        r.collection_point.name,
-        r.parameter?.name ?? '',
-        r.value ?? '',
-        r.parameter?.unit ?? r.unit ?? '',
-        r.recorder.name,
-        r.is_non_conformant ? 'SIM' : 'NÃO'
-      ]
-      csv += row.map(csvSafe).join(';') + '\n'
-    }
-
-    filename = `leituras_${new Date().toISOString().slice(0, 10)}.csv`
-  } else if (type === 'analyses') {
-    const analyses = await prisma.analysis.findMany({
-      where: { tenant_id: tenantId },
-      include: {
-        recorder: { select: { name: true } },
-        collection_point: { select: { name: true } },
-        parameter: { select: { name: true, unit: true } },
-      },
-      orderBy: { collected_at: 'desc' },
-      take: 1000
-    })
-
-    const headers = ['Data Coleta', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Registrado por', 'Não Conforme']
-    csv += headers.join(';') + '\n'
-
-    for (const a of analyses) {
-      const row = [
-        a.collected_at.toISOString(),
-        a.collection_point.name,
-        a.parameter.name,
-        a.value ?? '',
-        a.parameter.unit,
-        a.recorder.name,
-        a.is_non_conformant ? 'SIM' : 'NÃO'
-      ]
-      csv += row.map(csvSafe).join(';') + '\n'
-    }
-
-    filename = `analises_${new Date().toISOString().slice(0, 10)}.csv`
-  } else if (type === 'preventives') {
-    const maintenances = await prisma.preventiveMaintenance.findMany({
-      where: { tenant_id: tenantId },
-      include: {
-        equipment: { select: { name: true, serial_number: true } },
-        completer: { select: { name: true } },
-      },
-      orderBy: { scheduled_date: 'desc' },
-      take: 1000
-    })
-
-    const headers = ['ID', 'Equipamento', 'Serial', 'Data Agendada', 'Data Conclusão', 'Status', 'Responsável', 'Notas']
-    csv += headers.join(';') + '\n'
-
-    for (const m of maintenances) {
-      const row = [
-        m.id,
-        m.equipment.name,
-        m.equipment.serial_number ?? '',
-        m.scheduled_date.toISOString(),
-        m.completed_date ? m.completed_date.toISOString() : '',
-        m.status,
-        m.completer?.name ?? '',
-        m.notes ?? '',
-      ]
-      csv += row.map(csvSafe).join(';') + '\n'
-    }
-
-    filename = `preventivas_${new Date().toISOString().slice(0, 10)}.csv`
-  } else if (type === 'external_analyses') {
-    const external = await prisma.externalAnalysis.findMany({
-      where: { tenant_id: tenantId },
-      include: {
-        collector: { select: { name: true } },
-        collection_point: { select: { name: true } },
-        parameter: { select: { name: true, unit: true } },
-      },
-      orderBy: { collected_at: 'desc' },
-      take: 1000
-    })
-
-    const headers = ['ID', 'Data Coleta', 'Laboratório', 'Laudo', 'Ponto', 'Parâmetro', 'Valor', 'Unidade', 'Coletado por', 'Status', 'Não Conforme']
-    csv += headers.join(';') + '\n'
-
-    for (const a of external) {
-      const row = [
-        a.id,
-        a.collected_at.toISOString(),
-        a.laboratory_name ?? '',
-        a.laudo_number ?? '',
-        a.collection_point.name,
-        a.parameter.name,
-        a.value ?? '',
-        a.parameter.unit,
-        a.collector.name,
-        a.status === 'COMPLETED' ? 'CONCLUÍDO' : 'AGUARDANDO LAUDO',
-        a.is_non_conformant ? 'SIM' : (a.is_non_conformant === false ? 'NÃO' : '')
-      ]
-      csv += row.map(csvSafe).join(';') + '\n'
-    }
-
-    filename = `laudos_externos_${new Date().toISOString().slice(0, 10)}.csv`
-  } else {
-    return new NextResponse('Invalid type', { status: 400 })
-  }
-
-  // Use BOM for Excel to recognize UTF-8 correctly
-  const bom = '\uFEFF'
-
-  return new NextResponse(bom + csv, {
+  return new NextResponse(csvStream(f.fonte), {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${f.arquivo}"`,
+      'Cache-Control': 'no-store',
     },
   })
 }

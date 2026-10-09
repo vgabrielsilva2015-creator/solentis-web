@@ -3,8 +3,8 @@ const path = require('path');
 
 function walkDir(dir, callback) {
   fs.readdirSync(dir).forEach(f => {
-    let dirPath = path.join(dir, f);
-    let isDirectory = fs.statSync(dirPath).isDirectory();
+    const dirPath = path.join(dir, f);
+    const isDirectory = fs.statSync(dirPath).isDirectory();
     isDirectory ? walkDir(dirPath, callback) : callback(path.join(dir, f));
   });
 }
@@ -13,7 +13,7 @@ function processFile(filePath) {
   if (!filePath.endsWith('.tsx')) return;
   if (filePath.includes('node_modules') || filePath.includes('.next')) return;
 
-  let original = fs.readFileSync(filePath, 'utf8');
+  const original = fs.readFileSync(filePath, 'utf8');
   let content = original;
 
   // Encontra tags de abertura que contêm type="submit"

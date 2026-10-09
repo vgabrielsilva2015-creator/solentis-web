@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { statusEfetivoPassagem, HANDOVER_STATUS_LABEL } from '@/lib/handover-status'
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { EditHandoverForm } from './edit-handover-form'
@@ -20,11 +21,6 @@ const STATUS_COLOR: Record<string, string> = {
   CLOSED:           'bg-muted/60 text-muted-foreground border-border/50',
 }
 
-const HANDOVER_STATUS_LABEL: Record<string, string> = {
-  PENDING:   'Aguardando confirmação',
-  CONFIRMED: 'Confirmada',
-  TIMED_OUT: 'Timeout',
-}
 
 function formatDatetime(d: Date | string): string {
   return new Date(d).toLocaleString('pt-BR', {
@@ -72,6 +68,8 @@ export default async function InstanciaDetalhePage({
   if (!instance || instance.tenant_id !== (await getTenantId())) redirect('/gestor/turnos/tarefas')
 
   const h = instance.handover
+  // T-18: status calculado (vencida / confirmada com atraso), sem gravar no GET
+  const hStatus = h ? statusEfetivoPassagem(h) : null
 
   const checklist = (h ? JSON.parse((h.checklist_data as string) || '{}') : {}) as {
     readings_count?: number
@@ -142,11 +140,12 @@ export default async function InstanciaDetalhePage({
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Passagem</p>
             <span className={`rounded px-2 py-0.5 text-xs font-medium ${
-              h.status === 'CONFIRMED'  ? 'bg-green-950/60 text-green-400'  :
-              h.status === 'TIMED_OUT' ? 'bg-red-950/60 text-red-400'      :
-                                         'bg-amber-950/60 text-amber-400'
+              hStatus === 'CONFIRMED'      ? 'bg-green-950/60 text-green-400' :
+              hStatus === 'CONFIRMED_LATE' ? 'bg-amber-950/60 text-amber-400' :
+              hStatus === 'TIMED_OUT'      ? 'bg-red-950/60 text-red-400'     :
+                                             'bg-amber-950/60 text-amber-400'
             }`}>
-              {HANDOVER_STATUS_LABEL[h.status] ?? h.status}
+              {hStatus && HANDOVER_STATUS_LABEL[hStatus]}
             </span>
           </div>
 

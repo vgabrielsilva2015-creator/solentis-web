@@ -83,12 +83,27 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
             )}
           </div>
         </div>
-        <Link
-          href={`/gestor/produtos-quimicos/${id}/entrada`}
-          className="shrink-0 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
-        >
-          + Registrar entrada
-        </Link>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <Link
+            href={`/gestor/produtos-quimicos/${id}/entrada`}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
+          >
+            + Registrar entrada
+          </Link>
+          {/* T-20 (decisão 1): o gestor também registra saída e contagem, pelas mesmas telas do operador */}
+          <Link
+            href={`/operador/estoque/${id}/saida`}
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            Registrar saída
+          </Link>
+          <Link
+            href={`/operador/estoque/${id}/contagem`}
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            Contagem física
+          </Link>
+        </div>
       </div>
 
       {/* Resumo de estoque */}

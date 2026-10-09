@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { registrarSaida } from '@/app/operador/estoque/actions'
+import { numeroOuNaN } from '@/lib/number-ptbr'
 
 type Props = {
   productId:    string
@@ -25,7 +26,7 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
     return result
   }, null)
 
-  const qtyNum       = parseFloat(qty) || 0
+  const qtyNum       = numeroOuNaN(qty) || 0
   const ficaNegativo = qtyNum > 0 && qtyNum > estoqueAtual
 
   return (
@@ -60,10 +61,8 @@ export function ExitForm({ productId, productName, unit, estoqueAtual }: Props) 
             </label>
             <input
               name="quantity"
-              type="number"
+              type="text" autoComplete="off"
               inputMode="decimal"
-              min="0.01"
-              step="0.01"
               required
               value={qty}
               onChange={(e) => setQty(e.target.value)}

@@ -4,9 +4,11 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { getTenantId } from '@/lib/tenant'
 import { Button } from '@/components/ui/button'
-import { Download, UploadCloud } from 'lucide-react'
+import { UploadCloud } from 'lucide-react'
 import { ResultsDataTable, UnifiedResult } from '@/components/gestor/resultados/results-data-table'
 import { ResultsFilters } from '@/components/gestor/resultados/results-filters'
+import { ExportCsvMenu } from '@/components/export-csv-menu'
+import type { Prisma } from '@prisma/client'
 
 const PAGE_SIZE = 20
 
@@ -30,7 +32,7 @@ export default async function GestorLaudosPage({
   const skip = (page - 1) * PAGE_SIZE
   const tenant_id = await getTenantId()
 
-  const where: any = { 
+  const where: Prisma.AnalysisWhereInput = { 
     tenant_id,
     laboratory_type: 'EXTERNAL'
   }
@@ -106,12 +108,7 @@ export default async function GestorLaudosPage({
                 Importar Laudo PDF
               </Button>
             </Link>
-            <Link href={`/api/export?type=external_analyses`} target="_blank">
-              <Button variant="outline" className="border-border bg-muted text-foreground hover:bg-secondary text-xs h-8">
-                <Download className="w-4 h-4 mr-1.5" />
-                Exportar CSV
-              </Button>
-            </Link>
+            <ExportCsvMenu type="external_analyses" />
           </div>
         </div>
 

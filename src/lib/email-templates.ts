@@ -44,13 +44,23 @@ function baseUrl(): string {
   return process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'https://solentis.app'
 }
 
-function escapeHtml(input: string): string {
+export function escapeHtml(input: string): string {
   return input
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+/** Só http(s). Qualquer outra coisa (javascript:, data:) vira '#' (T-21 / V-12). */
+export function safeUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' || u.protocol === 'http:' ? escapeHtml(u.toString()) : '#'
+  } catch {
+    return '#'
+  }
 }
 
 interface EmailLayoutParams {
@@ -68,7 +78,7 @@ interface EmailLayoutParams {
 
 function renderEmailLayout(p: EmailLayoutParams): string {
   const logo = `${baseUrl()}/icons/icon-192x192.png`
-  const ctaUrl = escapeHtml(p.ctaUrl)
+  const ctaUrl = safeUrl(p.ctaUrl)
   const year = new Date().getFullYear()
   const showFallback = p.showFallbackLink !== false
 

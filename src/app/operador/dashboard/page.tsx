@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { STATUS_AGUARDANDO } from '@/lib/handover-status'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -33,9 +34,11 @@ export default async function OperadorDashboard() {
         ? prisma.shiftHandover.count({
             where: {
               tenant_id:        tenantId,
-              status:           'PENDING',
+              // Mesmo critério da lista em /operador/turnos (T-18): vencidas
+              // continuam aguardando, e o turno da noite aberto ontem também conta.
+              status:           { in: [...STATUS_AGUARDANDO] },
               outgoing_user_id: { not: userId },
-              shift_instance:   { date: today, status: 'HANDOVER_PENDING' },
+              shift_instance:   { status: 'HANDOVER_PENDING' },
             },
           })
         : Promise.resolve(0),

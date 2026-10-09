@@ -11,7 +11,7 @@ export function DeleteButton({ id, hasMovements }: { id: string; hasMovements: b
   if (hasMovements) {
     return (
       <p className="text-xs text-muted-foreground">
-        Produto com movimentações não pode ser excluído. Use "Desativar" acima.
+        Produto com movimentações não pode ser excluído. Use &quot;Desativar&quot; acima.
       </p>
     )
   }

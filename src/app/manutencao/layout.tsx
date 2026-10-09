@@ -16,6 +16,7 @@ export default async function ManutencaoLayout({
     { href: '/manutencao/dashboard',   label: 'Início',      iconName: 'LayoutDashboard' },
     { href: '/manutencao/preventivas', label: 'Preventivas', iconName: 'Wrench'          },
     { href: '/manutencao/corretivas',  label: 'Corretivas',  iconName: 'AlertTriangle'   },
+    { href: '/manutencao/ocorrencias', label: 'Ocorrências', iconName: 'Megaphone'       },
     { href: '/manutencao/escala',      label: 'Escalas',     iconName: 'CalendarDays'    },
   ]
 

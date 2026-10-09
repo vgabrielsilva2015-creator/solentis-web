@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { startOfDay, addDays } from 'date-fns'
 import { toZonedTime, format } from 'date-fns-tz'
 import { getLogger } from '@/lib/logger'
+import { baterCoracaoDoCron } from '@/lib/observability'
 
 export async function GET(request: Request) {
   // Verificação de segurança: a Vercel Cron envia 'Authorization: Bearer <CRON_SECRET>'.
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
   }
 
   const log = await getLogger({ action: 'cronShifts' })
+  const inicio = performance.now()
 
   try {
     const today = new Date()
@@ -24,81 +26,102 @@ export async function GET(request: Request) {
     const targetDate = startOfDay(today)
 
     // @tenant-safe: Job de sistema que gera turnos para todos os tenants
-    const schedules = await prisma.shiftSchedule.findMany({
+    // T-22: número de consultas CONSTANTE (não cresce com plantas/turnos): 1 agendamentos,
+    // 1 instâncias do dia, 1 escalas do dia, 1 gestores, 1 createMany.
+    const schedules = (await prisma.shiftSchedule.findMany({
       where: {
         is_active: true,
-        shift: { is_active: true }
+        days_of_week: { has: currentDayOfWeek },
+        shift: { is_active: true },
       },
-      include: {
-        shift: true
-      }
-    })
+      select: { shift_id: true, tenant_id: true, days_of_week: true },
+    })).filter((s) => s.days_of_week.includes(currentDayOfWeek))
 
     let created = 0
     let skipped = 0
 
-    for (const schedule of schedules) {
-      if (!schedule.days_of_week.includes(currentDayOfWeek)) continue
+    if (schedules.length > 0) {
+      const shiftIds = [...new Set(schedules.map((s) => s.shift_id))]
+      const tenantIds = [...new Set(schedules.map((s) => s.tenant_id))]
+      const chave = (t: string, sh: string) => `${t}/${sh}`
 
-      // Verifica se já existe uma instância para este turno nesta data
-      const existingInstance = await prisma.shiftInstance.findFirst({
-        where: {
-          shift_id: schedule.shift_id,
-          date: targetDate,
-          tenant_id: schedule.tenant_id
+      // @tenant-safe: job de sistema, filtrado pelos turnos/plantas dos agendamentos acima
+      const [existentes, escalas, gestores] = await Promise.all([
+        prisma.shiftInstance.findMany({
+          where: { date: targetDate, tenant_id: { in: tenantIds }, shift_id: { in: shiftIds } },
+          select: { tenant_id: true, shift_id: true },
+        }),
+        prisma.shiftScale.findMany({
+          where: { date: targetDate, tenant_id: { in: tenantIds }, shift_id: { in: shiftIds } },
+          select: { tenant_id: true, shift_id: true, operator_id: true },
+          orderBy: { id: 'asc' },
+        }),
+        prisma.user.findMany({
+          where: { tenant_id: { in: tenantIds }, role: 'MANAGER', is_active: true, deleted_at: null },
+          select: { id: true, tenant_id: true },
+          orderBy: { created_at: 'asc' },
+        }),
+      ])
+      const jaExiste = new Set(existentes.map((e) => chave(e.tenant_id, e.shift_id)))
+      const operadorEscalado = new Map<string, string>()
+      for (const e of escalas) {
+        const k = chave(e.tenant_id, e.shift_id)
+        if (!operadorEscalado.has(k)) operadorEscalado.set(k, e.operator_id)
+      }
+      const gestorDaPlanta = new Map<string, string>()
+      for (const g of gestores) if (!gestorDaPlanta.has(g.tenant_id)) gestorDaPlanta.set(g.tenant_id, g.id)
+
+      // opened_by é FK obrigatória para User: operador escalado → senão gestor da planta.
+      const novas: Array<{ tenant_id: string; shift_id: string; date: Date; status: string; opened_by: string }> = []
+      const vistos = new Set<string>()
+      for (const schedule of schedules) {
+        const k = chave(schedule.tenant_id, schedule.shift_id)
+        if (jaExiste.has(k) || vistos.has(k)) continue
+        vistos.add(k)
+        const openedById = operadorEscalado.get(k) ?? gestorDaPlanta.get(schedule.tenant_id)
+        if (!openedById) {
+          // Nenhum operador escalado nem gestor: pula ESTA instância (não quebra o lote)
+          skipped++
+          log.warn(
+            { tenantId: schedule.tenant_id, shiftId: schedule.shift_id, date: targetDate.toISOString() },
+            'Instância de turno pulada: sem operador escalado nem gestor',
+          )
+          continue
         }
-      })
-      if (existingInstance) continue
-
-      // opened_by é FK obrigatória para User. Fallback (mesma lógica de
-      // gestor/turnos/escala/actions.ts): operador escalado → senão gestor do tenant.
-      let openedById: string | null = null
-
-      const scale = await prisma.shiftScale.findFirst({
-        where: { tenant_id: schedule.tenant_id, shift_id: schedule.shift_id, date: targetDate },
-        select: { operator_id: true },
-      })
-      if (scale) {
-        openedById = scale.operator_id
-      } else {
-        const manager = await prisma.user.findFirst({
-          where: { tenant_id: schedule.tenant_id, role: 'MANAGER', is_active: true },
-          select: { id: true },
-        })
-        if (manager) openedById = manager.id
+        novas.push({ tenant_id: schedule.tenant_id, shift_id: schedule.shift_id, date: targetDate, status: 'SCHEDULED', opened_by: openedById })
       }
 
-      if (!openedById) {
-        // Nenhum operador escalado nem gestor: pula ESTA instância (não quebra o loop)
-        skipped++
-        log.warn(
-          { tenantId: schedule.tenant_id, shiftId: schedule.shift_id, date: targetDate.toISOString() },
-          'Instância de turno pulada: sem operador escalado nem gestor',
-        )
-        continue
-      }
-
-      // Criação individual com try/catch por item: uma falha em um tenant não
-      // impede a criação das instâncias dos demais.
-      try {
-        await prisma.shiftInstance.create({
-          data: {
-            tenant_id: schedule.tenant_id,
-            shift_id: schedule.shift_id,
-            date: targetDate,
-            status: 'SCHEDULED',
-            opened_by: openedById,
-          },
-        })
-        created++
-      } catch (err) {
-        skipped++
-        log.error(
-          { err, tenantId: schedule.tenant_id, shiftId: schedule.shift_id, date: targetDate.toISOString() },
-          'Falha ao criar instância de turno',
-        )
+      if (novas.length > 0) {
+        try {
+          // skipDuplicates: se outra execução criou no meio tempo, o índice único parcial ignora a linha
+          // @tenant-safe: cada linha de `novas` leva o tenant_id do próprio agendamento
+          const r = await prisma.shiftInstance.createMany({ data: novas, skipDuplicates: true })
+          created += r.count
+        } catch (err) {
+          // Falha no lote (ex.: um operador apagado quebra a FK): refaz item a item, como antes,
+          // para uma planta com problema não impedir as demais.
+          log.error({ err }, 'Falha no createMany de turnos; refazendo item a item')
+          for (const n of novas) {
+            try {
+              // @tenant-safe: `n` leva o tenant_id do próprio agendamento
+              await prisma.shiftInstance.create({ data: n })
+              created++
+            } catch (e) {
+              skipped++
+              log.error({ err: e, tenantId: n.tenant_id, shiftId: n.shift_id, date: targetDate.toISOString() }, 'Falha ao criar instância de turno')
+            }
+          }
+        }
       }
     }
+
+    // T-30: registro de que o cron rodou (e quanto fez) + batimento para o monitor externo.
+    // Turnos pulados não são falha do job (ficam no log como warn); só exceção não tratada é.
+    log.info(
+      { processed: schedules.length, created, skipped, durationMs: Math.round(performance.now() - inicio) },
+      'Cron de turnos concluído',
+    )
+    await baterCoracaoDoCron(true)
 
     return NextResponse.json({
       success: true,
@@ -107,7 +130,8 @@ export async function GET(request: Request) {
       skipped,
     })
   } catch (error) {
-    log.error({ err: error }, 'Erro ao gerar instâncias de turno')
+    log.error({ err: error, durationMs: Math.round(performance.now() - inicio) }, 'Erro ao gerar instâncias de turno')
+    await baterCoracaoDoCron(false)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

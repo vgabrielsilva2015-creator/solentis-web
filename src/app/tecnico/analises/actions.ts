@@ -1,51 +1,29 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
-import { redirect } from 'next/navigation'
-import { sendPushToRole } from '@/lib/push-actions'
-import { getLogger } from '@/lib/logger'
 import { handleNewOccurrence } from '@/lib/occurrences'
 
 
-async function requireTechnician() {
-  const session = await auth()
-  if (!session || session.user.role !== 'TECHNICIAN') {
-    redirect('/login')
-  }
-  return session
-}
 
-async function requireTechnicianOrManager() {
-  const session = await auth()
-  if (!session || !['TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 const AnaliseSchema = z.object({
-  collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
-  parameter_id:        z.string().min(1, 'Selecione o parâmetro'),
-  value: z.preprocess(
-    (v) => {
-      if (v === '' || v == null) return null
-      const n = Number(v)
-      return isNaN(n) ? null : n
-    },
-    z.number({ error: 'Informe o valor medido' }),
-  ),
+  collection_point_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o ponto de coleta'),
+  parameter_id:        z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o parâmetro'),
+  value: numeroBR({ rotulo: 'O valor medido', obrigatorio: 'Informe o valor medido' }),
   report_text: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(5000, 'Laudo deve ter no máximo 5000 caracteres').nullable(),
   ),
   laboratory_type: z.enum(['INTERNAL', 'EXTERNAL']).default('INTERNAL'),
-  collected_at: z.string().min(1, 'Informe a data/hora da coleta'),
+  collected_at: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data/hora da coleta'),
 })
 
 export type AnaliseFormState = {
@@ -60,7 +38,7 @@ export async function registrarAnalise(
   _prev: AnaliseFormState,
   formData: FormData,
 ): Promise<AnaliseFormState> {
-  const session = await requireTechnician()
+  const ctx = await requirePermission('analysis.create')
 
   const parsed = AnaliseSchema.safeParse({
     collection_point_id: formData.get('collection_point_id'),
@@ -74,20 +52,24 @@ export async function registrarAnalise(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const param = await prisma.qualityParameter.findFirst({ where: { id: parsed.data.parameter_id , tenant_id: (await getTenantId()) },
     select: { name: true, min_limit: true, max_limit: true, unit: true, default_method_id: true },
   })
   if (!param) return { error: 'Parâmetro não encontrado.' }
 
+  const erroPosse = await checkOwnership(await getTenantId(), [
+    { model: 'collectionPoint', id: parsed.data.collection_point_id },
+  ])
+  if (erroPosse) return { error: erroPosse }
+
   const isNonConformant =
     calcularNaoConformidade(parsed.data.value, param.min_limit, param.max_limit) ?? false
 
   const tenantId = await getTenantId()
 
-  let postCommitHooks: Array<() => Promise<void>> = []
+  const postCommitHooks: Array<() => Promise<void>> = []
   await prisma.$transaction(async (tx) => {
     await tx.analysis.create({
       data: {
@@ -162,10 +144,9 @@ export async function registrarAnalise(
 export async function aprovarAnalise(
   analysisId: string,
 ): Promise<{ error?: string }> {
-  const session = await requireTechnicianOrManager()
+  const ctx = await requirePermission('analysis.approve')
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   const analysis = await prisma.analysis.findFirst({ where: { id: analysisId , tenant_id: (await getTenantId()) },
     select: { approved_by: true },

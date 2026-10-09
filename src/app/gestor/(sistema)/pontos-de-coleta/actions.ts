@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
@@ -8,24 +8,20 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getTenantId } from '@/lib/tenant'
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') redirect('/login')
-}
 
 const PontoColetaSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  name: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, 'Nome deve ter pelo menos 2 caracteres'),
   matrix: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   location: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').nullable(),
   ),
   description: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
   is_field: z.preprocess((v) => v === 'on', z.boolean()),
   is_internal: z.preprocess((v) => v === 'on', z.boolean()),
@@ -42,7 +38,7 @@ export async function criarPontoColeta(
   _prev: PontoColetaFormState,
   formData: FormData,
 ): Promise<PontoColetaFormState> {
-  await requireManager()
+  await requirePermission('config.manage')
 
   const parsed = PontoColetaSchema.safeParse({
     name:        formData.get('name'),
@@ -88,7 +84,7 @@ export async function editarPontoColeta(
   _prev: PontoColetaFormState,
   formData: FormData,
 ): Promise<PontoColetaFormState> {
-  await requireManager()
+  await requirePermission('config.manage')
 
   const parsed = PontoColetaSchema.safeParse({
     name:        formData.get('name'),
@@ -130,7 +126,7 @@ export async function editarPontoColeta(
 }
 
 export async function toggleAtivoPontoColeta(id: string): Promise<{ error?: string }> {
-  await requireManager()
+  await requirePermission('config.manage')
   const pt = await prisma.collectionPoint.findFirst({
     where: { id, tenant_id: (await getTenantId()) },
     select: { is_active: true }

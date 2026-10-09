@@ -16,6 +16,7 @@ import {
   X
 } from 'lucide-react'
 import { updateOccurrenceStatus } from '@/app/operador/ocorrencias/actions'
+import { RESOLUCAO_MIN, resolucaoValida } from '@/lib/occurrence-resolution'
 
 const COLUMNS = [
   { id: 'OPEN', label: 'Aberta', color: 'border-t-amber-500 bg-amber-500/5 text-amber-400' },
@@ -94,10 +95,13 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
 
     startTransition(async () => {
       try {
-        await updateOccurrenceStatus(id, status, notes)
-      } catch (err: any) {
-        alert(err.message || 'Erro ao atualizar status.')
-        // Rollback
+        const r = await updateOccurrenceStatus(id, status, notes)
+        if (r?.error) {
+          alert(r.error)
+          setOccurrences(initialOccurrences) // desfaz a mudança otimista
+        }
+      } catch {
+        alert('Não foi possível atualizar o status. Tente novamente.')
         setOccurrences(initialOccurrences)
       }
     })
@@ -244,7 +248,7 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground">Notas de Resolução / O que foi feito? *</label>
+              <label className="text-xs font-semibold text-muted-foreground">O que foi feito para resolver? * <span className="font-normal">(mínimo {RESOLUCAO_MIN} caracteres; fica registrado com seu nome, data e hora)</span></label>
               <textarea
                 autoFocus
                 value={resolutionNotes}
@@ -261,7 +265,7 @@ export function OccurrencesKanban({ initialOccurrences, baseUrl }: OccurrencesKa
                 Cancelar
               </Button>
               <Button
-                disabled={!resolutionNotes.trim() || resolutionNotes.trim().length < 5}
+                disabled={isPending || !resolucaoValida(resolutionNotes)}
                 onClick={handleConfirmResolve}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-semibold focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >

@@ -1,10 +1,10 @@
 'use server'
 
-import { requireRole } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
 
 export type ManutencaoFormState = {
@@ -16,15 +16,15 @@ export type ManutencaoFormState = {
 // ─── Agendar preventiva avulsa ────────────────────────────────────────────────
 
 const PreventivaSchema = z.object({
-  equipment_id:   z.string().min(1, 'Selecione o equipamento'),
-  scheduled_date: z.string().min(1, 'Informe a data agendada'),
+  equipment_id:   z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o equipamento'),
+  scheduled_date: z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data agendada'),
 })
 
 export async function agendarPreventiva(
   _prev: ManutencaoFormState,
   formData: FormData,
 ): Promise<ManutencaoFormState> {
-  await requireRole(['MANAGER'])
+  await requirePermission('maintenance.plan')
   const tenantId = await getTenantId()
 
   const parsed = PreventivaSchema.safeParse({
@@ -59,12 +59,12 @@ export async function agendarPreventiva(
 // ─── Abrir corretiva ──────────────────────────────────────────────────────────
 
 const CorretivaSchema = z.object({
-  equipment_id:   z.string().min(1, 'Selecione o equipamento'),
-  description:    z.string().min(3, 'Descreva o problema'),
+  equipment_id:   z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').min(1, 'Selecione o equipamento'),
+  description:    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(3, 'Descreva o problema'),
   priority:       z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
-  start_date:     z.string().min(1, 'Informe a data de abertura'),
-  responsible_id: z.preprocess((v) => (v === '' || v == null ? null : String(v)), z.string().nullable()),
-  notes:          z.preprocess((v) => (v === '' || v == null ? null : String(v)), z.string().nullable()),
+  start_date:     z.string().max(40, 'Texto muito longo (máximo 40 caracteres).').min(1, 'Informe a data de abertura'),
+  responsible_id: z.preprocess((v) => (v === '' || v == null ? null : String(v)), z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').nullable()),
+  notes:          z.preprocess((v) => (v === '' || v == null ? null : String(v)), z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable()),
 })
 
 const DEADLINE_HOURS = { LOW: 72, MEDIUM: 48, HIGH: 24, CRITICAL: 12 } as const
@@ -73,7 +73,7 @@ export async function criarCorretiva(
   _prev: ManutencaoFormState,
   formData: FormData,
 ): Promise<ManutencaoFormState> {
-  const session = await requireRole(['MANAGER'])
+  const ctx = await requirePermission('maintenance.plan')
   const tenantId = await getTenantId()
 
   const parsed = CorretivaSchema.safeParse({
@@ -103,7 +103,7 @@ export async function criarCorretiva(
     })
     if (!resp) return { error: 'Responsável inválido.' }
   } else {
-    responsibleId = await resolveUserId(session.user.email!)
+    responsibleId = ctx.userId
   }
   if (!responsibleId) return { error: 'Sessão inválida.' }
 

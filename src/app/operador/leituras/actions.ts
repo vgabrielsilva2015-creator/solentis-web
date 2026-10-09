@@ -1,214 +1,72 @@
 'use server'
 
-import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
+import { requirePermission } from '@/server/auth/guards'
+import { medir } from '@/lib/observability'
 import { revalidatePath } from 'next/cache'
-import { calcularNaoConformidade } from '@/lib/readings-utils'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
-import { redirect } from 'next/navigation'
-import { sendPushToRole } from '@/lib/push-actions'
-import { saveUpload, saveImageUpload } from '@/lib/storage'
-import { handleNewOccurrence } from '@/lib/occurrences'
+import { saveImageUpload } from '@/lib/storage'
 import { getLogger } from '@/lib/logger'
+import { LeituraSchema } from '@/server/leituras/schema'
+import { leituraJaRegistrada, resolverReferencias, gravarLeitura } from '@/server/leituras/service'
 
 const MAX_IMG_BYTES = 5 * 1024 * 1024
-
-
-async function requireOperator() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
-
-const LeituraSchema = z
-  .object({
-    collection_point_id: z.string().min(1, 'Selecione o ponto de coleta'),
-    parameter_id: z.preprocess(
-      (v) => (v === '' || v == null ? null : String(v)),
-      z.string().nullable(),
-    ),
-    value: z.preprocess(
-      (v) => (v === '' || v == null ? null : Number(v)),
-      z.number().nullable(),
-    ),
-    unit: z.preprocess(
-      (v) => (v === '' || v == null ? null : String(v)),
-      z.string().nullable(),
-    ),
-    notes: z.preprocess(
-      (v) => (v === '' || v == null ? null : String(v)),
-      z.string().max(1000, 'Observação deve ter no máximo 1000 caracteres').nullable(),
-    ),
-    recorded_at: z.string().min(1, 'Informe a data/hora da leitura'),
-  })
-  .refine((d) => d.parameter_id === null || d.value !== null, {
-    message: 'Informe o valor medido',
-    path: ['value'],
-  })
 
 export type LeituraFormState = {
   error?: string
   fieldErrors?: Record<string, string[]>
   success?: boolean
   warning?: string
+  /** T-15: a leitura com este client_id já tinha sido registrada (reenvio). */
+  duplicate?: boolean
 }
 
-// ─── Registrar leitura ────────────────────────────────────────────────────────
+// T-25: as regras (idempotência, ponto/parâmetro do tenant, não conformidade, turno, ocorrência
+// automática) estão em `src/server/leituras/service.ts`. Aqui: quem pode, validação, foto, telas.
 
-export async function registrarLeitura(
-  _prev: LeituraFormState,
-  formData: FormData,
-): Promise<LeituraFormState> {
-  const session = await requireOperator()
+/** A foto é OPCIONAL: se o upload falhar, a leitura NÃO se perde — salva sem foto e avisa. */
+async function salvarFotoOpcional(formData: FormData, tenantId: string) {
+  const arquivo = formData.get('photo') as File | null
+  if (!arquivo || arquivo.size === 0) return { filename: null, warning: null }
+  try {
+    return { filename: await saveImageUpload(arquivo, 'readings', MAX_IMG_BYTES, tenantId), warning: null }
+  } catch (err: unknown) {
+    const log = await getLogger({ action: 'registrarLeitura' })
+    log.warn({ err: err instanceof Error ? err.message : String(err) }, 'Falha no upload da foto da leitura (leitura salva sem foto)')
+    return { filename: null, warning: 'Não deu para enviar a foto. A leitura foi salva; você pode anexar depois pelo histórico.' }
+  }
+}
 
-  const parsed = LeituraSchema.safeParse({
-    collection_point_id: formData.get('collection_point_id'),
-    parameter_id:        formData.get('parameter_id'),
-    value:               formData.get('value'),
-    unit:                formData.get('unit'),
-    notes:               formData.get('notes'),
-    recorded_at:         formData.get('recorded_at'),
+async function registrarLeituraImpl(_prev: LeituraFormState, formData: FormData): Promise<LeituraFormState> {
+  const ctx = await requirePermission('reading.create')
+
+  const parsed = LeituraSchema.safeParse(Object.fromEntries(
+    ['collection_point_id', 'parameter_id', 'value', 'unit', 'notes', 'recorded_at', 'client_id'].map((k) => [k, formData.get(k)]),
+  ))
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
+  const d = parsed.data
+
+  if (await leituraJaRegistrada(ctx.tenantId, d.client_id)) return { success: true, duplicate: true }
+
+  const ref = await resolverReferencias({
+    tenantId: ctx.tenantId, collectionPointId: d.collection_point_id, parameterId: d.parameter_id, value: d.value, unit: d.unit,
   })
-  if (!parsed.success) {
-    return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
-  }
+  if (!ref.ok) return { error: ref.error }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
-
-  let isNonConformant: boolean | null = null
-  let unit = parsed.data.unit
-  let paramName: string | null = null
-  let pointName: string | null = null
-
-  if (parsed.data.parameter_id) {
-    const [param, collectionPoint] = await Promise.all([
-      prisma.qualityParameter.findFirst({
-        where:  { id: parsed.data.parameter_id, tenant_id: await getTenantId() },
-        select: { name: true, min_limit: true, max_limit: true, unit: true },
-      }),
-      prisma.collectionPoint.findFirst({
-        where: { id: parsed.data.collection_point_id, tenant_id: await getTenantId() },
-        select: { id: true, name: true },
-      })
-    ])
-
-    if (!collectionPoint) {
-      return { error: 'Ponto de coleta inválido ou não autorizado.' }
-    }
-
-    if (param) {
-      // Copia a unidade do parâmetro quando o formulário não enviou uma
-      unit = unit ?? param.unit
-      paramName = param.name
-      pointName = collectionPoint.name
-      isNonConformant = calcularNaoConformidade(
-        parsed.data.value,
-        param.min_limit,
-        param.max_limit,
-      )
-    } else {
-      return { error: 'Parâmetro inválido ou não autorizado.' }
-    }
-  } else {
-    // If no parameter is provided, we still need to validate the collection point
-    const collectionPoint = await prisma.collectionPoint.findFirst({
-      where: { id: parsed.data.collection_point_id, tenant_id: await getTenantId() },
-      select: { id: true },
-    })
-    if (!collectionPoint) return { error: 'Ponto de coleta inválido ou não autorizado.' }
-  }
-
-  const activeInstance = await prisma.shiftInstance.findFirst({
-    where: { tenant_id: await getTenantId(), opened_by: userId, status: 'OPEN' },
-    select: { id: true },
-    orderBy: { opened_at: 'desc' },
-  }) ?? await prisma.shiftInstance.findFirst({
-    where: { tenant_id: await getTenantId(), status: 'OPEN' },
-    select: { id: true },
-    orderBy: { opened_at: 'desc' },
+  const foto = await salvarFotoOpcional(formData, ctx.tenantId)
+  const r = await gravarLeitura({
+    tenantId: ctx.tenantId, userId: ctx.userId, collectionPointId: d.collection_point_id, parameterId: d.parameter_id,
+    value: d.value, unit: ref.unit, notes: d.notes, recordedAt: localInputToUTC(d.recorded_at), clientId: d.client_id,
+    photoFilename: foto.filename, isNonConformant: ref.isNonConformant, paramName: ref.paramName,
   })
+  if (r.duplicate) return { success: true, duplicate: true }
 
-  // A foto é OPCIONAL: se o upload falhar (Blob fora do ar/não configurado,
-  // arquivo inválido), a leitura NÃO se perde — salva sem foto e avisa que dá
-  // para anexar depois. Nenhum erro cru (ENOENT/stack) chega ao formulário.
-  let photoFilename: string | null = null
-  let photoWarning: string | null = null
-  const photoFile = formData.get('photo') as File | null
-  if (photoFile && photoFile.size > 0) {
-    try {
-      photoFilename = await saveImageUpload(photoFile, 'readings', MAX_IMG_BYTES)
-    } catch (err: unknown) {
-      photoFilename = null
-      photoWarning = 'Não deu para enviar a foto. A leitura foi salva; você pode anexar depois pelo histórico.'
-      const log = await getLogger({ action: 'registrarLeitura' })
-      log.warn(
-        { err: err instanceof Error ? err.message : String(err) },
-        'Falha no upload da foto da leitura (leitura salva sem foto)',
-      )
-    }
+  for (const p of ['/operador/leituras', '/operador/ocorrencias', '/operador/dashboard', '/tecnico/dashboard', '/gestor/dashboard']) {
+    revalidatePath(p)
   }
+  return { success: true, warning: foto.warning ?? undefined }
+}
 
-  let postCommitHooks: Array<() => Promise<void>> = []
-  await prisma.$transaction(async (tx) => {
-    const reading = await tx.reading.create({
-      data: {
-        tenant_id:           (await getTenantId()),
-        collection_point_id: parsed.data.collection_point_id,
-        parameter_id:        parsed.data.parameter_id,
-        shift_instance_id:   activeInstance?.id ?? null,
-        value:               parsed.data.value,
-        unit,
-        notes:               parsed.data.notes,
-        is_non_conformant:   isNonConformant,
-        origin:              'MANUAL',
-        photo_filename:      photoFilename,
-        recorded_by:         userId,
-        recorded_at:         localInputToUTC(parsed.data.recorded_at),
-      },
-    })
-
-    // Se estiver fora da faixa, abre automaticamente uma ocorrência
-    if (isNonConformant && parsed.data.parameter_id) {
-      const tenantId = await getTenantId()
-      const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-        where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
-      })
-      const deadlineHours = defaultSeverity?.deadline_hours || 24
-      const deadline = new Date()
-      deadline.setHours(deadline.getHours() + deadlineHours)
-
-      const occurrence = await tx.occurrence.create({
-        data: {
-          tenant_id:   tenantId,
-          description: `Não Conformidade (${paramName}): Leitura registrada = ${parsed.data.value} ${unit ?? ''}. O valor está fora dos limites aceitáveis.`,
-          severity:    'HIGH',
-          status:      'OPEN',
-          type:        'OPERATIONAL',
-          deadline,
-          reported_by: userId,
-          collection_point_id: parsed.data.collection_point_id,
-        }
-      })
-      const hook = await handleNewOccurrence(tx, occurrence)
-      if (hook) postCommitHooks.push(hook)
-    }
-  })
-
-  for (const hook of postCommitHooks) {
-    await hook().catch(err => console.error('Error in postCommitHook:', err))
-  }
-
-
-
-  revalidatePath('/operador/leituras')
-  revalidatePath('/operador/ocorrencias')
-  revalidatePath('/operador/dashboard')
-  revalidatePath('/tecnico/dashboard')
-  revalidatePath('/gestor/dashboard')
-  return { success: true, warning: photoWarning ?? undefined }
+// ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───
+export async function registrarLeitura(...args: Parameters<typeof registrarLeituraImpl>) {
+  return medir('registrarLeitura', () => registrarLeituraImpl(...args))
 }

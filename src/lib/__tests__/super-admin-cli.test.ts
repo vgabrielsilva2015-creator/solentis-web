@@ -11,11 +11,17 @@ describe('create-super-admin', () => {
     expect(existsSync(join(process.cwd(), 'create-super.ts'))).toBe(false)
   })
   it('não tem valor padrão: sem e-mail, nome, planta ou host confirmado, recusa', () => {
-    for (const falta of ['--email', '--name', '--tenant-slug', '--confirm-host']) {
+    for (const falta of ['--email', '--name', '--confirm-host']) {
       const i = ARGS.indexOf(falta)
       const args = [...ARGS.slice(0, i), ...ARGS.slice(i + 2)]
       expect(lerEntrada(args, ENV).erro).toBeTruthy()
     }
+  })
+  it('sem --tenant-slug a conta vai para a planta da plataforma (padrão novo); com --tenant-slug usa o informado', () => {
+    const i = ARGS.indexOf('--tenant-slug')
+    const semSlug = lerEntrada([...ARGS.slice(0, i), ...ARGS.slice(i + 2)], ENV)
+    expect(semSlug.input?.tenantSlug).toBe('solentis-plataforma')
+    expect(lerEntrada(ARGS, ENV).input?.tenantSlug).toBe('solentis')
   })
   it('recusa quando o host confirmado não é o do DATABASE_URL (banco errado)', () => {
     const r = lerEntrada(['--email', 'a@b.co', '--name', 'Dono', '--tenant-slug', 's', '--confirm-host', 'outro.host'], ENV)

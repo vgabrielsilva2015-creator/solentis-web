@@ -1,12 +1,14 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
+import { reabrirOcorrencia, resolverOcorrencia } from '@/server/occurrences/resolve'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
-import { saveUpload, saveImageUpload } from '@/lib/storage'
+import { saveImageUpload } from '@/lib/storage'
 import { logAudit } from '@/lib/audit'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { redirect } from 'next/navigation'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
 import { logger } from '@/lib/logger'
@@ -15,27 +17,20 @@ import { handleNewOccurrence } from '@/lib/occurrences'
 const ALLOWED_TYPES  = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 
-async function requireAuthenticated() {
-  const session = await auth()
-  if (!session || !['OPERATOR', 'TECHNICIAN', 'MANAGER'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const OcorrenciaSchema = z.object({
-  description: z.string().min(5, 'Descreva a ocorrência em pelo menos 5 caracteres'),
+  description: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').min(5, 'Descreva a ocorrência em pelo menos 5 caracteres'),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], {
     message: 'Selecione a severidade'
   }),
-  category: z.string().min(1, 'Selecione a categoria'),
+  category: z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(1, 'Selecione a categoria'),
   type: z.enum(['OPERATIONAL', 'LABORATORY', 'EQUIPMENT', 'ENVIRONMENTAL', 'SAFETY'], {
     message: 'Selecione o tipo de ocorrência'
   }),
-  collection_point_id: z.string().optional().or(z.literal('')),
-  immediate_action: z.string().optional().nullable(),
+  collection_point_id: z.string().max(64, 'Texto muito longo (máximo 64 caracteres).').optional().or(z.literal('')),
+  immediate_action: z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').optional().nullable(),
 }).refine(data => {
   if ((data.severity === 'HIGH' || data.severity === 'CRITICAL') && (!data.immediate_action || data.immediate_action.trim().length === 0)) {
     return false
@@ -60,7 +55,7 @@ export async function registrarOcorrencia(
   _prev: OcorrenciaFormState,
   formData: FormData,
 ): Promise<OcorrenciaFormState> {
-  const session = await requireAuthenticated()
+  const ctx = await requirePermission('occurrence.create')
 
   const parsed = OcorrenciaSchema.safeParse({
     description: formData.get('description'),
@@ -74,11 +69,15 @@ export async function registrarOcorrencia(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) return { error: 'Sessão inválida.' }
+  const userId = ctx.userId
 
   // Prazo calculado a partir da configuração de severidade
   const tenantId = await getTenantId()
+
+  const erroPosse = await checkOwnership(tenantId, [
+    { model: 'collectionPoint', id: parsed.data.collection_point_id, optional: true },
+  ])
+  if (erroPosse) return { error: erroPosse }
   const severityDefault = await prisma.occurrenceSeverityDefault.findUnique({
     where: { tenant_id_severity: { tenant_id: tenantId, severity: parsed.data.severity } },
   })
@@ -106,7 +105,7 @@ export async function registrarOcorrencia(
     }
     let stored: string
     try {
-      stored = await saveImageUpload(file, 'occurrences', MAX_FILE_BYTES)
+      stored = await saveImageUpload(file, 'occurrences', MAX_FILE_BYTES, tenantId)
     } catch (err: unknown) {
       return { error: err instanceof Error ? err.message : `Erro no upload de ${file.name}` }
     }
@@ -119,7 +118,7 @@ export async function registrarOcorrencia(
     })
   }
 
-  let postCommitHooks: Array<() => Promise<void>> = []
+  const postCommitHooks: Array<() => Promise<void>> = []
   // Cria ocorrência (+ fotos + audit) em transação atômica
   await prisma.$transaction(async (tx) => {
     const occurrence = await tx.occurrence.create({
@@ -143,7 +142,7 @@ export async function registrarOcorrencia(
     if (photoPayloads.length > 0) {
       await tx.occurrencePhoto.createMany({
         data: photoPayloads.map(p => ({
-          tenant_id:     session.user.tenantId,
+          tenant_id:     ctx.tenantId,
           occurrence_id: occurrence.id,
           filename:      p.filename,
           original_name: p.original_name,
@@ -206,61 +205,16 @@ export async function registrarOcorrencia(
   return { success: true }
 }
 
-// ─── Resolver ocorrência ──────────────────────────────────────────────────────
-
-export async function resolverOcorrencia(formData: FormData) {
-  const session = await requireAuthenticated()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) throw new Error('Sessão inválida.')
-
-  const occurrenceId = formData.get('id') as string
-  const notes = formData.get('notes') as string
-
-  if (!occurrenceId) throw new Error('ID não informado')
-
-  await prisma.$transaction(async (tx) => {
-    const occurrence = await tx.occurrence.findUnique({
-      where: { id: occurrenceId, tenant_id: await getTenantId() },
-    })
-    if (!occurrence) throw new Error('Ocorrência não encontrada.')
-
-    // @tenant-checked: occurrence validada por tenant_id no findUnique acima.
-    await tx.occurrence.update({
-      where: { id: occurrenceId },
-      data: {
-        status: 'RESOLVED',
-        resolved_at: new Date(),
-        resolved_by: userId,
-        resolution_notes: notes,
-      },
-    })
-
-    await logAudit(tx, {
-      tenantId: (await getTenantId()),
-      userId,
-      action: 'UPDATE',
-      tableName: 'occurrences',
-      recordId: occurrence.id,
-      before: { status: occurrence.status },
-      after: { status: 'RESOLVED', resolved_by: userId, resolution_notes: notes },
-    })
-  })
-
-  revalidatePath('/operador/ocorrencias')
-  revalidatePath('/tecnico/ocorrencias')
-  revalidatePath('/gestor/ocorrencias')
-  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
-  redirect(`/operador/ocorrencias/${occurrenceId}`)
-}
-
 export async function addOccurrenceComment(occurrenceId: string, text: string) {
-  const session = await requireAuthenticated()
+  const ctx = await requirePermission('occurrence.create')
   const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) throw new Error('Sessão inválida.')
+  const userId = ctx.userId
 
   if (!text || text.trim().length < 2) {
     throw new Error('Comentário deve ter pelo menos 2 caracteres.')
+  }
+  if (text.length > 2000) {
+    throw new Error('Comentário muito longo (máximo 2000 caracteres).')
   }
 
   // Isolamento de tenant: confirma que a ocorrência pertence ao tenant do usuário
@@ -301,56 +255,50 @@ export async function updateOccurrenceStatus(
   occurrenceId: string,
   newStatus: string,
   notes?: string
-) {
-  const session = await requireAuthenticated()
-  const tenantId = await getTenantId()
-  const userId = await resolveUserId(session.user.email!)
-  if (!userId) throw new Error('Sessão inválida.')
+): Promise<{ error?: string }> {
+  const ctx = await requirePermission('occurrence.move')
 
   const validStatuses = ['OPEN', 'IN_PROGRESS', 'WAITING', 'RESOLVED']
   if (!validStatuses.includes(newStatus)) {
-    throw new Error('Status inválido.')
+    return { error: 'Status inválido.' }
   }
 
   const occurrence = await prisma.occurrence.findFirst({
-    where: { id: occurrenceId, tenant_id: tenantId }
+    where: { id: occurrenceId, tenant_id: ctx.tenantId },
+    select: { status: true },
   })
-  if (!occurrence) throw new Error('Ocorrência não encontrada.')
+  if (!occurrence) return { error: 'Ocorrência não encontrada.' }
+  if (occurrence.status === newStatus) return {}
 
-  await prisma.$transaction(async (tx) => {
-    const isResolving = newStatus === 'RESOLVED'
-    // @tenant-checked: occurrence validada por tenant_id no findFirst acima.
-    await tx.occurrence.update({
-      where: { id: occurrenceId },
-      data: {
-        status: newStatus,
-        ...(isResolving ? {
-          resolved_at: new Date(),
-          resolved_by: userId,
-          resolution_notes: notes || 'Resolvido via painel Kanban.',
-        } : {})
-      }
+  if (newStatus === 'RESOLVED') {
+    // Arrastar para "Resolvida" é resolver: mesma permissão e mesmas regras do botão
+    // (ação descrita obrigatória, responsável e data/hora na auditoria). T-20.
+    const permCtx = await requirePermission('occurrence.resolve')
+    const r = await resolverOcorrencia(permCtx, occurrenceId, notes, null, 'kanban')
+    if (!r.ok) return { error: r.error }
+  } else if (occurrence.status === 'RESOLVED') {
+    // Reabrir também exige a permissão de resolver; a resolução anterior fica na auditoria
+    const permCtx = await requirePermission('occurrence.resolve')
+    if (!(await reabrirOcorrencia(permCtx, occurrenceId, newStatus))) return { error: 'A ocorrência mudou enquanto você arrastava. Atualize a tela.' }
+  } else {
+    await prisma.$transaction(async (tx) => {
+      await tx.occurrence.updateMany({ where: { id: occurrenceId, tenant_id: ctx.tenantId }, data: { status: newStatus } })
+      await logAudit(tx, {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        action: 'UPDATE',
+        tableName: 'occurrences',
+        recordId: occurrenceId,
+        before: { status: occurrence.status },
+        after: { status: newStatus },
+      })
     })
+  }
 
-    await logAudit(tx, {
-      tenantId,
-      userId,
-      action: 'UPDATE',
-      tableName: 'occurrences',
-      recordId: occurrenceId,
-      before: { status: occurrence.status },
-      after: {
-        status: newStatus,
-        ...(isResolving ? { resolved_by: userId, resolution_notes: notes || 'Resolvido via painel Kanban.' } : {})
-      }
-    })
-  })
-
-  revalidatePath('/operador/ocorrencias')
-  revalidatePath('/tecnico/ocorrencias')
-  revalidatePath('/gestor/ocorrencias')
-  revalidatePath(`/operador/ocorrencias/${occurrenceId}`)
-  revalidatePath(`/tecnico/ocorrencias/${occurrenceId}`)
-  revalidatePath(`/gestor/ocorrencias/${occurrenceId}`)
+  for (const area of ['operador', 'tecnico', 'gestor']) {
+    revalidatePath(`/${area}/ocorrencias`)
+    revalidatePath(`/${area}/ocorrencias/${occurrenceId}`)
+  }
+  return {}
 }
 

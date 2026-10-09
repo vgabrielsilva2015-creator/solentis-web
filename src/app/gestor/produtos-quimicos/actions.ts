@@ -1,71 +1,38 @@
 'use server'
 
-import { auth } from '@/lib/auth'
+import { requirePermission } from '@/server/auth/guards'
+import { medir } from '@/lib/observability'
+import { EntradaSchema } from '@/server/estoque/schema'
+import { registrarEntradaDeEstoque } from '@/server/estoque/service'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
-import { getTenantId, resolveUserId } from '@/lib/tenant'
+import { getTenantId } from '@/lib/tenant'
+import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
 
-async function requireManager() {
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    redirect('/login')
-  }
-  return session
-}
 
-async function requireManagerOrTechnician() {
-  const session = await auth()
-  if (!session || !['MANAGER', 'TECHNICIAN'].includes(session.user.role)) {
-    redirect('/login')
-  }
-  return session
-}
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const unitValues = [...CHEMICAL_UNITS_PRESET, 'outro'] as const
 
 const ProdutoSchema = z.object({
-  name:        z.string().min(2, { error: 'Nome deve ter pelo menos 2 caracteres' }),
+  name:        z.string().max(200, 'Texto muito longo (máximo 200 caracteres).').min(2, { error: 'Nome deve ter pelo menos 2 caracteres' }),
   unit_select: z.enum(unitValues, { error: 'Selecione a unidade' }),
   unit_custom: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
     z.string().max(20).nullable(),
   ),
-  min_stock: z.preprocess(
-    (v) => parseFloat(String(v)),
-    z.number({ error: 'Estoque mínimo inválido' }).min(0, { error: 'Deve ser maior ou igual a 0' }),
-  ),
+  min_stock: numeroBR({ min: 0, rotulo: 'O estoque mínimo', obrigatorio: 'Informe o estoque mínimo.' }),
   description: z.preprocess(
     (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
+    z.string().max(2000, 'Texto muito longo (máximo 2000 caracteres).').nullable(),
   ),
-})
-
-const EntradaSchema = z.object({
-  product_id:     z.string().min(1, { error: 'Produto obrigatório' }),
-  quantity:       z.preprocess(
-    (v) => parseFloat(String(v)),
-    z.number({ error: 'Quantidade inválida' }).positive({ error: 'Quantidade deve ser maior que 0' }),
-  ),
-  supplier:       z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
-  ),
-  invoice_number: z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
-  ),
-  notes:          z.preprocess(
-    (v) => (v === '' || v == null ? null : String(v)),
-    z.string().nullable(),
-  ),
-  received_at:    z.string().min(1, { error: 'Data de recebimento obrigatória' }),
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,7 +44,7 @@ function resolveUnit(unit_select: string, unit_custom: string | null): string {
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 export async function criarProduto(_prev: unknown, formData: FormData) {
-  const session = await requireManager()
+  const ctx = await requirePermission('config.manage')
 
   const parsed = ProdutoSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) {
@@ -89,8 +56,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
 
   if (!unit) return { error: 'Informe a unidade de medida' }
 
-  const recorded_by = await resolveUserId(session.user.email!)
-  if (!recorded_by) return { error: 'Sessão inválida.' }
+  const recorded_by = ctx.userId
 
   await prisma.chemicalProduct.create({
     data: { tenant_id: (await getTenantId()), name, unit, min_stock, description, created_by: recorded_by },
@@ -102,7 +68,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
 }
 
 export async function editarProduto(_prev: unknown, formData: FormData) {
-  await requireManager()
+  await requirePermission('config.manage')
 
   const id = formData.get('id') as string
   if (!id) return { error: 'ID inválido' }
@@ -127,7 +93,7 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 }
 
 export async function toggleAtivoProduto(id: string, is_active: boolean) {
-  await requireManager()
+  await requirePermission('config.manage')
 
   await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data:  { is_active },
   })
@@ -137,30 +103,22 @@ export async function toggleAtivoProduto(id: string, is_active: boolean) {
   revalidatePath('/gestor/dashboard')
 }
 
-export async function registrarEntrada(_prev: unknown, formData: FormData) {
-  const session = await requireManagerOrTechnician()
+async function registrarEntradaImpl(_prev: unknown, formData: FormData) {
+  const ctx = await requirePermission('stock.receive')
 
   const parsed = EntradaSchema.safeParse(Object.fromEntries(formData))
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos' }
-  }
-
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos' }
   const { product_id, quantity, supplier, invoice_number, notes, received_at } = parsed.data
-  const recorded_by = await resolveUserId(session.user.email!)
-  if (!recorded_by) return { error: 'Sessão inválida.' }
 
-  await prisma.chemicalStockEntry.create({
-    data: {
-      tenant_id: (await getTenantId()),
-      product_id,
-      quantity,
-      supplier,
-      invoice_number,
-      notes,
-      received_at: localInputToUTC(received_at),
-      recorded_by,
-    },
+  const erroPosse = await checkOwnership(ctx.tenantId, [{ model: 'chemicalProduct', id: product_id }])
+  if (erroPosse) return { error: erroPosse }
+
+  // T-25: a regra (trava do produto + gravação) está em `src/server/estoque/service.ts`
+  const r = await registrarEntradaDeEstoque({
+    tenantId: ctx.tenantId, userId: ctx.userId, productId: product_id, quantity, supplier,
+    invoiceNumber: invoice_number, notes, receivedAt: localInputToUTC(received_at),
   })
+  if (!r.ok) return { error: r.error }
 
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath(`/gestor/produtos-quimicos/${product_id}`)
@@ -169,7 +127,7 @@ export async function registrarEntrada(_prev: unknown, formData: FormData) {
 }
 
 export async function excluirProduto(id: string) {
-  await requireManager()
+  await requirePermission('config.manage')
   const tenantId = await getTenantId()
 
   const [entries, exits, counts] = await Promise.all([
@@ -186,4 +144,9 @@ export async function excluirProduto(id: string) {
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath('/gestor/dashboard')
   redirect('/gestor/produtos-quimicos')
+}
+
+// ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───
+export async function registrarEntrada(...args: Parameters<typeof registrarEntradaImpl>) {
+  return medir('registrarEntrada', () => registrarEntradaImpl(...args))
 }

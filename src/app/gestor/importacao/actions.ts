@@ -1,8 +1,10 @@
 'use server'
 
+import { getActor, permissionError, requirePermission } from '@/server/auth/guards'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
-import { revalidatePath } from 'next/cache'
+import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
+import { errorMessage } from '@/lib/error-utils'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -11,17 +13,13 @@ function delay(ms: number) {
 export async function extractDataFromPDF(base64Data: string, mimeType: string) {
   // Server Actions são endpoints públicos: estar sob /gestor não protege.
   // Sem este guard, qualquer sessão poderia queimar a cota paga do Gemini.
-  const { auth } = await import('@/lib/auth')
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Não autorizado.')
-  }
+  await requirePermission('lab.import')
   if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType)) {
     throw new Error('Tipo de arquivo inválido.')
   }
-  // base64 ~= 1.37x os bytes reais → ~10 MB de arquivo original.
-  if (typeof base64Data !== 'string' || base64Data.length > 14_000_000) {
-    throw new Error('Arquivo muito grande.')
+  // base64 = 4/3 dos bytes reais; a requisição inteira não pode passar de 4,5 MB na Vercel (T-24).
+  if (typeof base64Data !== 'string' || base64Data.length > MAX_LAUDO_BASE64_CHARS) {
+    throw new Error(`Arquivo muito grande. O limite por arquivo é ${mb(MAX_LAUDO_BYTES)}; reduza o PDF e tente de novo.`)
   }
 
   const apiKey = process.env.GEMINI_API_KEY
@@ -65,7 +63,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
   const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-pro']
   const MAX_RETRIES = 3
   const BASE_DELAY_MS = 3000
-  let lastError: any = null
+  let lastError: unknown = null
 
   for (const modelName of modelsToTry) {
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -107,7 +105,7 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
   }
 
   // Sempre incluir o erro real para facilitar debug
-  const rawError = lastError?.message || 'Erro desconhecido'
+  const rawError = errorMessage(lastError) || 'Erro desconhecido'
   const friendlyError = `Falha ao processar PDF. Erro: ${rawError.substring(0, 150)}`
 
   log.error({ err: lastError }, 'Erro em todos os modelos da IA')
@@ -119,10 +117,7 @@ export async function getMappingContext() {
   const { getTenantId } = await import('@/lib/tenant')
   const { auth } = await import('@/lib/auth')
 
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') {
-    throw new Error('Não autorizado.')
-  }
+  await requirePermission('lab.import')
 
   const tenantId = await getTenantId()
   
@@ -151,15 +146,11 @@ export async function createParameterFromImport(data: { name: string; unit: stri
   const { getTenantId } = await import('@/lib/tenant')
   const { auth } = await import('@/lib/auth')
   
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') return { success: false, error: 'Não autorizado.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'lab.import')) return { success: false, error: 'Não autorizado.' }
   
   const tenantId = await getTenantId()
-  const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: tenantId, email: session.user.email! } },
-    select: { id: true }
-  })
-  if (!user) return { success: false, error: 'Usuário não encontrado.' }
+  const user = { id: ctx.userId }
 
   try {
     const param = await prisma.qualityParameter.create({
@@ -200,16 +191,12 @@ export async function saveMappedReadings(data: {
   const { auth } = await import('@/lib/auth')
   const { calcularNaoConformidade } = await import('@/lib/readings-utils')
   
-  const session = await auth()
-  if (!session || session.user.role !== 'MANAGER') return { success: false, error: 'Não autorizado.' }
+  const ctx = await getActor()
+  if (permissionError(ctx, 'lab.import')) return { success: false, error: 'Não autorizado.' }
   
   const tenantId = await getTenantId()
 
-  const user = await prisma.user.findUnique({
-    where: { tenant_id_email: { tenant_id: tenantId, email: session.user.email! } },
-    select: { id: true }
-  })
-  if (!user) return { success: false, error: 'Usuário não encontrado.' }
+  const user = { id: ctx.userId }
 
   // Buscar a matriz do ponto para verificação multi-matriz.
   // Rejeita ponto inexistente/de outro tenant — a FK é global, então sem este

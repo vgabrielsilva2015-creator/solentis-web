@@ -1,19 +1,11 @@
-export const RATE_LIMIT_MAX_ATTEMPTS  = 5
-export const RATE_LIMIT_WINDOW_MS     = 15 * 60 * 1000 // 15 minutos
+// Limite de tentativas de login: src/lib/rate-limit.ts (T-10)
 export const SESSION_MAX_AGE_OPERATOR = 30 * 60         // 30 min em segundos
 export const SESSION_MAX_AGE_DEFAULT  = 60 * 60         // 60 min em segundos
 
-export const ROUTE_ACCESS: Record<string, string[]> = {
-  '/gestor':     ['MANAGER'],
-  '/tecnico':    ['TECHNICIAN', 'MANAGER'],
-  '/operador':   ['OPERATOR', 'TECHNICIAN', 'MANAGER'],
-  '/manutencao': ['MAINTENANCE', 'MANAGER'],
-  '/admin':      ['SUPER_ADMIN'],
-}
+import { AREA_ACCESS } from '@/server/auth/permissions'
 
-export function isRateLimited(recentFailures: number): boolean {
-  return recentFailures >= RATE_LIMIT_MAX_ATTEMPTS
-}
+/** Acesso às áreas de tela — definido na matriz de permissões (T-20). */
+export const ROUTE_ACCESS: Record<string, readonly string[]> = AREA_ACCESS
 
 export function getSessionMaxAge(role: string): number {
   return role === 'OPERATOR' ? SESSION_MAX_AGE_OPERATOR : SESSION_MAX_AGE_DEFAULT
@@ -31,7 +23,8 @@ export function getDashboardRoute(role: string): string {
 }
 
 export function isRouteAllowedForRole(pathname: string, userRole: string): boolean {
-  if (userRole === 'SUPER_ADMIN') return true
+  // SUPER_ADMIN só entra na própria área (/admin) e nas rotas sem área (troca de senha, API, etc.).
+  // Antes liberava tudo; as telas dos perfis de planta ficam fora do alcance da conta de plataforma.
   for (const [prefix, roles] of Object.entries(ROUTE_ACCESS)) {
     if (pathname.startsWith(prefix)) {
       return roles.includes(userRole)
