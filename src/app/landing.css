@@ -35,6 +35,7 @@
   --gradient-brand: linear-gradient(150deg, #3ad0d6, #0a86a0);
   --shadow-soft-v:
     0 1px 2px oklch(0.2 0.04 235 / 0.04), 0 20px 50px -20px oklch(0.2 0.04 235 / 0.22);
+  --shadow-glow-v: 0 10px 30px -10px oklch(0.56 0.11 205 / 0.55);
 
   background-color: var(--background);
   color: var(--foreground);
@@ -55,6 +56,9 @@
   border: 1px solid var(--border);
   box-shadow: var(--shadow-soft-v);
 }
+/* Escopados (vencem qualquer utilitário homônimo do app). */
+.landing-scope .shadow-soft { box-shadow: var(--shadow-soft-v); }
+.landing-scope .shadow-glow { box-shadow: var(--shadow-glow-v); }
 
 /* Prévia do produto */
 .product-preview {

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
 // Abertura silenciosa: toca uma vez e dissipa até fundo branco. Fallback de falha,
@@ -43,8 +44,7 @@ export function OpeningWave() {
       className={`opening-wave${playing ? ' is-playing' : ''}${finished ? ' is-finished' : ''}`}
       aria-hidden="true"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={WAVE_STILL} alt="" />
+      <Image src={WAVE_STILL} alt="" fill sizes="100vw" priority />
       {enabled && (
         <video
           ref={videoRef}

@@ -49,7 +49,7 @@
   --color-surface-3: var(--surface-3);
   --color-success: var(--success);
   --color-warning: var(--warning); /* usado pela landing (Mockups/ProductPreview) */
-  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif; /* títulos da landing */
+  --font-display: var(--font-sora), "Sora", ui-sans-serif, system-ui, sans-serif; /* títulos da landing */
   --color-alarm: var(--alarm);
   --color-data: var(--data);
 
