@@ -12,7 +12,7 @@ import { getLogger } from '@/lib/logger'
 import { getTenantId } from '@/lib/tenant'
 import { createSetPasswordToken, buildSetPasswordUrl } from '@/lib/auth-tokens'
 import { sendEmail } from '@/lib/email'
-import { inviteEmail } from '@/lib/email-templates'
+import { inviteEmailHtml, EMAIL_SUBJECTS } from '@/lib/email-templates'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
@@ -90,8 +90,11 @@ export async function criarUsuario(
     try {
       const rawToken = await createSetPasswordToken(newUserId, tenantId, INVITE_TTL_MS)
       const inviteUrl = buildSetPasswordUrl(rawToken)
-      const mail = inviteEmail({ name: parsed.data.name, url: inviteUrl, email: parsed.data.email })
-      const emailResult = await sendEmail({ to: parsed.data.email, subject: mail.subject, html: mail.html })
+      const emailResult = await sendEmail({
+        to: parsed.data.email,
+        subject: EMAIL_SUBJECTS.invite,
+        html: inviteEmailHtml({ name: parsed.data.name, url: inviteUrl }),
+      })
       if (emailResult.success) inviteSent = true
       else inviteError = emailResult.error
     } catch (mailErr) {

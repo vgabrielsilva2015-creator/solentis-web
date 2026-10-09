@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { BUMP_SESSION_VERSION } from '@/lib/session-version'
 import { hashPassword, passwordSchema } from '@/lib/password'
 import { sendEmail } from '@/lib/email'
-import { resetPasswordEmail } from '@/lib/email-templates'
+import { passwordResetEmailHtml, passwordChangedEmailHtml, EMAIL_SUBJECTS } from '@/lib/email-templates'
 import { getLogger } from '@/lib/logger'
 import { headers } from 'next/headers'
 import { after } from 'next/server'
@@ -87,12 +87,11 @@ async function enviarLinkDeReset(normalizedEmail: string): Promise<void> {
     })
 
     const resetUrl = buildResetUrl(rawToken)
-    const mail = resetPasswordEmail({ url: resetUrl, email: user.email })
 
     await sendEmail({
       to: user.email,
-      subject: mail.subject,
-      html: mail.html,
+      subject: EMAIL_SUBJECTS.reset,
+      html: passwordResetEmailHtml({ url: resetUrl }),
     })
   } catch (err) {
     const log = await getLogger({ action: 'requestPasswordReset' })
@@ -131,7 +130,7 @@ export async function resetPassword(token: string, newPassword: string) {
 
     // Troca a senha e marca o token como usado de forma atômica.
     // @tenant-checked: alvo derivado do token de reset validado acima (record).
-    await prisma.$transaction([
+    const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: record.user_id },
         data: { password_hash: hashed, must_change_password: false, ...BUMP_SESSION_VERSION },
@@ -142,6 +141,19 @@ export async function resetPassword(token: string, newPassword: string) {
         data: { used_at: new Date() },
       }),
     ])
+
+    // E-mail de confirmação (aviso de segurança). Best-effort: nunca quebra a troca.
+    try {
+      const loginUrl = `${process.env.NEXTAUTH_URL?.replace(/\/$/, '') ?? 'http://localhost:3000'}/login`
+      await sendEmail({
+        to: updatedUser.email,
+        subject: EMAIL_SUBJECTS.passwordChanged,
+        html: passwordChangedEmailHtml({ name: updatedUser.name, loginUrl }),
+      })
+    } catch (mailErr) {
+      const log = await getLogger({ action: 'resetPassword' })
+      log.warn({ err: mailErr, userId: record.user_id }, 'Senha alterada, mas falhou o e-mail de confirmação')
+    }
 
     return { success: true }
   } catch (err) {
