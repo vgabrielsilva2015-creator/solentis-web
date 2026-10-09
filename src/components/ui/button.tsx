@@ -19,6 +19,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        // Variantes da landing (apresentação). Só usadas nas páginas públicas.
+        hero: "rounded-lg bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:translate-y-px",
+        soft: "rounded-lg bg-card text-foreground border border-border hover:bg-muted",
       },
       size: {
         default:
@@ -32,6 +35,7 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        xl: "h-12 px-6 text-base", // CTA da landing
       },
     },
     defaultVariants: {
