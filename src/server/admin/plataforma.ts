@@ -139,3 +139,44 @@ export async function alternarAtivoUsuarioPlataforma(
     return { isActive: novoStatus, tenantId: alvo.tenant_id }
   })
 }
+
+// ─── Alterar o perfil/função de um usuário (painel de plataforma) ────────────
+
+/** Perfis que o super admin pode atribuir pelo painel. SUPER_ADMIN fica de fora (conta de sistema). */
+const PAPEIS_EDITAVEIS = ['OPERATOR', 'TECHNICIAN', 'MANAGER', 'MAINTENANCE'] as const
+
+/**
+ * Altera o perfil de um usuário de planta. Troca o `role` e invalida as sessões abertas
+ * (`BUMP_SESSION_VERSION`), para o acesso passar a valer com o novo perfil na hora.
+ * Não altera o próprio ator nem um SUPER_ADMIN.
+ */
+export async function alterarPapelUsuarioPlataforma(
+  prisma: PrismaClient,
+  i: { actorId: string; userId: string; novoPapel: string },
+): Promise<{ error?: string; role?: string; tenantId?: string }> {
+  if (!(PAPEIS_EDITAVEIS as readonly string[]).includes(i.novoPapel)) {
+    return { error: 'Perfil inválido. Use Operador, Técnico, Gestor ou Manutenção.' }
+  }
+  if (i.actorId === i.userId) return { error: 'Você não pode alterar o seu próprio perfil.' }
+
+  return prisma.$transaction(async (tx) => {
+    // @tenant-safe: super admin opera entre plantas de propósito; alvo por PK global
+    const alvo = await tx.user.findUnique({
+      where: { id: i.userId },
+      select: { id: true, tenant_id: true, role: true, deleted_at: true },
+    })
+    if (!alvo || alvo.deleted_at) return { error: 'Usuário não encontrado.' }
+    if (alvo.role === 'SUPER_ADMIN') {
+      return { error: 'Não é possível alterar o perfil de um super admin por aqui.' }
+    }
+    if (alvo.role === i.novoPapel) return { role: i.novoPapel, tenantId: alvo.tenant_id }
+
+    // @tenant-safe: alteração por super admin, alvo por PK global
+    await tx.user.update({ where: { id: alvo.id }, data: { role: i.novoPapel, ...BUMP_SESSION_VERSION } })
+    await logAudit(tx, {
+      tenantId: alvo.tenant_id, userId: i.actorId, action: 'UPDATE', tableName: 'users', recordId: alvo.id,
+      before: { role: alvo.role }, after: { role: i.novoPapel },
+    })
+    return { role: i.novoPapel, tenantId: alvo.tenant_id }
+  })
+}

@@ -16,7 +16,7 @@ import { inviteEmail } from '@/lib/email-templates'
 import { seedTenantDefaults } from '@/lib/tenant-defaults'
 import { UsuarioSchema, type UsuarioFormState } from '@/app/gestor/(sistema)/usuarios/schema'
 import { errorCode, errorMessage } from '@/lib/error-utils'
-import { PLATAFORMA_SLUG, alternarAtivoUsuarioPlataforma } from '@/server/admin/plataforma'
+import { PLATAFORMA_SLUG, alternarAtivoUsuarioPlataforma, alterarPapelUsuarioPlataforma } from '@/server/admin/plataforma'
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias
 
@@ -182,6 +182,28 @@ export async function toggleAtivoUsuario(
 
   revalidatePath(`/admin/plantas/${r.tenantId}`)
   return { isActive: r.isActive }
+}
+
+// ─── Alterar o perfil/função de um usuário (super admin, cross-tenant) ───────
+// Regra e transação em `src/server/admin/plataforma.ts` (inclui BUMP_SESSION_VERSION).
+export async function alterarPapelUsuario(
+  userId: string,
+  novoPapel: string,
+): Promise<{ error?: string; role?: string }> {
+  const ctx = await requirePermission('platform.admin')
+
+  let r
+  try {
+    r = await alterarPapelUsuarioPlataforma(prisma, { actorId: ctx.userId, userId, novoPapel })
+  } catch (e) {
+    const log = await getLogger({ action: 'alterarPapelUsuario' })
+    log.error({ err: e, targetUserId: userId }, 'Falha ao alterar perfil (super admin)')
+    return { error: 'Erro ao alterar o perfil do usuário.' }
+  }
+  if (r.error) return { error: r.error }
+
+  revalidatePath(`/admin/plantas/${r.tenantId}`)
+  return { role: r.role }
 }
 
 // ─── Criar usuário DENTRO de uma planta (super admin) ────────────────────────

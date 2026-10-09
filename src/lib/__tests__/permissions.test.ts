@@ -181,6 +181,7 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
   const ADICIONADAS: Record<string, string[]> = {
     'mfa/cadastro/actions.ts#iniciarCadastroMfa': ['SUPER_ADMIN'],   // Fase 2 do Super Admin
     'mfa/cadastro/actions.ts#confirmarCadastroMfa': ['SUPER_ADMIN'],
+    'admin/plantas/actions.ts#alterarPapelUsuario': ['SUPER_ADMIN'], // alterar perfil de usuário (platform.admin)
   }
 
   const esperado = (k: string) => (k in MUDANCAS ? MUDANCAS[k].para : BEFORE[k])

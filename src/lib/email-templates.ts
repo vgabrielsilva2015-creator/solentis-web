@@ -123,7 +123,7 @@ function layout(o: Layout): string {
 
 export function inviteEmail({ name, url, email }: { name: string; url: string; email?: string }): RenderedEmail {
   return {
-    subject: 'Convite — Solentis',
+    subject: 'Você foi convidado para o Solentis',
     html: layout({
       preheader: 'Aceite o convite e crie seu acesso ao Solentis.',
       eyebrow: 'Convite de acesso',
@@ -132,7 +132,7 @@ export function inviteEmail({ name, url, email }: { name: string; url: string; e
         `Olá, ${escapeHtml(name)}. Uma conta foi criada para você no Solentis, a plataforma de gestão da estação de tratamento.`,
         'Clique no botão abaixo para definir sua senha e acessar. O link é válido por <strong>7 dias</strong>.',
       ],
-      buttonLabel: 'Definir minha senha',
+      buttonLabel: 'ACEITAR CONVITE',
       url, email, emailLabel: 'Convite para',
       footer: [
         'Não esperava este convite? Pode ignorar este e-mail: nenhuma conta será ativada sem o seu aceite.',
@@ -153,10 +153,33 @@ export function resetPasswordEmail({ url, email }: { url: string; email?: string
         'Recebemos um pedido para redefinir a senha da sua conta no Solentis.',
         'Clique no botão abaixo para escolher uma nova senha. O link é válido por <strong>60 minutos</strong>.',
       ],
-      buttonLabel: 'Redefinir senha',
+      buttonLabel: 'REDEFINIR SENHA',
       url, email, emailLabel: 'Conta',
       notice: { title: 'Não foi você?', text: 'Ignore este e-mail. Sua senha atual continua valendo e nada será alterado sem o clique no botão.' },
       footer: ['O link é pessoal, tem validade limitada e funciona uma única vez. Não o encaminhe a outras pessoas.'],
+    }),
+  }
+}
+
+/**
+ * Aviso de segurança enviado DEPOIS que a senha é efetivamente alterada.
+ * Mesmo layout/proteções dos demais; `safeUrl` trata o link de login.
+ */
+export function passwordChangedEmail({ name, loginUrl }: { name?: string; loginUrl: string }): RenderedEmail {
+  const saudacao = name ? `Olá, ${escapeHtml(name)}. ` : ''
+  return {
+    subject: 'Sua senha do Solentis foi alterada',
+    html: layout({
+      preheader: 'A senha da sua conta Solentis foi alterada.',
+      eyebrow: 'Segurança',
+      title: 'Sua senha foi alterada',
+      paragraphs: [
+        `${saudacao}A senha da sua conta Solentis foi alterada recentemente. Se foi você, está tudo certo.`,
+      ],
+      buttonLabel: 'ACESSAR O SOLENTIS',
+      url: loginUrl,
+      notice: { title: 'Não foi você?', text: 'Se você não realizou essa alteração, entre em contato com o responsável pelo sistema.' },
+      footer: ['Este aviso é enviado sempre que a senha da conta é alterada, para a sua segurança.'],
     }),
   }
 }
