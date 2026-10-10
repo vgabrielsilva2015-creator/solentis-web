@@ -1,0 +1,186 @@
+/*
+ * Estilos da LANDING pública (apresentação). Portados do export Lovable.
+ * Escopados em `.landing-scope`: a landing é tema CLARO/branco; o app roda escuro.
+ * O wrapper re-afirma os tokens claros (iguais ao :root do app) só para a subárvore
+ * da landing, sem afetar o dashboard. Classes utilitárias próprias (.glass, .bg-brand)
+ * têm nomes exclusivos e não colidem com o app.
+ */
+
+.landing-scope {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --opening-surface: var(--background);
+  --foreground: oklch(0.23 0.02 248);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.04 235);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.04 235);
+  --primary: oklch(0.52 0.12 200);
+  --primary-foreground: oklch(0.99 0.01 200);
+  --secondary: oklch(0.96 0.02 210);
+  --secondary-foreground: oklch(0.25 0.05 230);
+  --muted: oklch(0.975 0.005 248);
+  --muted-foreground: oklch(0.44 0.018 248);
+  --accent: oklch(0.52 0.12 200 / 0.1);
+  --accent-foreground: oklch(0.35 0.08 210);
+  --destructive: oklch(0.58 0.2 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --success: oklch(0.6 0.13 160);
+  --warning: oklch(0.72 0.15 70);
+  --border: oklch(0.91 0.006 248);
+  --input: oklch(0.89 0.02 220);
+  --ring: oklch(0.56 0.11 205);
+
+  --gradient-hero: var(--muted);
+  --gradient-brand: linear-gradient(150deg, #3ad0d6, #0a86a0);
+  --shadow-soft-v:
+    0 1px 2px oklch(0.2 0.04 235 / 0.04), 0 20px 50px -20px oklch(0.2 0.04 235 / 0.22);
+  --shadow-glow-v: 0 10px 30px -10px oklch(0.56 0.11 205 / 0.55);
+
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+}
+.landing-scope :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Utilitários próprios da landing */
+.bg-brand { background: var(--gradient-brand); }
+.bg-hero { background: var(--gradient-hero); }
+.text-brand { color: var(--primary); }
+.glass {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft-v);
+}
+/* Escopados (vencem qualquer utilitário homônimo do app). */
+.landing-scope .shadow-soft { box-shadow: var(--shadow-soft-v); }
+.landing-scope .shadow-glow { box-shadow: var(--shadow-glow-v); }
+
+/* Prévia do produto */
+.product-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted);
+  box-shadow: var(--shadow-soft-v);
+}
+@media (min-width: 1024px) {
+  .product-preview { grid-template-columns: 210px minmax(0, 1fr); }
+}
+
+/* Onda de abertura */
+.opening-wave {
+  position: absolute;
+  inset: auto 0 0;
+  height: 210px;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--opening-surface);
+  mask-image: linear-gradient(to bottom, transparent, black 24%, black 70%, transparent);
+  opacity: 1;
+  transition: opacity 1.1s ease;
+  mix-blend-mode: multiply;
+}
+.opening-wave.is-finished { opacity: 0; }
+.opening-wave.is-playing img { opacity: 0; }
+.opening-wave img,
+.opening-wave video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.opening-wave video { opacity: 0; transition: opacity 0.7s ease; }
+.opening-wave.is-playing:not(.is-finished) video { opacity: 1; }
+@media (min-width: 1024px) {
+  .opening-wave { height: 240px; }
+}
+
+/* Hero */
+.landing-container { max-width: 1280px; margin-inline: auto; padding-inline: 24px; }
+.landing-hero { padding-block: 112px 190px; }
+.hero-headline { font-size: 34px; line-height: 1.15; }
+.hero-subheadline { font-size: 17px; line-height: 1.65; }
+@media (min-width: 640px) {
+  .hero-headline { font-size: 52px; }
+  .hero-subheadline { font-size: 18px; }
+}
+@media (min-width: 1024px) {
+  .landing-container { padding-inline: 48px; }
+  .landing-hero { padding-block: 128px 170px; min-height: 660px; }
+  .hero-headline { font-size: 64px; }
+}
+@media (max-width: 420px) {
+  .hero-actions { flex-direction: column; }
+  .hero-actions > *,
+  .hero-actions button { width: 100%; }
+}
+
+/* Marca animada */
+.sol-logo {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--gradient-brand);
+}
+.sol-surface {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary-foreground);
+  opacity: 0.8;
+}
+.sol-b {
+  position: absolute;
+  bottom: -8px;
+  border-radius: 50%;
+  background: var(--primary-foreground);
+  animation: sol-rise 3s ease-in infinite;
+}
+.sol-b1 { width: 6px; height: 6px; left: 20%; }
+.sol-b2 { width: 4px; height: 4px; left: 45%; animation-delay: 0.5s; }
+.sol-b3 { width: 7px; height: 7px; left: 65%; animation-delay: 1s; }
+.sol-b4 { width: 3px; height: 3px; left: 80%; animation-delay: 0.2s; }
+@keyframes sol-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+
+@keyframes landing-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animate-float { animation: landing-float 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-wave { opacity: 0; }
+  .opening-wave video { display: none; }
+  .sol-b { bottom: 40%; }
+  .landing-scope *,
+  .landing-scope *::before,
+  .landing-scope *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

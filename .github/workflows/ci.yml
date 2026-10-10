@@ -121,6 +121,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Revisão de dependências (só em PR)
         if: github.event_name == 'pull_request'
+        # Exige o "Dependency graph" habilitado em Settings > Code security do repo.
+        # Enquanto estiver desligado, a action aborta ("not supported on this repository").
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
@@ -150,6 +152,8 @@ jobs:
       DATABASE_URL: "postgresql://ci:ci@localhost:5432/solentis_e2e_test?schema=public"
       DIRECT_URL: "postgresql://ci:ci@localhost:5432/solentis_e2e_test?schema=public"
       AUTH_SECRET: ci-placeholder-nao-e-segredo-real-0123456789abcdef
+      # NextAuth v5 rejeita o host (UntrustedHost) atrás do proxy do CI sem isto -> login falhava no smoke.
+      AUTH_TRUST_HOST: "true"
       NEXTAUTH_URL: http://localhost:3000
       CRON_SECRET: ci-cron-placeholder
     steps:
