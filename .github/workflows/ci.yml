@@ -128,12 +128,10 @@ jobs:
           fail-on-severity: high
 
   # T-29 — E2E (Playwright) contra o app construído neste job, com Postgres de serviço e o seed.
-  # NÃO VERIFICADO: ainda não rodou no GitHub. Por isso `continue-on-error`: aparece no PR mas não
-  # bloqueia. Quando a primeira execução ficar verde, remova a linha para torná-lo obrigatório.
+  # VERIFICADO VERDE (PR #51): passou a ser obrigatório — se o smoke quebrar, bloqueia o merge.
   e2e:
     name: E2E (smoke)
     runs-on: ubuntu-latest
-    continue-on-error: true
     services:
       postgres:
         image: postgres:16
