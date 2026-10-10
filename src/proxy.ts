@@ -12,6 +12,12 @@ const { auth } = NextAuth(authConfig)
 // de "esqueci senha" ou no link de convite/reset por e-mail é jogado ao login.
 const PUBLIC_AUTH_PATHS = ['/forgot', '/reset', '/signup', '/verify-email', '/invite']
 
+// Rotas públicas da landing (apresentação do produto) — acessíveis SEM sessão.
+// A raiz `/` serve a landing para visitante e redireciona quem já está logado
+// para o dashboard (lógica em src/app/page.tsx). Sem liberar aqui, o proxy
+// jogava todo visitante da home/institucionais para o /login.
+const PUBLIC_LANDING_PATHS = ['/sobre-nos', '/privacidade']
+
 export default auth((req) => {
   const { pathname } = req.nextUrl
   let session = req.auth
@@ -37,6 +43,12 @@ export default auth((req) => {
 
   // Rotas públicas de auth: liberadas independentemente de sessão
   if (PUBLIC_AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
+    return finalizar(NextResponse.next())
+  }
+
+  // Landing pública: a home `/` e as páginas institucionais ficam abertas.
+  // A própria page.tsx já encaminha o usuário logado para o dashboard.
+  if (pathname === '/' || PUBLIC_LANDING_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return finalizar(NextResponse.next())
   }
 
