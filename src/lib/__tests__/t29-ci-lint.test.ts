@@ -12,9 +12,8 @@ describe('CI', () => {
       expect(ci).toContain(trecho)
     }
   })
-  it('só o E2E (ainda não verificado) é não-bloqueante', () => {
-    expect(ci.match(/continue-on-error: true/g)).toHaveLength(1)
-    expect(ci.indexOf('continue-on-error: true')).toBeGreaterThan(ci.indexOf('  e2e:'))
+  it('nenhum job é não-bloqueante (o E2E foi verificado e passou a bloquear)', () => {
+    expect(ci.match(/continue-on-error: true/g)).toBeNull()
   })
 })
 
