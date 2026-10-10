@@ -46,13 +46,30 @@ async function login(page: Page, p: Perfil) {
   await page.fill('input[name="email"]', p.email);
   await page.fill('input[name="password"]', p.senha);
   await page.click('button[type="submit"]');
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15000 });
+  // O login redireciona para '/', que encaminha ao dashboard do perfil (ou a
+  // /trocar-senha no 1º acesso). Espera sair de /login E da home '/' transitória —
+  // senão o teste segue antes do redirect final e cai em /trocar-senha no 1º goto.
+  await page.waitForURL((url) => {
+    const path = url.pathname;
+    return path !== '/' && !path.startsWith('/login');
+  }, { timeout: 15000 });
+
+  // 1º acesso: o seed força a troca de senha (hoje, só o gestor/admin). Troca a
+  // senha pela UI para que as telas internas fiquem acessíveis no smoke, em vez de
+  // pular o perfil e deixar essas telas sem cobertura.
+  if (page.url().includes('/trocar-senha')) {
+    const novaSenha = `${p.senha}x9`; // ≠ atual, ≥10 chars, com letra e número
+    await page.fill('input[name="currentPassword"]', p.senha);
+    await page.fill('input[name="newPassword"]', novaSenha);
+    await page.fill('input[name="confirmPassword"]', novaSenha);
+    await page.click('button[type="submit"]');
+    await page.waitForURL((url) => !url.pathname.startsWith('/trocar-senha'), { timeout: 15000 });
+  }
 }
 
 for (const perfil of PERFIS) {
   test(`smoke: ${perfil.nome} abre todas as telas`, async ({ page }) => {
     await login(page, perfil);
-    test.skip(page.url().includes('/trocar-senha'), `${perfil.nome} precisa trocar a senha antes (seed)`);
     const falhas: string[] = [];
     for (const rota of perfil.rotas) {
       const resp = await page.goto(rota);
