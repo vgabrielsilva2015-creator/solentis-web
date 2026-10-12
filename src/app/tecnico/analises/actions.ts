@@ -10,6 +10,7 @@ import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { handleNewOccurrence } from '@/lib/occurrences'
+import { logAudit } from '@/lib/audit'
 
 
 
@@ -145,16 +146,39 @@ export async function aprovarAnalise(
   analysisId: string,
 ): Promise<{ error?: string }> {
   const ctx = await requirePermission('analysis.approve')
+  const { userId, tenantId, role } = ctx
 
-  const userId = ctx.userId
-
-  const analysis = await prisma.analysis.findFirst({ where: { id: analysisId , tenant_id: (await getTenantId()) },
-    select: { approved_by: true },
+  const analysis = await prisma.analysis.findFirst({
+    where: { id: analysisId, tenant_id: tenantId },
+    select: { approved_by: true, recorded_by: true },
   })
   if (!analysis)              return { error: 'Análise não encontrada.' }
   if (analysis.approved_by)   return { error: 'Análise já aprovada.' }
 
-  await prisma.analysis.updateMany({ where: { id: analysisId , tenant_id: (await getTenantId()) }, data:  { approved_by: userId, approved_at: new Date() },
+  // Separação de funções: quem registrou a análise não pode aprová-la.
+  // Exceção: o gestor (MANAGER) pode aprovar qualquer análise, inclusive a que
+  // registrou — cobre a planta com um único técnico.
+  if (analysis.recorded_by === userId && role !== 'MANAGER') {
+    return { error: 'Você não pode aprovar uma análise que registrou. Peça a outro responsável ou ao gestor.' }
+  }
+
+  // Condiciona a aprovação a `approved_by: null` para que duas aprovações numa
+  // corrida não se sobreponham: só a primeira afeta a linha.
+  const { count } = await prisma.analysis.updateMany({
+    where: { id: analysisId, tenant_id: tenantId, approved_by: null },
+    data:  { approved_by: userId, approved_at: new Date() },
+  })
+  if (count === 0) return { error: 'Análise já aprovada.' }
+
+  await logAudit(prisma, {
+    tenantId,
+    userId,
+    action:        'UPDATE',
+    tableName:     'analyses',
+    recordId:      analysisId,
+    before:        { approved_by: null },
+    after:         { approved_by: userId },
+    justification: 'Aprovação de análise',
   })
 
   revalidatePath('/tecnico/analises')
