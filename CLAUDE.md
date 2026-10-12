@@ -29,6 +29,35 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 ✅ Onda 3 — Suporte PWA (Serwist), Modo Offline com Sincronização Automática, Extração IA com Gemini para Laudos Externos, Geração de PDF e CRUD de Pontos de Coleta CONCLUÍDA
 ✅ Sessão de Hardening (2026-06-26) — Segurança, fuso horário, uploads, cadastro por convite (ver seção abaixo)
 ✅ Feature (2026-07-01) — Templates de tarefa por turno (gestor pré-configura análises criadas na abertura), foto de comprovação obrigatória por template, e "repetir tarefa" preservando o histórico. Model `ShiftTaskTemplate` + campos em `ShiftTask` (template_id, requires_photo, repeated_from_id, repeat_reason). Migração aplicada via `prisma db execute` (SQL aditivo em `prisma/sql/`) — o histórico de migrations do repo está incompleto, então NÃO usar `prisma migrate dev` (resetaria); o schema é gerenciado por SQL aditivo / `db push`. **[Superado pela T-09, out/2026: há baseline em `prisma/migrations`; processo atual em `docs/MIGRATIONS.md`.]**
+✅ Revisão geral de segurança (2026-07-28, PR #28) — ver seção abaixo
+✅ Trilha T-01 → T-30 (out/2026) — permissões, sessão revalidada, migrations baseline, perf de cron/export/dashboard, uploads, Blob privado, integração Postgres, lint/CI, observabilidade — ver bloco "🧭 Estado real da main"
+✅ Super Admin fases 1 e 2 (PR #47, #49) — ações acionáveis + MFA TOTP (`MFA_ENFORCE` em etapas, off por padrão)
+✅ Landing page pública (PR #50) — `/`, `/sobre-nos`, `/privacidade`
+✅ E2E smoke obrigatório no CI (PR #51) — `main` em `e8ed78d`
+
+## 🧭 Estado real da `main` — 2026-10-12 (ATUALIZAÇÃO DE CONTEXTO)
+
+As seções datadas abaixo (2026-06/07) descrevem fases antigas e estão **superadas** em vários pontos de infra. O estado verdadeiro hoje, confirmado no git (`main` em `e8ed78d`):
+
+- **Infra:** PostgreSQL (Supabase) na Vercel · **5 perfis** (OPERATOR/TECHNICIAN/MANAGER/MAINTENANCE/SUPER_ADMIN) · migrations com baseline em `prisma/migrations` (processo em `docs/MIGRATIONS.md`; **não** usar `migrate dev`/`db push` em prod) · proteção de rotas em `src/proxy.ts`. O texto histórico "SQLite / Prisma v5 / 3 perfis / 21 tabelas" é **registro de fase**, não verdade atual.
+- **Trilha T-01 → T-30 mergeada na `main`.** Destaques recentes de perf/segurança:
+  - **T-20** — matriz única de permissões (`src/server/auth/permissions.ts`, `docs/PERMISSOES.md`); toda action começa por `requirePermission`/`getActor`.
+  - **T-22** — cron de turnos com nº constante de queries; exportação CSV em stream, período obrigatório, nada truncado em silêncio.
+  - **T-23** — dashboard do gestor agregado no banco + cache por planta (era 14–16 s / 55 MB no banco de carga).
+  - **T-24** — limites de upload alinhados ao teto de 4,5 MB da Vercel (`src/lib/upload-limits.ts`); corrige o erro real do laudo.
+  - **T-25** — serviços de domínio de estoque/leituras, actions finas.
+  - **T-26** — Blob privado com pasta por planta (flag `BLOB_ACCESS=private`, **desligada por padrão**; ativação depende de passos do dono — ver `IMPLEMENTATION-T26.md` §"Como ativar").
+  - **T-28** harness de integração Postgres · **T-29** lint zerado + gate no CI · **T-30** observabilidade.
+- **Super Admin fases 1 e 2 (MFA):** segundo fator TOTP com `MFA_ENFORCE` em etapas (off por padrão); super admin altera perfil/função de usuário (PR #47, #49).
+- **Landing page pública (PR #50):** visitante vê `/`, `/sobre-nos`, `/privacidade` (liberadas no `proxy.ts`).
+- **E2E obrigatório (PR #51):** smoke do gestor troca a senha do 1º acesso e o check virou **bloqueante** no `ci.yml`. Segfault esporádico do `next start` é flake — re-rodar com `gh run rerun --failed`.
+
+### ⏳ Pendências de infra/dono (não são tarefa de código)
+- **T-26** — criar Blob store privado na Vercel, rodar migração em ensaio → `--apply`, setar `BLOB_ACCESS=private`, redeploy e testar (passos em `IMPLEMENTATION-T26.md`). **Backup do banco antes do passo 4.**
+- **RLS no Supabase** (T-14, migration `20261007020000_rls_deny_all`) — defesa em profundidade; aplicar com `migrate deploy`.
+- Verificar domínio no Resend + `NEXTAUTH_URL` · rotacionar token do GitHub · confirmar PITR do Supabase e testar restore · `connection_limit` na `DATABASE_URL` da Vercel.
+
+> Arquivos não rastreados na raiz: `AGENTS.md` (gerado pelo `next dev` — pode commitar), `IMPLEMENTATION-T22/23/24/26.md` (docs de handoff), `verificar-prod-readonly.sql`.
 
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
 
