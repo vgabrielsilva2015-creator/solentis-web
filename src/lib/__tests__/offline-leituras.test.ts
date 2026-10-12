@@ -24,7 +24,7 @@ function walk(dir: string, acc: string[] = []): string[] {
   }
   return acc
 }
-const FILES = walk(SRC).map((f) => ({ f: f.replace(SRC + '/', ''), text: readFileSync(f, 'utf-8') }))
+const FILES = walk(SRC).map((f) => ({ f: f.replace(/\\/g, '/').replace(SRC.replace(/\\/g, '/') + '/', ''), text: readFileSync(f, 'utf-8') }))
 
 function memStore(itens: QueuedReading[] = []): QueueStore & { map: Map<string, QueuedReading> } {
   const map = new Map(itens.map((i) => [i.client_id, i]))

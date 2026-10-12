@@ -129,11 +129,12 @@ describe('o resto do sistema', () => {
   it('toda chamada de saveUpload/saveImageUpload/readUpload informa a planta', () => {
     const faltando: string[] = []
     for (const f of arquivos(raiz)) {
-      if (f.endsWith('lib/storage.ts')) continue
+      const fp = f.replace(/\\/g, '/')
+      if (fp.endsWith('lib/storage.ts')) continue
       const linhas = readFileSync(f, 'utf-8').split('\n')
       linhas.forEach((l, i) => {
         if (/\b(saveUpload|saveImageUpload|readUpload)\(/.test(l) && !/import /.test(l)) {
-          if (!/tenantId|tenant_id|getTenantId\(\)|ctx\.tenantId/.test(l)) faltando.push(`${f.replace(raiz + '/', '')}:${i + 1}`)
+          if (!/tenantId|tenant_id|getTenantId\(\)|ctx\.tenantId/.test(l)) faltando.push(`${fp.replace(raiz.replace(/\\/g, '/') + '/', '')}:${i + 1}`)
         }
       })
     }
