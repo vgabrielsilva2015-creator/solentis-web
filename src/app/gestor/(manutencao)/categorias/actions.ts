@@ -6,7 +6,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getTenantId } from '@/lib/tenant'
+import { logAudit } from '@/lib/audit'
 
 
 
@@ -28,7 +28,7 @@ export async function criarCategoria(
   _prev: CategoriaFormState,
   formData: FormData,
 ): Promise<CategoriaFormState> {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
 
   const parsed = CategoriaSchema.safeParse({
     name:        formData.get('name'),
@@ -38,16 +38,24 @@ export async function criarCategoria(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  let novaId: string
   try {
-    await prisma.equipmentCategory.create({
-      data: { tenant_id: (await getTenantId()), name: parsed.data.name, description: parsed.data.description, is_active: true },
+    const cat = await prisma.equipmentCategory.create({
+      data: { tenant_id: ctx.tenantId, name: parsed.data.name, description: parsed.data.description, is_active: true },
     })
+    novaId = cat.id
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { name: ['Já existe uma categoria com este nome'] } }
     }
     return { error: 'Erro ao criar categoria. Tente novamente.' }
   }
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'equipment_categories', recordId: novaId,
+    after: { name: parsed.data.name, description: parsed.data.description },
+  })
 
   revalidatePath('/gestor/categorias')
   redirect('/gestor/categorias')
@@ -58,7 +66,7 @@ export async function editarCategoria(
   _prev: CategoriaFormState,
   formData: FormData,
 ): Promise<CategoriaFormState> {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
 
   const parsed = CategoriaSchema.safeParse({
     name:        formData.get('name'),
@@ -69,8 +77,9 @@ export async function editarCategoria(
   }
 
   try {
-    await prisma.equipmentCategory.updateMany({ where: { id: categoriaId , tenant_id: (await getTenantId()) }, data:  { name: parsed.data.name, description: parsed.data.description },
+    const { count } = await prisma.equipmentCategory.updateMany({ where: { id: categoriaId , tenant_id: ctx.tenantId }, data:  { name: parsed.data.name, description: parsed.data.description },
     })
+    if (count === 0) return { error: 'Categoria não encontrada.' }
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { name: ['Já existe uma categoria com este nome'] } }
@@ -78,16 +87,27 @@ export async function editarCategoria(
     return { error: 'Erro ao salvar alterações. Tente novamente.' }
   }
 
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'equipment_categories', recordId: categoriaId,
+    after: { name: parsed.data.name, description: parsed.data.description },
+  })
+
   revalidatePath('/gestor/categorias')
   revalidatePath(`/gestor/categorias/${categoriaId}`)
   return { success: true }
 }
 
 export async function toggleAtivoCategoria(id: string): Promise<{ error?: string }> {
-  await requirePermission('config.manage')
-  const cat = await prisma.equipmentCategory.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
+  const ctx = await requirePermission('config.manage')
+  const cat = await prisma.equipmentCategory.findFirst({ where: { id, tenant_id: ctx.tenantId }, select: { is_active: true } })
   if (!cat) return { error: 'Categoria não encontrada.' }
-  await prisma.equipmentCategory.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !cat.is_active } })
+  await prisma.equipmentCategory.updateMany({ where: { id, tenant_id: ctx.tenantId }, data: { is_active: !cat.is_active } })
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'equipment_categories', recordId: id,
+    before: { is_active: cat.is_active }, after: { is_active: !cat.is_active },
+  })
   revalidatePath('/gestor/categorias')
   revalidatePath(`/gestor/categorias/${id}`)
   return {}

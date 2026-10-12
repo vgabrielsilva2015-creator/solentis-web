@@ -6,7 +6,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getTenantId } from '@/lib/tenant'
+import { logAudit } from '@/lib/audit'
 
 
 const PontoColetaSchema = z.object({
@@ -38,7 +38,7 @@ export async function criarPontoColeta(
   _prev: PontoColetaFormState,
   formData: FormData,
 ): Promise<PontoColetaFormState> {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
 
   const parsed = PontoColetaSchema.safeParse({
     name:        formData.get('name'),
@@ -54,10 +54,11 @@ export async function criarPontoColeta(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
+  let novoId: string
   try {
-    await prisma.collectionPoint.create({
+    const ponto = await prisma.collectionPoint.create({
       data: {
-        tenant_id:   (await getTenantId()),
+        tenant_id:   ctx.tenantId,
         name:        parsed.data.name,
         matrix:      parsed.data.matrix,
         location:    parsed.data.location,
@@ -68,12 +69,19 @@ export async function criarPontoColeta(
         is_external: parsed.data.is_external,
       },
     })
+    novoId = ponto.id
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { name: ['Já existe um ponto de coleta com este nome'] } }
     }
     return { error: 'Erro ao criar ponto de coleta. Tente novamente.' }
   }
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'collection_points', recordId: novoId,
+    after: { name: parsed.data.name, matrix: parsed.data.matrix, location: parsed.data.location },
+  })
 
   revalidatePath('/gestor/pontos-de-coleta')
   redirect('/gestor/pontos-de-coleta')
@@ -84,7 +92,7 @@ export async function editarPontoColeta(
   _prev: PontoColetaFormState,
   formData: FormData,
 ): Promise<PontoColetaFormState> {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
 
   const parsed = PontoColetaSchema.safeParse({
     name:        formData.get('name'),
@@ -101,8 +109,8 @@ export async function editarPontoColeta(
   }
 
   try {
-    await prisma.collectionPoint.updateMany({
-      where: { id: pontoId, tenant_id: (await getTenantId()) },
+    const { count } = await prisma.collectionPoint.updateMany({
+      where: { id: pontoId, tenant_id: ctx.tenantId },
       data:  {
         name:        parsed.data.name,
         matrix:      parsed.data.matrix,
@@ -113,6 +121,7 @@ export async function editarPontoColeta(
         is_external: parsed.data.is_external,
       },
     })
+    if (count === 0) return { error: 'Ponto de coleta não encontrado.' }
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
       return { fieldErrors: { name: ['Já existe um ponto de coleta com este nome'] } }
@@ -120,24 +129,36 @@ export async function editarPontoColeta(
     return { error: 'Erro ao salvar alterações. Tente novamente.' }
   }
 
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'collection_points', recordId: pontoId,
+    after: { name: parsed.data.name, matrix: parsed.data.matrix, location: parsed.data.location },
+  })
+
   revalidatePath('/gestor/pontos-de-coleta')
   revalidatePath(`/gestor/pontos-de-coleta/${pontoId}`)
   return { success: true }
 }
 
 export async function toggleAtivoPontoColeta(id: string): Promise<{ error?: string }> {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
   const pt = await prisma.collectionPoint.findFirst({
-    where: { id, tenant_id: (await getTenantId()) },
+    where: { id, tenant_id: ctx.tenantId },
     select: { is_active: true }
   })
   if (!pt) return { error: 'Ponto de coleta não encontrado.' }
-  
+
   await prisma.collectionPoint.updateMany({
-    where: { id, tenant_id: (await getTenantId()) },
+    where: { id, tenant_id: ctx.tenantId },
     data:  { is_active: !pt.is_active }
   })
-  
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'collection_points', recordId: id,
+    before: { is_active: pt.is_active }, after: { is_active: !pt.is_active },
+  })
+
   revalidatePath('/gestor/pontos-de-coleta')
   revalidatePath(`/gestor/pontos-de-coleta/${id}`)
   return {}

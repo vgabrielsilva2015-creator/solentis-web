@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
+import { logAudit } from '@/lib/audit'
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const
 
@@ -52,6 +53,15 @@ export async function atualizarPrazos(
       }),
     ),
   )
+
+  await logAudit(prisma, {
+    tenantId: tid, userId, action: 'UPDATE',
+    tableName: 'occurrence_severity_defaults', recordId: tid,
+    after: {
+      CRITICAL: parsed.data.CRITICAL, HIGH: parsed.data.HIGH,
+      MEDIUM: parsed.data.MEDIUM, LOW: parsed.data.LOW,
+    },
+  })
 
   revalidatePath('/gestor/prazos-ocorrencia')
   return { success: true }
