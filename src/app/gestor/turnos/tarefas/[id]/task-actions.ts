@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
+import { logAudit } from '@/lib/audit'
 
 
 
@@ -68,7 +69,7 @@ export async function atribuirTarefa(
     if (!assignee) return { error: 'Operador selecionado não encontrado ou inativo.' }
   }
 
-  await prisma.shiftTask.create({
+  const task = await prisma.shiftTask.create({
     data: {
       tenant_id:         (await getTenantId()),
       shift_instance_id: instanceId,
@@ -80,6 +81,12 @@ export async function atribuirTarefa(
     },
   })
 
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId, action: 'CREATE',
+    tableName: 'shift_tasks', recordId: task.id,
+    after: { title: parsed.data.title, shift_instance_id: instanceId, assigned_to_id: parsed.data.assigned_to_id },
+  })
+
   revalidatePath(`/gestor/turnos/tarefas/${instanceId}`)
   return { success: true }
 }
@@ -88,14 +95,21 @@ export async function atribuirTarefa(
 // Só PENDING pode ser removida — tarefas DONE/SKIPPED são histórico operacional
 
 export async function removerTarefa(taskId: string): Promise<void> {
-  await requirePermission('shift.assign')
+  const ctx = await requirePermission('shift.assign')
 
   const task = await prisma.shiftTask.findFirst({
     where:  { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
-    select: { shift_instance_id: true },
+    select: { shift_instance_id: true, title: true },
   })
   if (!task) return
 
-  await prisma.shiftTask.deleteMany({ where: { id: taskId , tenant_id: (await getTenantId()) } })
+  const { count } = await prisma.shiftTask.deleteMany({ where: { id: taskId , tenant_id: (await getTenantId()) } })
+  if (count > 0) {
+    await logAudit(prisma, {
+      tenantId: ctx.tenantId, userId: ctx.userId, action: 'DELETE',
+      tableName: 'shift_tasks', recordId: taskId,
+      before: { title: task.title, shift_instance_id: task.shift_instance_id },
+    })
+  }
   revalidatePath(`/gestor/turnos/tarefas/${task.shift_instance_id}`)
 }

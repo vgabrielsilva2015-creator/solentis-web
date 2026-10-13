@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
 import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
 import { errorMessage } from '@/lib/error-utils'
+import { logAudit } from '@/lib/audit'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -173,6 +174,12 @@ export async function createParameterFromImport(data: { name: string; unit: stri
       }
     })
 
+    await logAudit(prisma, {
+      tenantId, userId: user.id, action: 'CREATE',
+      tableName: 'quality_parameters', recordId: param.id,
+      after: { name: param.name, unit: param.unit, origem: 'IMPORTACAO_LAUDO' },
+    })
+
     return { success: true, parameter: { id: param.id, name: param.name, unit: param.unit } }
   } catch (err: unknown) {
     const log = await getLogger({ action: 'criarParametroDoLaudo' })
@@ -228,6 +235,9 @@ export async function saveMappedReadings(data: {
     })
     for (const l of limits) limitMap.set(l.parameter_id, { min_limit: l.min_limit, max_limit: l.max_limit })
   }
+
+  let criadas = 0
+  let naoConformes = 0
 
   try {
     for (const r of data.readings) {
@@ -301,8 +311,20 @@ export async function saveMappedReadings(data: {
           })
         }
       })
+      criadas++
+      if (isNonConformant) naoConformes++
     }
-    
+
+    // Auditoria: um registro-resumo da importação do laudo (as análises individuais
+    // já carregam recorded_by/origin=AI_IMPORT). Evita N linhas de auditoria por import.
+    if (criadas > 0) {
+      await logAudit(prisma, {
+        tenantId, userId: user.id, action: 'CREATE',
+        tableName: 'analyses', recordId: data.pointId,
+        after: { origem: 'AI_IMPORT', ponto: data.pointId, data: data.date, analises: criadas, nao_conformes: naoConformes },
+      })
+    }
+
     return { success: true }
   } catch (err: unknown) {
     const log = await getLogger({ action: 'salvarLeiturasLaudo' })

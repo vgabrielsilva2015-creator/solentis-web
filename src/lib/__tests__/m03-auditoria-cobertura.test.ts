@@ -74,28 +74,20 @@ const EXCECOES_INFRA: Record<string, string> = {
 const EXCECOES_PENDENTE: Record<string, string> = {
   // M-03b fechou: admin/criarPlanta + produtos-químicos
   // M-03c fechou: manutenção (preventiva/corretiva) + turnos + tarefas-padrão
-  'gestor/importacao/actions.ts#createParameterFromImport':               'pendente M-03d (importação IA)',
-  'gestor/importacao/actions.ts#saveMappedReadings':                      'pendente M-03d (importação IA)',
-  'gestor/turnos/escala/actions.ts#addShiftTask':                         'pendente M-03d (escala)',
-  'gestor/turnos/escala/actions.ts#deleteShiftTask':                      'pendente M-03d (escala)',
-  'gestor/turnos/escala/actions.ts#saveShiftScale':                       'pendente M-03d (escala)',
-  'gestor/turnos/escala/actions.ts#toggleMaintenanceDay':                 'pendente M-03d (escala)',
-  'gestor/turnos/tarefas/[id]/task-actions.ts#atribuirTarefa':            'pendente M-03d (tarefas de turno)',
-  'gestor/turnos/tarefas/[id]/task-actions.ts#removerTarefa':             'pendente M-03d (tarefas de turno)',
-  'gestor/turnos/tarefas/actions.ts#preAgendarTurno':                     'pendente M-03d (tarefas de turno)',
-  'operador/turnos/actions.ts#abrirTurno':                                'pendente M-03d (operador/turnos)',
-  'operador/turnos/actions.ts#assumirPosto':                              'pendente M-03d (operador/turnos)',
-  'operador/turnos/actions.ts#iniciarPassagem':                           'pendente M-03d (operador/turnos)',
-  'operador/turnos/actions.ts#confirmarPassagem':                         'pendente M-03d (operador/turnos)',
-  'operador/turnos/actions.ts#concluirTarefa':                            'pendente M-03d (operador/turnos)',
-  'operador/turnos/actions.ts#pularTarefa':                               'pendente M-03d (operador/turnos)',
-  'operador/turnos/actions.ts#repetirTarefa':                             'pendente M-03d (operador/turnos)',
-  'tecnico/analises/actions.ts#registrarAnalise':                         'pendente M-03e (análises)',
-  'tecnico/equipamentos/actions.ts#criarEquipamento':                     'pendente M-03e (equipamentos)',
-  'tecnico/equipamentos/actions.ts#editarEquipamento':                    'pendente M-03e (equipamentos)',
-  'tecnico/equipamentos/actions.ts#toggleAtivoEquipamento':               'pendente M-03e (equipamentos)',
-  'tecnico/equipamentos/actions.ts#concluirPreventiva':                   'pendente M-03e (equipamentos)',
-  'tecnico/equipamentos/actions.ts#registrarCorretiva':                   'pendente M-03e (equipamentos)',
+  // M-03d fechou: importação IA + escala + tarefas de turno
+  'operador/turnos/actions.ts#abrirTurno':                                'pendente M-03e (operador/turnos)',
+  'operador/turnos/actions.ts#assumirPosto':                              'pendente M-03e (operador/turnos)',
+  'operador/turnos/actions.ts#iniciarPassagem':                           'pendente M-03e (operador/turnos)',
+  'operador/turnos/actions.ts#confirmarPassagem':                         'pendente M-03e (operador/turnos)',
+  'operador/turnos/actions.ts#concluirTarefa':                            'pendente M-03e (operador/turnos)',
+  'operador/turnos/actions.ts#pularTarefa':                               'pendente M-03e (operador/turnos)',
+  'operador/turnos/actions.ts#repetirTarefa':                             'pendente M-03e (operador/turnos)',
+  'tecnico/analises/actions.ts#registrarAnalise':                         'pendente M-03f (análises)',
+  'tecnico/equipamentos/actions.ts#criarEquipamento':                     'pendente M-03f (equipamentos)',
+  'tecnico/equipamentos/actions.ts#editarEquipamento':                    'pendente M-03f (equipamentos)',
+  'tecnico/equipamentos/actions.ts#toggleAtivoEquipamento':               'pendente M-03f (equipamentos)',
+  'tecnico/equipamentos/actions.ts#concluirPreventiva':                   'pendente M-03f (equipamentos)',
+  'tecnico/equipamentos/actions.ts#registrarCorretiva':                   'pendente M-03f (equipamentos)',
 }
 const EXCECOES = { ...EXCECOES_INFRA, ...EXCECOES_PENDENTE }
 
