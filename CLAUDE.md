@@ -59,6 +59,21 @@ As seções datadas abaixo (2026-06/07) descrevem fases antigas e estão **super
 
 > Arquivos não rastreados na raiz: `AGENTS.md` (gerado pelo `next dev` — pode commitar), `IMPLEMENTATION-T22/23/24/26.md` (docs de handoff), `verificar-prod-readonly.sql`.
 
+## 🔎 Melhoria contínua — PROMPT-01 (rastreabilidade e auditoria) — 2026-10-13
+
+Execução do contrato `PROMPT-01-melhoria-claude-code.md` (ondas pequenas, uma branch por item, gate verde antes de entregar). Mergeado na `main` local e **publicado** (push → deploy Vercel). Tudo **sem migration**.
+
+- **Item A** — testes estruturais (`t26-storage-privado`, `stock-lock`, `offline-leituras`) agnósticos ao separador de caminho: montavam/excluíam caminhos com `/` POSIX fixo e falhavam só no Windows. Normalizado para bater com o CI (Linux). Test-only.
+- **M-01 — separação de funções na aprovação de análise** (`tecnico/analises/actions.ts#aprovarAnalise`): quem registrou não aprova a própria análise (exceção: `MANAGER`, para planta de 1 técnico); `updateMany` condicionado a `approved_by: null` (sem dupla aprovação em corrida); `logAudit` na aprovação.
+- **M-02 — máquina de estados da OS corretiva** (`tecnico/equipamentos/actions.ts#atualizarStatusCorretiva`): só transições previstas (`OPEN→{IN_PROGRESS,CANCELLED}`, `IN_PROGRESS→{COMPLETED,CANCELLED}`, `COMPLETED→{VALIDATED,IN_PROGRESS}` reabrir, `VALIDATED`/`CANCELLED` terminais); `updateMany` condicionado ao estado lido (log de manutenção nasce 1×); `logAudit` em toda transição; **separação de funções**: o responsável não valida a própria OS, exceto se for o único gestor.
+- **M-03 — cobertura de auditoria (contrato + correções em lotes):**
+  - Teste de contrato `src/lib/__tests__/m03-auditoria-cobertura.test.ts`: **toda** server action de escrita precisa de `logAudit` ou entrada justificada em `EXCECOES` (infra/segurança ou backlog). Acusa exceção obsoleta → fechar uma pendência obriga a removê-la da lista. É a guarda contra novas lacunas.
+  - **M-03a** — categorias, pontos-de-coleta, prazos-ocorrência, cronograma (10 actions).
+  - **M-03b** — `admin/criarPlanta` (criação de planta + 1º gestor, era o gap mais sensível) + produtos-químicos (5 actions).
+  - **M-03c** — manutenção (preventiva/corretiva), turnos, tarefas-padrão (9 actions).
+  - Progresso: 24 de 48 lacunas fechadas. **Backlog restante** em `docs/auditoria/BACKLOG-DESCOBERTAS.md` (M-03d importação IA + escala + tarefas de turno; M-03e operador/turnos; M-03f análises/equipamentos).
+- **Padrão aplicado:** `const ctx = await requirePermission(...)` → `ctx.tenantId`/`ctx.userId`; `updateMany` com guard `count===0 → "não encontrado"`; `logAudit(prisma|tx, { tenantId, userId, action, tableName, recordId, before?, after? })`.
+
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
 
 Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0 críticos / 2 altos / 7 médios / 6 baixos). Branch `fix/revisao-seguranca-e-bugs` **mergeada na `main` via PR #28** (merge commit `f5caa5b`). Todos os itens acionáveis por código foram corrigidos:
