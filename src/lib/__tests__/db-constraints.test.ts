@@ -108,7 +108,7 @@ describe('NOT VALID, VALIDATE e conferência prévia andam juntos', () => {
 describe('índices das migrations estão no schema.prisma', () => {
   // Índices que o Prisma 5 não expressa (parciais): ficam fora do schema de propósito.
   // Ao rodar `migrate dev --create-only`, apagar do SQL gerado qualquer DROP destes.
-  const MANUAIS = new Set(['uniq_shift_instance_ativa', 'uniq_turno_ativo_por_operador'])
+  const MANUAIS = new Set(['uniq_shift_instance_ativa', 'uniq_turno_ativo_por_operador', 'uniq_ocorrencia_aberta_ponto_param'])
   const SCHEMA = read('prisma/schema.prisma')
 
   function nomesDoSchema(): Set<string> {

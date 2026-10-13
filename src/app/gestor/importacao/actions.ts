@@ -292,6 +292,7 @@ export async function saveMappedReadings(data: {
             severity: 'HIGH',
             description: `Não Conformidade via Laudo (${param.name}): Resultado = ${r.bruto}. O valor está fora dos limites aceitáveis para a matriz ${matrixName || 'não definida'}. Ponto: ${point?.name}`,
             collectionPointId: data.pointId,
+            parameterId: r.parameterId,
           })
         }
 

@@ -22,12 +22,14 @@ import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 
 function fakeTx() {
   return {
+    $executeRaw: vi.fn(async () => 1),
     collectionPoint: { findFirst: vi.fn(async () => ({ id: 'p1', name: 'Saída Final' })) },
     occurrenceSeverityDefault: { findUnique: vi.fn(async () => ({ deadline_hours: 24 })) },
-    occurrence: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'occ1', ...data })) },
+    occurrence: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'occ1', ...data })), findFirst: vi.fn(async () => null) },
+    occurrenceComment: { create: vi.fn() },
   }
 }
-const base = { tenantId: 'A', userId: 'u1', type: 'OPERATIONAL' as const, description: 'pH fora', collectionPointId: 'p1' }
+const base = { tenantId: 'A', userId: 'u1', type: 'OPERATIONAL' as const, description: 'pH fora', collectionPointId: 'p1', parameterId: 'q1' }
 
 beforeEach(() => {
   handleNewOccurrenceMock.mockReset().mockResolvedValue(vi.fn())
