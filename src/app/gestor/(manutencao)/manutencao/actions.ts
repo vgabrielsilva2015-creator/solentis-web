@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
 import { localInputToUTC } from '@/lib/date-utils'
+import { logAudit } from '@/lib/audit'
 
 export type ManutencaoFormState = {
   error?: string
@@ -24,7 +25,7 @@ export async function agendarPreventiva(
   _prev: ManutencaoFormState,
   formData: FormData,
 ): Promise<ManutencaoFormState> {
-  await requirePermission('maintenance.plan')
+  const ctx = await requirePermission('maintenance.plan')
   const tenantId = await getTenantId()
 
   const parsed = PreventivaSchema.safeParse({
@@ -42,13 +43,19 @@ export async function agendarPreventiva(
   })
   if (!equipment) return { error: 'Equipamento inválido ou não autorizado.' }
 
-  await prisma.preventiveMaintenance.create({
+  const preventiva = await prisma.preventiveMaintenance.create({
     data: {
       tenant_id:      tenantId,
       equipment_id:   parsed.data.equipment_id,
       scheduled_date: localInputToUTC(parsed.data.scheduled_date),
       status:         'SCHEDULED',
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'preventive_maintenances', recordId: preventiva.id,
+    after: { equipment_id: parsed.data.equipment_id, scheduled_date: parsed.data.scheduled_date },
   })
 
   revalidatePath('/gestor/manutencao/preventivas')
@@ -111,7 +118,7 @@ export async function criarCorretiva(
   const startDate = localInputToUTC(parsed.data.start_date)
   const deadline = new Date(startDate.getTime() + deadlineHours * 60 * 60 * 1000)
 
-  await prisma.correctiveMaintenance.create({
+  const corretiva = await prisma.correctiveMaintenance.create({
     data: {
       tenant_id:      tenantId,
       equipment_id:   parsed.data.equipment_id,
@@ -123,6 +130,12 @@ export async function criarCorretiva(
       notes:          parsed.data.notes,
       deadline,
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'corrective_maintenances', recordId: corretiva.id,
+    after: { equipment_id: parsed.data.equipment_id, priority: parsed.data.priority, responsible_id: responsibleId },
   })
 
   revalidatePath('/gestor/manutencao/corretivas')
