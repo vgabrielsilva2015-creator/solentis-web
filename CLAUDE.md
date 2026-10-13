@@ -71,7 +71,10 @@ Execução do contrato `PROMPT-01-melhoria-claude-code.md` (ondas pequenas, uma 
   - **M-03a** — categorias, pontos-de-coleta, prazos-ocorrência, cronograma (10 actions).
   - **M-03b** — `admin/criarPlanta` (criação de planta + 1º gestor, era o gap mais sensível) + produtos-químicos (5 actions).
   - **M-03c** — manutenção (preventiva/corretiva), turnos, tarefas-padrão (9 actions).
-  - Progresso: 24 de 48 lacunas fechadas. **Backlog restante** em `docs/auditoria/BACKLOG-DESCOBERTAS.md` (M-03d importação IA + escala + tarefas de turno; M-03e operador/turnos; M-03f análises/equipamentos).
+  - **M-03d** — importação IA, escala, tarefas de turno (9 actions).
+  - **M-03e** — operador/turnos: abrir, passagem (iniciar/confirmar), concluir/pular/repetir tarefa, assumir posto (7 actions).
+  - **M-03f** — análises (registrarAnalise) + equipamentos (criar/editar/toggle/preventiva/corretiva) (6 actions).
+  - **CONCLUÍDO:** 48/48 lacunas de negócio fechadas; `EXCECOES_PENDENTE` zerou. Sobram só 5 exceções **permanentes** de infra/segurança (push, reset/troca de senha, cadastro MFA). O teste de contrato segue como guarda contra novas lacunas. Detalhe em `docs/auditoria/BACKLOG-DESCOBERTAS.md`.
 - **Padrão aplicado:** `const ctx = await requirePermission(...)` → `ctx.tenantId`/`ctx.userId`; `updateMany` com guard `count===0 → "não encontrado"`; `logAudit(prisma|tx, { tenantId, userId, action, tableName, recordId, before?, after? })`.
 
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)

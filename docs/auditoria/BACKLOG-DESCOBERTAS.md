@@ -8,17 +8,18 @@ da verdade executável: toda action de escrita audita ou está em `EXCECOES`.
 
 ## M-03 — cobertura de `logAudit` nas server actions de escrita
 
-Levantamento inicial: **48** actions de escrita sem auditoria.
+Levantamento inicial: **48** actions de escrita sem auditoria. **Status: CONCLUÍDO (48/48).**
 
-### Fechadas (24)
+### Fechadas (48 — todas)
 - **M-03a** (10) — `categorias`, `pontos-de-coleta`, `prazos-ocorrencia`, `cronograma` (+`cronograma/novo`).
 - **M-03b** (5) — `admin/plantas#criarPlanta` (tenant + 1º gestor) e `produtos-quimicos` (criar/editar/ativar/excluir).
 - **M-03c** (9) — `manutencao` (agendarPreventiva/criarCorretiva), `turnos` (criar/editar/toggleAtivo/toggleDaySchedule), `tarefas-padrao` (criar/atualizar/desativar).
+- **M-03d** (9) — `importacao` (createParameterFromImport/saveMappedReadings — resumo por import), `turnos/escala` (addShiftTask/deleteShiftTask/saveShiftScale/toggleMaintenanceDay), tarefas de turno (atribuirTarefa/removerTarefa/preAgendarTurno).
+- **M-03e** (7) — `operador/turnos`: abrirTurno, iniciarPassagem, confirmarPassagem, concluirTarefa, pularTarefa, assumirPosto, repetirTarefa.
+- **M-03f** (6) — `tecnico/analises#registrarAnalise`; `tecnico/equipamentos`: criarEquipamento, editarEquipamento, toggleAtivoEquipamento, concluirPreventiva, registrarCorretiva.
 
-### Pendentes (15)
-- **M-03d** — importação IA: `gestor/importacao#createParameterFromImport`, `#saveMappedReadings`; escala: `turnos/escala#addShiftTask/deleteShiftTask/saveShiftScale/toggleMaintenanceDay`; tarefas de turno: `turnos/tarefas/[id]/task-actions#atribuirTarefa/removerTarefa`, `turnos/tarefas#preAgendarTurno`.
-- **M-03e** — `operador/turnos`: `abrirTurno`, `assumirPosto`, `iniciarPassagem`, `confirmarPassagem`, `concluirTarefa`, `pularTarefa`, `repetirTarefa`.
-- **M-03f** — `tecnico/analises#registrarAnalise`; `tecnico/equipamentos`: `criarEquipamento`, `editarEquipamento`, `toggleAtivoEquipamento`, `concluirPreventiva`, `registrarCorretiva`.
+### Pendentes
+Nenhuma. `EXCECOES_PENDENTE` do teste de contrato está vazio.
 
 ### Exceções permanentes (infra/segurança, não auditam de propósito)
 - `lib/push-actions#subscribeUser/unsubscribeUser` — assinatura de push do próprio aparelho.
