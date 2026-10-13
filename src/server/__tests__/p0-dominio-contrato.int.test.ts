@@ -21,32 +21,42 @@ async function saldo(tenant_id: string, product_id: string) {
   return (e._sum.quantity ?? 0) - (s._sum.quantity ?? 0)
 }
 
-describe('contagem física = ajuste de inventário', () => {
-  it('contou mais que o saldo: entrada de ajuste da diferença; saldo passa a ser o contado', async () => {
-    const A = await criarCenario('A'); await criarEntrada(A.tenant.id, A.produto.id, A.gestor.id, 10)
+describe('contagem física = ajuste de inventário (M-04: ≤5% ajusta, >5% pendente)', () => {
+  it('divergência até 5%: ajusta direto (entrada e saída); contou igual: nenhum ajuste', async () => {
+    const A = await criarCenario('A'); await criarEntrada(A.tenant.id, A.produto.id, A.gestor.id, 100)
     actAs(A.operador)
-    const r = await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '14', counted_at: agora() }))
-    expect(r).toEqual({ success: true })
-    const ajustes = await prisma.chemicalStockEntry.findMany({ where: { notes: 'Ajuste por contagem física' } })
-    expect(ajustes).toHaveLength(1)
-    expect(ajustes[0]).toMatchObject({ quantity: 4, tenant_id: A.tenant.id, recorded_by: A.operador.id })
-    expect(await prisma.chemicalStockCount.count({ where: { tenant_id: A.tenant.id } })).toBe(1)
-    expect(await saldo(A.tenant.id, A.produto.id)).toBe(14)
-  })
+    // +3% (100 → 103): entrada de ajuste 3
+    expect(await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '103', counted_at: agora() }))).toEqual({ success: true })
+    const entradas = await prisma.chemicalStockEntry.findMany({ where: { notes: 'Ajuste por contagem física' } })
+    expect(entradas).toHaveLength(1)
+    expect(entradas[0]).toMatchObject({ quantity: 3, tenant_id: A.tenant.id, recorded_by: A.operador.id })
+    expect(await saldo(A.tenant.id, A.produto.id)).toBeCloseTo(103)
 
-  it('contou menos: saída de ajuste; contou igual: nenhum ajuste, mas a contagem fica registrada', async () => {
-    const A = await criarCenario('A'); await criarEntrada(A.tenant.id, A.produto.id, A.gestor.id, 10)
-    actAs(A.operador)
-    await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '3,5', counted_at: agora() }))
+    // −~4,85% (103 → 98): saída de ajuste 5
+    await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '98', counted_at: agora() }))
     const saidas = await prisma.chemicalStockExit.findMany({ where: { notes: 'Ajuste por contagem física' } })
     expect(saidas).toHaveLength(1)
-    expect(saidas[0].quantity).toBeCloseTo(6.5)
-    expect(await saldo(A.tenant.id, A.produto.id)).toBeCloseTo(3.5)
+    expect(saidas[0].quantity).toBeCloseTo(5)
+    expect(await saldo(A.tenant.id, A.produto.id)).toBeCloseTo(98)
 
-    await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '3,5', counted_at: agora() }))
+    // contou igual (98): nenhum ajuste, mas a contagem fica registrada (3 contagens no total)
+    await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '98', counted_at: agora() }))
+    expect(await prisma.chemicalStockEntry.count({ where: { notes: 'Ajuste por contagem física' } })).toBe(1)
     expect(await prisma.chemicalStockExit.count({ where: { notes: 'Ajuste por contagem física' } })).toBe(1)
+    expect(await prisma.chemicalStockCount.count({ where: { tenant_id: A.tenant.id } })).toBe(3)
+  })
+
+  it('divergência acima de 5%: fica PENDENTE, sem ajuste, saldo inalterado', async () => {
+    const A = await criarCenario('A'); await criarEntrada(A.tenant.id, A.produto.id, A.gestor.id, 100)
+    actAs(A.operador)
+    // +40% (100 → 140): acima do limite → pendente de aprovação do gestor
+    const r = await registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '140', counted_at: agora() }))
+    expect(r).toMatchObject({ success: true, pending: true })
     expect(await prisma.chemicalStockEntry.count({ where: { notes: 'Ajuste por contagem física' } })).toBe(0)
-    expect(await prisma.chemicalStockCount.count({ where: { tenant_id: A.tenant.id } })).toBe(2)
+    expect(await prisma.chemicalStockExit.count({ where: { notes: 'Ajuste por contagem física' } })).toBe(0)
+    const contagem = await prisma.chemicalStockCount.findFirst({ where: { tenant_id: A.tenant.id }, select: { review_status: true } })
+    expect(contagem?.review_status).toBe('PENDING')
+    expect(await saldo(A.tenant.id, A.produto.id)).toBeCloseTo(100)
   })
 })
 

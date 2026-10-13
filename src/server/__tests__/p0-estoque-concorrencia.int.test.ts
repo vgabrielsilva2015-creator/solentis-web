@@ -45,16 +45,19 @@ describe('saídas simultâneas', () => {
     expect(await registrarSaida(null, form({ product_id: A.produto.id, quantity: '0,5', used_at: agora() }))).toMatchObject({ error: expect.stringMatching(/negativo/i) })
   })
 
-  it('contagem física e saída ao mesmo tempo: o saldo final é o contado ou o contado menos a saída, nunca negativo', async () => {
+  it('contagem (>5%, fica pendente no M-04) e saída ao mesmo tempo, sob a trava: só a saída aplica, saldo 7, nunca negativo', async () => {
     const A = await criarCenario('A')
     await criarEntrada(A.tenant.id, A.produto.id, A.gestor.id, 10)
     actAs(A.operador)
+    // contagem 6 (−40%/−14%) fica PENDENTE — não ajusta; a saída 3 aplica sob a mesma trava.
     await Promise.all([
       registrarContagem(null, form({ product_id: A.produto.id, counted_quantity: '6', counted_at: agora() })),
       registrarSaida(null, form({ product_id: A.produto.id, quantity: '3', used_at: agora() })),
     ])
     const s = await saldo(A.tenant.id, A.produto.id)
-    expect([3, 6]).toContainEqual(expect.closeTo(s, 6))
+    expect(s).toBeCloseTo(7)                 // 10 − 3 (contagem não mexeu no saldo)
+    expect(s).toBeGreaterThanOrEqual(0)      // nunca negativo
+    expect(await prisma.chemicalStockExit.count({ where: { notes: 'Ajuste por contagem física' } })).toBe(0)
   })
 })
 
