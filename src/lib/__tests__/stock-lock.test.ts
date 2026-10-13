@@ -10,7 +10,7 @@ import { join } from 'path'
 function walk(dir: string, acc: string[] = []): string[] {
   for (const e of readdirSync(dir)) {
     const full = join(dir, e)
-    if (statSync(full).isDirectory()) { if (e !== '__tests__' && e !== 'node_modules' && !(dir.endsWith('/src') && e === 'test')) walk(full, acc) } // src/test = apoio dos testes (T-28), nunca importado pelo app
+    if (statSync(full).isDirectory()) { if (e !== '__tests__' && e !== 'node_modules' && !(dir.replace(/\\/g, '/').endsWith('/src') && e === 'test')) walk(full, acc) } // src/test = apoio dos testes (T-28), nunca importado pelo app
     else if (/\.tsx?$/.test(e)) acc.push(full)
   }
   return acc
@@ -27,7 +27,7 @@ describe('estoque serializado por produto (T-13)', () => {
         const fnStart = text.lastIndexOf('async function', m.index) // T-30: cobre também a função *Impl por trás do invólucro de medição
         const corpo = text.slice(fnStart, m.index)
         if (!/lockProduct\(tx,/.test(corpo) || m[0].startsWith('prisma.')) {
-          faltando.push(`${f.replace(process.cwd() + '/', '')}:${text.slice(0, m.index).split('\n').length}`)
+          faltando.push(`${f.replace(/\\/g, '/').replace(process.cwd().replace(/\\/g, '/') + '/', '')}:${text.slice(0, m.index).split('\n').length}`)
         }
       }
     }
