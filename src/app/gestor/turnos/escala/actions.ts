@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
 import { assertOwned } from '@/lib/ownership'
 import { normalizarData } from '@/lib/shift-utils'
+import { logAudit } from '@/lib/audit'
 
 
 export async function saveShiftScale(
@@ -14,12 +15,12 @@ export async function saveShiftScale(
   dateStr: string,
   actionType: 'assign' | 'remove'
 ) {
-  await requirePermission('shift.manage')
+  const ctx = await requirePermission('shift.manage')
   const tenantId = await getTenantId()
   const targetDate = normalizarData(new Date(dateStr + 'T00:00:00'))
 
   if (actionType === 'remove') {
-    await prisma.shiftScale.deleteMany({
+    const { count } = await prisma.shiftScale.deleteMany({
       where: {
         tenant_id: tenantId,
         shift_id: shiftId,
@@ -27,6 +28,13 @@ export async function saveShiftScale(
         operator_id: operatorId,
       },
     })
+    if (count > 0) {
+      await logAudit(prisma, {
+        tenantId, userId: ctx.userId, action: 'DELETE',
+        tableName: 'shift_scales', recordId: `${operatorId}@${shiftId}:${dateStr}`,
+        before: { operator_id: operatorId, shift_id: shiftId, date: dateStr },
+      })
+    }
   } else {
     await assertOwned(tenantId, { model: 'shift', id: shiftId, message: 'Turno não encontrado.' })
 
@@ -37,7 +45,7 @@ export async function saveShiftScale(
     if (!operator) throw new Error('Operador não encontrado ou inativo.')
 
     // Assign operator to shift
-    await prisma.shiftScale.upsert({
+    const scale = await prisma.shiftScale.upsert({
       where: {
         tenant_id_date_shift_id_operator_id: {
           tenant_id: tenantId,
@@ -53,6 +61,11 @@ export async function saveShiftScale(
         shift_id: shiftId,
         operator_id: operatorId,
       }
+    })
+    await logAudit(prisma, {
+      tenantId, userId: ctx.userId, action: 'CREATE',
+      tableName: 'shift_scales', recordId: scale.id,
+      after: { operator_id: operatorId, shift_id: shiftId, date: dateStr },
     })
   }
 
@@ -77,13 +90,23 @@ export async function toggleMaintenanceDay(dateStr: string, description?: string
     await prisma.maintenanceDay.delete({
       where: { id: existing.id }
     })
+    await logAudit(prisma, {
+      tenantId, userId: ctx.userId, action: 'DELETE',
+      tableName: 'maintenance_days', recordId: existing.id,
+      before: { date: dateStr },
+    })
   } else {
-    await prisma.maintenanceDay.create({
+    const criado = await prisma.maintenanceDay.create({
       data: {
         tenant_id: tenantId,
         date: targetDate,
         description: description || 'Manutenção Programada ETE',
       }
+    })
+    await logAudit(prisma, {
+      tenantId, userId: ctx.userId, action: 'CREATE',
+      tableName: 'maintenance_days', recordId: criado.id,
+      after: { date: dateStr, description: description || 'Manutenção Programada ETE' },
     })
   }
 
@@ -150,7 +173,7 @@ export async function addShiftTask(
   }
 
   // Create the ShiftTask
-  await prisma.shiftTask.create({
+  const task = await prisma.shiftTask.create({
     data: {
       tenant_id: tenantId,
       shift_instance_id: instance.id,
@@ -162,13 +185,19 @@ export async function addShiftTask(
     }
   })
 
+  await logAudit(prisma, {
+    tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'shift_tasks', recordId: task.id,
+    after: { title, shift_instance_id: instance.id, assigned_to_id: assignedToId || null },
+  })
+
   revalidatePath('/gestor/turnos/escala')
   revalidatePath('/operador/turnos/escala')
   revalidatePath('/operador/turnos')
 }
 
 export async function deleteShiftTask(taskId: string) {
-  await requirePermission('shift.manage')
+  const ctx = await requirePermission('shift.manage')
   const tenantId = await getTenantId()
 
   const task = await prisma.shiftTask.findFirst({
@@ -179,6 +208,12 @@ export async function deleteShiftTask(taskId: string) {
   // @tenant-checked: task validada por tenant_id no findFirst acima.
   await prisma.shiftTask.delete({
     where: { id: taskId }
+  })
+
+  await logAudit(prisma, {
+    tenantId, userId: ctx.userId, action: 'DELETE',
+    tableName: 'shift_tasks', recordId: taskId,
+    before: { title: task.title, shift_instance_id: task.shift_instance_id },
   })
 
   revalidatePath('/gestor/turnos/escala')

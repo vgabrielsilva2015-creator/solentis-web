@@ -144,6 +144,12 @@ export async function preAgendarTurno(
     },
   })
 
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId, action: 'CREATE',
+    tableName: 'shift_instances', recordId: instance.id,
+    after: { shift_id: parsed.data.shift_id, date: parsed.data.date, status: 'SCHEDULED' },
+  })
+
   revalidatePath('/gestor/turnos/tarefas')
   return { success: true, instanceId: instance.id }
 }
