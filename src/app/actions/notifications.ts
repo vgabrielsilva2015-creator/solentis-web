@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { getLogger } from '@/lib/logger'
 import { hrefFor } from '@/lib/search'
-import { notificationTaskHref, HANDOVER_ALERT_HREF } from '@/lib/notification-links'
+import { notificationTaskHref, HANDOVER_ALERT_HREF, CHEMICAL_PRODUCT_HREF } from '@/lib/notification-links'
 import { STATUS_AGUARDANDO } from '@/lib/handover-status'
 
 export type NotificationItem = {
@@ -167,6 +167,24 @@ export async function getNotifications(): Promise<NotificationItem[]> {
           type: 'HANDOVER',
           href: HANDOVER_ALERT_HREF(i.id),
           date: i.opened_at ?? i.date,
+        })
+      })
+
+      // 6. Contagens de estoque com divergência acima do limite, aguardando aprovação (M-04).
+      const contagensPendentes = await prisma.chemicalStockCount.findMany({
+        where: { tenant_id: tenantId, review_status: 'PENDING' },
+        include: { product: { select: { id: true, name: true } }, recorder: { select: { name: true } } },
+        orderBy: { counted_at: 'desc' },
+        take: 5,
+      })
+      contagensPendentes.forEach((c) => {
+        notifications.push({
+          id: `count-${c.id}`,
+          title: 'Contagem aguardando aprovação',
+          description: `${c.product.name} · contado por ${c.recorder.name}`,
+          type: 'MAINTENANCE',
+          href: CHEMICAL_PRODUCT_HREF(c.product.id),
+          date: c.counted_at,
         })
       })
     }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { registrarContagem } from '../../actions'
 import { calcularDivergencia, formatarQuantidade } from '@/lib/stock-utils'
 import { numeroOuNaN } from '@/lib/number-ptbr'
+import { decidirContagem } from '@/lib/stock-review'
 
 type Props = {
   productId:        string
@@ -22,12 +23,31 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
 
   const [state, action, pending] = useActionState(async (prev: unknown, formData: FormData) => {
     const result = await registrarContagem(prev, formData)
-    if (result?.success) router.push(estoquePath)
+    // Sucesso aplicado → volta pra lista. Pendente (>5%) → fica para o operador ler o aviso.
+    if (result?.success && !('pending' in result && result.pending)) router.push(estoquePath)
     return result
   }, null)
 
   const qtyNum      = numeroOuNaN(qty)
   const divergencia = !isNaN(qtyNum) && qty !== '' ? calcularDivergencia(estoqueCalculado, qtyNum) : null
+  const foraDoLimite = !isNaN(qtyNum) && qty !== '' ? !decidirContagem(estoqueCalculado, qtyNum).aplicar : false
+
+  if (state && 'pending' in state && state.pending) {
+    return (
+      <div className="space-y-4">
+        <p className="rounded-lg bg-amber-900/30 border border-amber-700 px-4 py-3 text-sm text-amber-200">
+          {('warning' in state && state.warning) || 'Contagem registrada; aguardando aprovação do gestor.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push(estoquePath)}
+          className="w-full rounded-lg bg-blue-700 py-3 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+        >
+          Entendido
+        </button>
+      </div>
+    )
+  }
 
   return (
     <form action={action} className="space-y-4">
@@ -61,6 +81,11 @@ export function CountForm({ productId, unit, estoqueCalculado, estoquePath = '/o
             {divergencia === 0 && ' — em linha com o calculado'}
             {divergencia < 0  && ' — físico abaixo do calculado'}
             {divergencia > 0  && ' — físico acima do calculado'}
+          </p>
+        )}
+        {foraDoLimite && (
+          <p className="text-xs text-amber-400">
+            Divergência acima de 5% do saldo — o estoque só será ajustado após aprovação de um gestor.
           </p>
         )}
       </div>

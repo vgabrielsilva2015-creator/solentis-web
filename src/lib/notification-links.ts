@@ -13,3 +13,6 @@ export function notificationTaskHref(role: string, shiftInstanceId: string): str
 
 /** Passagem vencida (só o gestor recebe): abre o detalhe da instância do turno. */
 export const HANDOVER_ALERT_HREF = (shiftInstanceId: string) => `/gestor/turnos/tarefas/${shiftInstanceId}`
+
+/** Contagem de estoque aguardando aprovação (M-04): abre o detalhe do produto. */
+export const CHEMICAL_PRODUCT_HREF = (productId: string) => `/gestor/produtos-quimicos/${productId}`

@@ -3,7 +3,7 @@
 import { requirePermission } from '@/server/auth/guards'
 import { medir } from '@/lib/observability'
 import { EntradaSchema } from '@/server/estoque/schema'
-import { registrarEntradaDeEstoque } from '@/server/estoque/service'
+import { registrarEntradaDeEstoque, revisarContagemDeEstoque } from '@/server/estoque/service'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
@@ -170,6 +170,31 @@ export async function excluirProduto(id: string) {
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath('/gestor/dashboard')
   redirect('/gestor/produtos-quimicos')
+}
+
+// ─── M-04: revisar contagem pendente (aprovar/rejeitar) ───────────────────────
+// A regra, a trava e a auditoria estão em `src/server/estoque/service.ts`. Aqui só
+// autentica (gestor), valida a entrada e atualiza a tela. A separação de funções
+// (quem contou não revisa) é aplicada no serviço.
+export async function revisarContagem(
+  countId: string,
+  decisao: 'APROVAR' | 'REJEITAR',
+  motivo?: string,
+): Promise<{ error?: string }> {
+  const ctx = await requirePermission('stock.review')
+
+  if (decisao !== 'APROVAR' && decisao !== 'REJEITAR') return { error: 'Decisão inválida.' }
+  if (typeof countId !== 'string' || countId.length < 1 || countId.length > 64) return { error: 'Contagem inválida.' }
+  const motivoLimpo = motivo && motivo.trim() !== '' ? motivo.trim().slice(0, 500) : null
+
+  const r = await revisarContagemDeEstoque({
+    tenantId: ctx.tenantId, reviewerId: ctx.userId, countId, decisao, motivo: motivoLimpo,
+  })
+  if (!r.ok) return { error: r.error }
+
+  revalidatePath('/gestor/produtos-quimicos')
+  revalidatePath('/gestor/dashboard')
+  return {}
 }
 
 // ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───
