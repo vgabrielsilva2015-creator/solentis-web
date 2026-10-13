@@ -182,6 +182,7 @@ describe('quem pode cada action: igual a antes da T-20, menos as mudanças lista
     'mfa/cadastro/actions.ts#iniciarCadastroMfa': ['SUPER_ADMIN'],   // Fase 2 do Super Admin
     'mfa/cadastro/actions.ts#confirmarCadastroMfa': ['SUPER_ADMIN'],
     'admin/plantas/actions.ts#alterarPapelUsuario': ['SUPER_ADMIN'],   // veio da main (PR #47), já no guard único
+    'gestor/turnos/tarefas/actions.ts#encerrarTurnoForcado': ['MANAGER'],   // M-05: gestor encerra turno preso com justificativa
   }
 
   const esperado = (k: string) => (k in MUDANCAS ? MUDANCAS[k].para : BEFORE[k])

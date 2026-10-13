@@ -140,6 +140,35 @@ export async function getNotifications(): Promise<NotificationItem[]> {
           date: h.timeout_at,
         })
       })
+
+      // 5. Turnos abertos de dias anteriores sem passagem iniciada (M-05):
+      // turno "esquecido" aberto, nunca passado. O gestor pode encerrar à força.
+      const hoje = new Date()
+      hoje.setHours(0, 0, 0, 0)
+      const presos = await prisma.shiftInstance.findMany({
+        where: {
+          tenant_id: tenantId,
+          status: 'OPEN',
+          handover: { is: null },
+          date: { lt: hoje },
+        },
+        include: {
+          shift:  { select: { name: true } },
+          opener: { select: { name: true } },
+        },
+        orderBy: { date: 'asc' },
+        take: 5,
+      })
+      presos.forEach((i) => {
+        notifications.push({
+          id: `shift-open-${i.id}`,
+          title: 'Turno aberto sem passagem',
+          description: `${i.shift.name} · aberto por ${i.opener?.name ?? '—'}`,
+          type: 'HANDOVER',
+          href: HANDOVER_ALERT_HREF(i.id),
+          date: i.opened_at ?? i.date,
+        })
+      })
     }
 
     // Ordenar por data (mais recentes primeiro)
