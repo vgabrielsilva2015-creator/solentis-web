@@ -9,8 +9,8 @@ import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { CHEMICAL_UNITS_PRESET } from '@/types'
-import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
+import { logAudit } from '@/lib/audit'
 import { localInputToUTC } from '@/lib/date-utils'
 import { redirect } from 'next/navigation'
 
@@ -58,8 +58,14 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
 
   const recorded_by = ctx.userId
 
-  await prisma.chemicalProduct.create({
-    data: { tenant_id: (await getTenantId()), name, unit, min_stock, description, created_by: recorded_by },
+  const produto = await prisma.chemicalProduct.create({
+    data: { tenant_id: ctx.tenantId, name, unit, min_stock, description, created_by: recorded_by },
+  })
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'chemical_products', recordId: produto.id,
+    after: { name, unit, min_stock },
   })
 
   revalidatePath('/gestor/produtos-quimicos')
@@ -68,7 +74,7 @@ export async function criarProduto(_prev: unknown, formData: FormData) {
 }
 
 export async function editarProduto(_prev: unknown, formData: FormData) {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
 
   const id = formData.get('id') as string
   if (!id) return { error: 'ID inválido' }
@@ -83,7 +89,14 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 
   if (!unit) return { error: 'Informe a unidade de medida' }
 
-  await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data:  { name, unit, min_stock, description },
+  const { count } = await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: ctx.tenantId }, data:  { name, unit, min_stock, description },
+  })
+  if (count === 0) return { error: 'Produto não encontrado.' }
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'chemical_products', recordId: id,
+    after: { name, unit, min_stock },
   })
 
   revalidatePath('/gestor/produtos-quimicos')
@@ -93,9 +106,16 @@ export async function editarProduto(_prev: unknown, formData: FormData) {
 }
 
 export async function toggleAtivoProduto(id: string, is_active: boolean) {
-  await requirePermission('config.manage')
+  const ctx = await requirePermission('config.manage')
 
-  await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data:  { is_active },
+  const { count } = await prisma.chemicalProduct.updateMany({ where: { id, tenant_id: ctx.tenantId }, data:  { is_active },
+  })
+  if (count === 0) return
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'chemical_products', recordId: id,
+    before: { is_active: !is_active }, after: { is_active },
   })
 
   revalidatePath('/gestor/produtos-quimicos')
@@ -127,8 +147,8 @@ async function registrarEntradaImpl(_prev: unknown, formData: FormData) {
 }
 
 export async function excluirProduto(id: string) {
-  await requirePermission('config.manage')
-  const tenantId = await getTenantId()
+  const ctx = await requirePermission('config.manage')
+  const tenantId = ctx.tenantId
 
   const [entries, exits, counts] = await Promise.all([
     prisma.chemicalStockEntry.count({ where: { tenant_id: tenantId, product_id: id } }),
@@ -140,7 +160,13 @@ export async function excluirProduto(id: string) {
     return { error: 'Este produto possui movimentações registradas e não pode ser excluído. Use "Desativar" para tirá-lo de uso preservando o histórico.' }
   }
 
-  await prisma.chemicalProduct.deleteMany({ where: { id, tenant_id: tenantId } })
+  const { count } = await prisma.chemicalProduct.deleteMany({ where: { id, tenant_id: tenantId } })
+  if (count > 0) {
+    await logAudit(prisma, {
+      tenantId, userId: ctx.userId, action: 'DELETE',
+      tableName: 'chemical_products', recordId: id,
+    })
+  }
   revalidatePath('/gestor/produtos-quimicos')
   revalidatePath('/gestor/dashboard')
   redirect('/gestor/produtos-quimicos')
