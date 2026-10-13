@@ -6,6 +6,7 @@ import { getLogger } from '@/lib/logger'
 import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
 import { errorMessage } from '@/lib/error-utils'
 import { logAudit } from '@/lib/audit'
+import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -200,10 +201,11 @@ export async function saveMappedReadings(data: {
   
   const ctx = await getActor()
   if (permissionError(ctx, 'lab.import')) return { success: false, error: 'Não autorizado.' }
-  
+
   const tenantId = await getTenantId()
 
   const user = { id: ctx.userId }
+  const log = await getLogger({ action: 'salvarLeiturasLaudo', tenantId })
 
   // Buscar a matriz do ponto para verificação multi-matriz.
   // Rejeita ponto inexistente/de outro tenant — a FK é global, então sem este
@@ -257,7 +259,8 @@ export async function saveMappedReadings(data: {
 
       const isNonConformant = calcularNaoConformidade(r.value, min_limit, max_limit, r.is_detected)
 
-      await prisma.$transaction(async (tx) => {
+      // A transação devolve o hook de notificação (ou null) para rodarmos pós-commit.
+      const hook = await prisma.$transaction(async (tx) => {
         await tx.analysis.create({
           data: {
             tenant_id: tenantId,
@@ -277,24 +280,18 @@ export async function saveMappedReadings(data: {
             max_limit_applied: max_limit
           }
         })
-        
-        if (isNonConformant) {
-          const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-            where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
-          })
-          const deadlineHours = defaultSeverity?.deadline_hours || 24
-          const deadline = new Date()
-          deadline.setHours(deadline.getHours() + deadlineHours)
 
-          await tx.occurrence.create({
-            data: {
-              tenant_id: tenantId,
-              description: `Não Conformidade via Laudo (${param.name}): Resultado = ${r.bruto}. O valor está fora dos limites aceitáveis para a matriz ${matrixName || 'não definida'}. Ponto: ${point?.name}`,
-              severity: 'HIGH',
-              status: 'OPEN',
-              deadline,
-              reported_by: user.id,
-            }
+        // Caminho único (M-06): grava type + collection_point_id e dispara a notificação
+        // ao gestor, como leitura/análise. O ponto já foi validado contra o tenant acima.
+        let notifHook: (() => Promise<void>) | null = null
+        if (isNonConformant) {
+          notifHook = await criarOcorrenciaAutomatica(tx, {
+            tenantId,
+            userId: user.id,
+            type: 'LABORATORY',
+            severity: 'HIGH',
+            description: `Não Conformidade via Laudo (${param.name}): Resultado = ${r.bruto}. O valor está fora dos limites aceitáveis para a matriz ${matrixName || 'não definida'}. Ponto: ${point?.name}`,
+            collectionPointId: data.pointId,
           })
         }
 
@@ -310,7 +307,10 @@ export async function saveMappedReadings(data: {
             }
           })
         }
+        return notifHook
       })
+      // Pós-commit: notifica os gestores. Falha de envio não derruba o que já foi gravado.
+      if (hook) await hook().catch((err) => log.error({ err }, 'Falha ao notificar NC de laudo'))
       criadas++
       if (isNonConformant) naoConformes++
     }
@@ -327,7 +327,6 @@ export async function saveMappedReadings(data: {
 
     return { success: true }
   } catch (err: unknown) {
-    const log = await getLogger({ action: 'salvarLeiturasLaudo' })
     log.error({ err }, 'Falha na transação de salvamento do laudo')
     return { success: false, error: 'Não foi possível salvar as leituras. Verifique os dados e tente novamente.' }
   }
