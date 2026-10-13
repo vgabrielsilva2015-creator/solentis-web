@@ -9,6 +9,7 @@ import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { podeAbrirTurnoAgora, horaAberturaPermitida } from '@/lib/shift-window'
 import { aguardandoConfirmacao, STATUS_AGUARDANDO } from '@/lib/handover-status'
+import { logAudit } from '@/lib/audit'
 
 const MAX_PHOTOS_TASK = 3
 const MAX_FILE_SIZE   = 5 * 1024 * 1024 // 5 MB
@@ -208,6 +209,12 @@ export async function abrirTurno(
       }
     }
 
+    await logAudit(tx, {
+      tenantId: tenant_id, userId, action: scheduled ? 'UPDATE' : 'CREATE',
+      tableName: 'shift_instances', recordId: instanceId,
+      after: { shift_id: parsed.data.shift_id, status: 'OPEN', evento: 'abertura_de_turno' },
+    })
+
     return null
     })
   } catch (e: unknown) {
@@ -282,7 +289,7 @@ export async function iniciarPassagem(
   )
 
   await prisma.$transaction(async (tx) => {
-    await tx.shiftHandover.create({
+    const ho = await tx.shiftHandover.create({
       data: {
         tenant_id:             (await getTenantId()),
         shift_instance_id:     instanceId,
@@ -295,6 +302,11 @@ export async function iniciarPassagem(
       },
     })
     await tx.shiftInstance.updateMany({ where: { id: instanceId , tenant_id: (await getTenantId()) }, data:  { status: 'HANDOVER_PENDING' },
+    })
+    await logAudit(tx, {
+      tenantId: (await getTenantId()), userId, action: 'CREATE',
+      tableName: 'shift_handovers', recordId: ho.id,
+      after: { shift_instance_id: instanceId, evento: 'inicio_de_passagem' },
     })
   })
 
@@ -371,6 +383,11 @@ export async function confirmarPassagem(
       },
     })
     if (confirmada.count !== 1) throw new PassagemJaConfirmada()
+    await logAudit(tx, {
+      tenantId: (await getTenantId()), userId, action: 'UPDATE',
+      tableName: 'shift_handovers', recordId: handoverId,
+      before: { status: handover.status }, after: { status: 'CONFIRMED', evento: 'confirmacao_de_passagem' },
+    })
     // Fecha o turno anterior
     await tx.shiftInstance.updateMany({ where: { id: handover.shift_instance.id , tenant_id: (await getTenantId()) }, data:  { status: 'CLOSED', closed_at: now },
     })
@@ -514,6 +531,11 @@ export async function concluirTarefa(
         completion_notes: parsed.data.completion_notes,
       },
     })
+    await logAudit(tx, {
+      tenantId: (await getTenantId()), userId, action: 'UPDATE',
+      tableName: 'shift_tasks', recordId: taskId,
+      before: { status: 'PENDING' }, after: { status: 'DONE', fotos: photoRecords.length },
+    })
     if (photoRecords.length > 0) {
       const tenantId = await getTenantId()
       await tx.shiftTaskPhoto.createMany({
@@ -549,6 +571,11 @@ export async function pularTarefa(taskId: string): Promise<void> {
   if (!task || (task.shift_instance && task.shift_instance.status === 'CLOSED')) return
 
   await prisma.shiftTask.updateMany({ where: { id: taskId , tenant_id: (await getTenantId()) }, data:  { status: 'SKIPPED' },
+  })
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'shift_tasks', recordId: taskId,
+    before: { status: 'PENDING' }, after: { status: 'SKIPPED' },
   })
   if (task.shift_instance_id) revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
   revalidatePath('/operador/turnos')
@@ -612,7 +639,7 @@ export async function assumirPosto(
   result = await prisma.$transaction(async (tx) => {
     // Cria registro de handover automático/compulsório
     const timeoutAt = new Date(now.getTime() + 1)
-    await tx.shiftHandover.create({
+    const ho = await tx.shiftHandover.create({
       data: {
         tenant_id:             tenantId,
         shift_instance_id:     oldInstance.id,
@@ -633,6 +660,12 @@ export async function assumirPosto(
         confirmed_at:          now,
         status:                'CONFIRMED',
       },
+    })
+
+    await logAudit(tx, {
+      tenantId, userId, action: 'CREATE',
+      tableName: 'shift_handovers', recordId: ho.id,
+      after: { evento: 'assumir_posto', old_instance_id: oldInstance.id, outgoing_user_id: oldInstance.opened_by },
     })
 
     // Fecha o turno anterior
@@ -755,7 +788,7 @@ export async function repetirTarefa(
     targetInstanceId = active.id
   }
 
-  await prisma.shiftTask.create({
+  const nova = await prisma.shiftTask.create({
     data: {
       tenant_id,
       shift_instance_id: targetInstanceId,
@@ -769,6 +802,12 @@ export async function repetirTarefa(
       created_by:        userId,
       status:            'PENDING',
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId: tenant_id, userId, action: 'CREATE',
+    tableName: 'shift_tasks', recordId: nova.id,
+    after: { title: original.title, repeated_from_id: original.id, shift_instance_id: targetInstanceId },
   })
 
   revalidatePath(`/operador/turnos/${targetInstanceId}/tarefas`)

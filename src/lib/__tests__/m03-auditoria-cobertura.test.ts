@@ -75,13 +75,7 @@ const EXCECOES_PENDENTE: Record<string, string> = {
   // M-03b fechou: admin/criarPlanta + produtos-químicos
   // M-03c fechou: manutenção (preventiva/corretiva) + turnos + tarefas-padrão
   // M-03d fechou: importação IA + escala + tarefas de turno
-  'operador/turnos/actions.ts#abrirTurno':                                'pendente M-03e (operador/turnos)',
-  'operador/turnos/actions.ts#assumirPosto':                              'pendente M-03e (operador/turnos)',
-  'operador/turnos/actions.ts#iniciarPassagem':                           'pendente M-03e (operador/turnos)',
-  'operador/turnos/actions.ts#confirmarPassagem':                         'pendente M-03e (operador/turnos)',
-  'operador/turnos/actions.ts#concluirTarefa':                            'pendente M-03e (operador/turnos)',
-  'operador/turnos/actions.ts#pularTarefa':                               'pendente M-03e (operador/turnos)',
-  'operador/turnos/actions.ts#repetirTarefa':                             'pendente M-03e (operador/turnos)',
+  // M-03e fechou: operador/turnos (abrir, passagem, tarefas, assumir posto)
   'tecnico/analises/actions.ts#registrarAnalise':                         'pendente M-03f (análises)',
   'tecnico/equipamentos/actions.ts#criarEquipamento':                     'pendente M-03f (equipamentos)',
   'tecnico/equipamentos/actions.ts#editarEquipamento':                    'pendente M-03f (equipamentos)',
