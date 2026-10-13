@@ -933,11 +933,22 @@ model ChemicalStockCount {
   recorded_by      String
   created_at       DateTime @default(now())
 
+  // M-04: fluxo de aprovação da contagem.
+  // APPLIED = ajuste já aplicado (divergência ≤ limite, ou aprovada depois).
+  // PENDING = divergência acima do limite, aguardando aprovação do gestor.
+  // REJECTED = recusada pelo gestor (sem ajuste).
+  // Default APPLIED preserva as contagens antigas (todas já haviam sido aplicadas).
+  review_status String    @default("APPLIED")
+  reviewed_by   String?
+  reviewed_at   DateTime?
+  review_reason String?
+
   tenant   Tenant          @relation(fields: [tenant_id], references: [id])
   product  ChemicalProduct @relation(fields: [product_id], references: [id])
   recorder User            @relation(fields: [recorded_by], references: [id])
 
   @@index([tenant_id, product_id, counted_at])
+  @@index([tenant_id, review_status])
   @@map("chemical_stock_counts")
 }
 

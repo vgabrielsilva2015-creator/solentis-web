@@ -8,10 +8,14 @@
  */
 import { prisma } from '@/lib/prisma'
 import { lockProduct, saldoAtual } from '@/lib/stock-lock'
+import { decidirContagem } from '@/lib/stock-review'
+import { logAudit } from '@/lib/audit'
 
 export type Resultado = { ok: true } | { ok: false; error: string }
+/** Contagem: `pending` = divergência acima do limite, aguardando aprovação do gestor. */
+export type ResultadoContagem = { ok: true; pending: boolean } | { ok: false; error: string }
 
-const PRODUTO_INVALIDO: Resultado = { ok: false, error: 'Produto inválido ou não autorizado.' }
+const PRODUTO_INVALIDO = { ok: false, error: 'Produto inválido ou não autorizado.' } as const
 
 export async function registrarSaidaDeEstoque(i: {
   tenantId: string; userId: string; productId: string; quantity: number; notes: string | null; usedAt: Date
@@ -60,31 +64,103 @@ export async function registrarEntradaDeEstoque(i: {
 
 export async function registrarContagemDeEstoque(i: {
   tenantId: string; userId: string; productId: string; countedQuantity: number; notes: string | null; countedAt: Date
-}): Promise<Resultado> {
-  // Contagem física = ajuste de inventário: cria uma movimentação da diferença para que o
-  // saldo calculado passe a ser exatamente o valor contado. O saldo é lido com o produto travado.
-  return prisma.$transaction(async (tx): Promise<Resultado> => {
+}): Promise<ResultadoContagem> {
+  // Contagem física = ajuste de inventário. M-04: divergência ≤ limite ajusta direto;
+  // acima do limite a contagem fica PENDENTE e só ajusta após aprovação do gestor.
+  // O saldo é lido com o produto travado.
+  return prisma.$transaction(async (tx): Promise<ResultadoContagem> => {
     if (!(await lockProduct(tx, i.tenantId, i.productId))) return PRODUTO_INVALIDO
     const calculado = await saldoAtual(tx, i.tenantId, i.productId)
-    const diff = i.countedQuantity - calculado
+    const { aplicar, diff } = decidirContagem(calculado, i.countedQuantity)
 
-    await tx.chemicalStockCount.create({
+    const count = await tx.chemicalStockCount.create({
       data: {
         tenant_id: i.tenantId, product_id: i.productId, counted_quantity: i.countedQuantity,
         notes: i.notes, counted_at: i.countedAt, recorded_by: i.userId,
+        review_status: aplicar ? 'APPLIED' : 'PENDING',
       },
     })
 
-    const nota = 'Ajuste por contagem física'
+    if (aplicar) {
+      const nota = 'Ajuste por contagem física'
+      if (diff > 0) {
+        await tx.chemicalStockEntry.create({
+          data: { tenant_id: i.tenantId, product_id: i.productId, quantity: diff, notes: nota, received_at: i.countedAt, recorded_by: i.userId },
+        })
+      } else if (diff < 0) {
+        await tx.chemicalStockExit.create({
+          data: { tenant_id: i.tenantId, product_id: i.productId, quantity: -diff, notes: nota, used_at: i.countedAt, recorded_by: i.userId },
+        })
+      }
+    }
+
+    await logAudit(tx, {
+      tenantId: i.tenantId, userId: i.userId, action: 'CREATE',
+      tableName: 'chemical_stock_counts', recordId: count.id,
+      after: { counted: i.countedQuantity, calculado, diff, status: aplicar ? 'APPLIED' : 'PENDING' },
+    })
+
+    return { ok: true, pending: !aplicar }
+  })
+}
+
+// M-04: o gestor revisa uma contagem PENDENTE. Aprovar aplica o ajuste no momento
+// (recalcula a diferença com o produto travado); rejeitar descarta sem mexer no estoque.
+// Separação de funções: quem registrou a contagem não pode revisá-la.
+export async function revisarContagemDeEstoque(i: {
+  tenantId: string; reviewerId: string; countId: string; decisao: 'APROVAR' | 'REJEITAR'; motivo: string | null
+}): Promise<Resultado> {
+  return prisma.$transaction(async (tx): Promise<Resultado> => {
+    const count = await tx.chemicalStockCount.findFirst({
+      where:  { id: i.countId, tenant_id: i.tenantId },
+      select: { product_id: true, counted_quantity: true, recorded_by: true, review_status: true, counted_at: true },
+    })
+    if (!count) return { ok: false, error: 'Contagem não encontrada.' }
+    if (count.review_status !== 'PENDING') return { ok: false, error: 'Esta contagem já foi revisada.' }
+    if (count.recorded_by === i.reviewerId) {
+      return { ok: false, error: 'Você não pode revisar uma contagem que registrou. Peça a outro gestor.' }
+    }
+
+    // Trava o produto antes de qualquer gravação (serializa com outras movimentações).
+    if (!(await lockProduct(tx, i.tenantId, count.product_id))) return PRODUTO_INVALIDO
+    const now = new Date()
+
+    if (i.decisao === 'REJEITAR') {
+      await tx.chemicalStockCount.updateMany({
+        where: { id: i.countId, tenant_id: i.tenantId, review_status: 'PENDING' },
+        data:  { review_status: 'REJECTED', reviewed_by: i.reviewerId, reviewed_at: now, review_reason: i.motivo },
+      })
+      await logAudit(tx, {
+        tenantId: i.tenantId, userId: i.reviewerId, action: 'UPDATE',
+        tableName: 'chemical_stock_counts', recordId: i.countId,
+        before: { review_status: 'PENDING' }, after: { review_status: 'REJECTED' },
+        justification: i.motivo,
+      })
+      return { ok: true }
+    }
+
+    // APROVAR: aplica a diferença recalculada no momento da aprovação.
+    const calculado = await saldoAtual(tx, i.tenantId, count.product_id)
+    const diff = count.counted_quantity - calculado
+    const nota = 'Ajuste por contagem física (aprovada pelo gestor)'
     if (diff > 0) {
       await tx.chemicalStockEntry.create({
-        data: { tenant_id: i.tenantId, product_id: i.productId, quantity: diff, notes: nota, received_at: i.countedAt, recorded_by: i.userId },
+        data: { tenant_id: i.tenantId, product_id: count.product_id, quantity: diff, notes: nota, received_at: now, recorded_by: i.reviewerId },
       })
     } else if (diff < 0) {
       await tx.chemicalStockExit.create({
-        data: { tenant_id: i.tenantId, product_id: i.productId, quantity: -diff, notes: nota, used_at: i.countedAt, recorded_by: i.userId },
+        data: { tenant_id: i.tenantId, product_id: count.product_id, quantity: -diff, notes: nota, used_at: now, recorded_by: i.reviewerId },
       })
     }
+    await tx.chemicalStockCount.updateMany({
+      where: { id: i.countId, tenant_id: i.tenantId, review_status: 'PENDING' },
+      data:  { review_status: 'APPLIED', reviewed_by: i.reviewerId, reviewed_at: now },
+    })
+    await logAudit(tx, {
+      tenantId: i.tenantId, userId: i.reviewerId, action: 'UPDATE',
+      tableName: 'chemical_stock_counts', recordId: i.countId,
+      before: { review_status: 'PENDING' }, after: { review_status: 'APPLIED', diff },
+    })
     return { ok: true }
   })
 }

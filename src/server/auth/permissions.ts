@@ -27,6 +27,8 @@ export const PERMISSIONS = {
   'stock.move': [OP, TEC, GES],
   /** Entrada de produto químico (recebimento). */
   'stock.receive': [GES, TEC],
+  /** Revisar (aprovar/rejeitar) contagem com divergência acima do limite (M-04). */
+  'stock.review': [GES],
 
   // ── Ocorrências ───────────────────────────────────────────────────────────
   /** Registrar e comentar. DECISÃO 3: Manutenção também. */
@@ -90,6 +92,7 @@ export const AREA_ACCESS: Record<string, readonly AppRole[]> = {
 export const PERMISSION_DENIED_MESSAGE: Partial<Record<Permission, string>> = {
   'shift.operate': 'Apenas operadores podem fazer esta ação no turno.',
   'stock.move': 'Seu perfil não pode registrar saída e contagem de estoque.',
+  'stock.review': 'Apenas Gestores podem aprovar ou rejeitar contagens de estoque.',
   'maintenance.validate': 'Apenas Gestores podem validar Ordens de Serviço concluídas.',
 }
 export const DEFAULT_DENIED_MESSAGE = 'Seu perfil não pode fazer esta ação.'

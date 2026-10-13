@@ -30,6 +30,16 @@ Nenhuma. `EXCECOES_PENDENTE` do teste de contrato está vazio.
 - **`admin/criarPlanta` sem auditoria** (RESOLVIDO no M-03b) — criava planta + 1º
   gestor sem rastro, enquanto o resto do módulo admin já auditava. Era o gap mais
   sensível por ser ação de super admin.
+- **Escritas de estoque no `service.ts` fora do contrato de auditoria** (ABERTO) —
+  o teste de contrato `m03-auditoria-cobertura.test.ts` só varre arquivos
+  `'use server'`. As gravações de estoque vivem em `src/server/estoque/service.ts`
+  (que **não** é `'use server'`), então `registrarEntradaDeEstoque`,
+  `registrarSaidaDeEstoque` e `registrarContagemDeEstoque` **escaparam** da varredura.
+  - **Contagem:** passou a auditar no M-04 (`logAudit` dentro do serviço).
+  - **Entrada e saída:** ainda **não auditam**. Proposta: adicionar `logAudit` nas
+    duas no serviço (CREATE em `chemical_stock_entries` / `chemical_stock_exits`) e
+    **estender o contrato** para varrer também `src/server/**`, não só `'use server'`,
+    de modo a pegar escritas delegadas a serviços. Risco baixo, sem migration.
 
 ## Observações de robustez aplicadas junto (não mudam comportamento esperado)
 - `editar*`/`toggle*` passaram a devolver "não encontrado" quando o `updateMany`

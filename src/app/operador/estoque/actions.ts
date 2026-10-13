@@ -58,7 +58,10 @@ async function registrarContagemImpl(_prev: unknown, formData: FormData) {
   revalidatePath(`/operador/estoque/${product_id}`)
   revalidatePath('/tecnico/estoque')
   revalidatePath('/gestor/dashboard')
-  return { success: true }
+  // M-04: divergência acima do limite não ajusta na hora — espera o gestor aprovar.
+  return r.pending
+    ? { success: true, pending: true as const, warning: 'Contagem registrada. A diferença é grande (acima de 5%) e o estoque só será ajustado após a aprovação de um gestor.' }
+    : { success: true }
 }
 
 // ─── T-30: medição de duração/erro (composição; o contrato das ações não muda) ───

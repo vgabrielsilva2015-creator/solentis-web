@@ -10,6 +10,7 @@ import {
 import { EditForm } from './edit-form'
 import { ToggleButton } from './toggle-button'
 import { DeleteButton } from './delete-button'
+import { PendingCounts } from './pending-counts'
 import { BackButton } from '@/components/back-button'
 import { getTenantId } from '@/lib/tenant'
 
@@ -65,6 +66,17 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
       recorder: c.recorder.name,
     })),
   ].sort((a, b) => b.date.getTime() - a.date.getTime())
+
+  // M-04: contagens com divergência > 5% aguardando aprovação do gestor.
+  const pendentes = product.counts
+    .filter((c) => c.review_status === 'PENDING')
+    .map((c) => ({
+      id: c.id,
+      qty: c.counted_quantity,
+      unit: product.unit,
+      recorder: c.recorder.name,
+      date: c.counted_at.toLocaleString('pt-BR'),
+    }))
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
@@ -153,6 +165,9 @@ export default async function ProdutoDetalhe({ params }: { params: Promise<{ id:
 
       <ToggleButton id={product.id} is_active={product.is_active} />
       <DeleteButton id={product.id} hasMovements={movements.length > 0} />
+
+      {/* M-04: contagens pendentes de aprovação */}
+      <PendingCounts itens={pendentes} />
 
       {/* Histórico de movimentação */}
       <div>
