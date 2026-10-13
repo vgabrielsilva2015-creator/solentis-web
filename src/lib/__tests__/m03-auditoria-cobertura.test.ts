@@ -72,15 +72,11 @@ const EXCECOES_INFRA: Record<string, string> = {
 }
 // Backlog M-03b…n: dado de negócio que AINDA não audita. Some daqui conforme os lotes fecham.
 const EXCECOES_PENDENTE: Record<string, string> = {
-  'admin/plantas/actions.ts#criarPlanta':                                 'pendente M-03b (admin): criação de planta + 1º usuário',
-  'gestor/(manutencao)/manutencao/actions.ts#agendarPreventiva':          'pendente M-03b (manutenção)',
-  'gestor/(manutencao)/manutencao/actions.ts#criarCorretiva':             'pendente M-03b (manutenção)',
-  'gestor/importacao/actions.ts#createParameterFromImport':               'pendente M-03b (importação IA)',
-  'gestor/importacao/actions.ts#saveMappedReadings':                      'pendente M-03b (importação IA)',
-  'gestor/produtos-quimicos/actions.ts#criarProduto':                     'pendente M-03b (estoque/produtos)',
-  'gestor/produtos-quimicos/actions.ts#editarProduto':                    'pendente M-03b (estoque/produtos)',
-  'gestor/produtos-quimicos/actions.ts#excluirProduto':                   'pendente M-03b (estoque/produtos)',
-  'gestor/produtos-quimicos/actions.ts#toggleAtivoProduto':               'pendente M-03b (estoque/produtos)',
+  // M-03b fechou: admin/criarPlanta + produtos-químicos (agora auditam)
+  'gestor/(manutencao)/manutencao/actions.ts#agendarPreventiva':          'pendente M-03c (manutenção)',
+  'gestor/(manutencao)/manutencao/actions.ts#criarCorretiva':             'pendente M-03c (manutenção)',
+  'gestor/importacao/actions.ts#createParameterFromImport':               'pendente M-03c (importação IA)',
+  'gestor/importacao/actions.ts#saveMappedReadings':                      'pendente M-03c (importação IA)',
   'gestor/turnos/[id]/tarefas-padrao/actions.ts#criarTemplate':           'pendente M-03c (turnos)',
   'gestor/turnos/[id]/tarefas-padrao/actions.ts#atualizarTemplate':       'pendente M-03c (turnos)',
   'gestor/turnos/[id]/tarefas-padrao/actions.ts#desativarTemplate':       'pendente M-03c (turnos)',

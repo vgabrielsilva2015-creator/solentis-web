@@ -51,7 +51,7 @@ export async function criarPlanta(
   _prev: PlantaFormState,
   formData: FormData,
 ): Promise<PlantaFormState> {
-  await requirePermission('platform.admin')
+  const ctx = await requirePermission('platform.admin')
 
   const parsed = PlantaSchema.safeParse({
     tenantName:  formData.get('tenantName'),
@@ -94,6 +94,19 @@ export async function criarPlanta(
       // 3. Mobiliar a planta "de fábrica": cadastros de referência CONAMA,
       //    métodos, categorias, pontos, turnos, prazos e produtos químicos.
       await seedTenantDefaults(tx, tenant.id, gestor.id)
+
+      // Auditoria: criação da planta e do 1º gestor pelo super admin (cross-tenant).
+      // tenantId = planta criada; userId = super admin que executou.
+      await logAudit(tx, {
+        tenantId: tenant.id, userId: ctx.userId, action: 'CREATE',
+        tableName: 'tenants', recordId: tenant.id,
+        after: { name: tenantName, slug, criada_por: 'SUPER_ADMIN' },
+      })
+      await logAudit(tx, {
+        tenantId: tenant.id, userId: ctx.userId, action: 'CREATE',
+        tableName: 'users', recordId: gestor.id,
+        after: { name: gestorName, email: gestorEmail, role: 'MANAGER' },
+      })
     }, { timeout: 20000 })
 
     revalidatePath('/admin/plantas')
