@@ -9,7 +9,7 @@ import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
-import { handleNewOccurrence } from '@/lib/occurrences'
+import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 import { logAudit } from '@/lib/audit'
 
 
@@ -109,26 +109,15 @@ export async function registrarAnalise(
         select: { name: true }
       })
 
-      const defaultSeverity = await tx.occurrenceSeverityDefault.findUnique({
-        where: { tenant_id_severity: { tenant_id: tenantId, severity: 'HIGH' } }
+      // Caminho único (M-06): grava collection_point_id e usa o mesmo prazo/notificação.
+      const hook = await criarOcorrenciaAutomatica(tx, {
+        tenantId,
+        userId,
+        type:        'LABORATORY',
+        severity:    'HIGH',
+        description: `Não Conformidade (${paramName?.name}): Análise registrada = ${parsed.data.value} ${param.unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${point?.name || parsed.data.collection_point_id}`,
+        collectionPointId: parsed.data.collection_point_id,
       })
-      const deadlineHours = defaultSeverity?.deadline_hours || 24
-      const deadline = new Date()
-      deadline.setHours(deadline.getHours() + deadlineHours)
-
-      const occurrence = await tx.occurrence.create({
-        data: {
-          tenant_id:   tenantId,
-          description: `Não Conformidade (${paramName?.name}): Análise registrada = ${parsed.data.value} ${param.unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${point?.name || parsed.data.collection_point_id}`,
-          severity:    'HIGH',
-          status:      'OPEN',
-          type:        'LABORATORY',
-          deadline,
-          reported_by: userId,
-        }
-      })
-      
-      const hook = await handleNewOccurrence(tx, occurrence)
       if (hook) postCommitHooks.push(hook)
     }
   })

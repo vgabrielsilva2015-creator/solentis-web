@@ -7,7 +7,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
-import { handleNewOccurrence } from '@/lib/occurrences'
+import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 
 function violacaoDeUnicidade(err: unknown): boolean {
   return !!err && typeof err === 'object' && (err as { code?: string }).code === 'P2002'
@@ -90,27 +90,16 @@ export async function gravarLeitura(i: NovaLeitura): Promise<{ duplicate: boolea
         },
       })
 
-      // Fora da faixa: abre automaticamente uma ocorrência
+      // Fora da faixa: abre automaticamente uma ocorrência (caminho único — M-06)
       if (i.isNonConformant && i.parameterId) {
-        const padrao = await tx.occurrenceSeverityDefault.findUnique({
-          where: { tenant_id_severity: { tenant_id: i.tenantId, severity: 'HIGH' } },
+        const hook = await criarOcorrenciaAutomatica(tx, {
+          tenantId: i.tenantId,
+          userId: i.userId,
+          type: 'OPERATIONAL',
+          severity: 'HIGH',
+          description: `Não Conformidade (${i.paramName}): Leitura registrada = ${i.value} ${i.unit ?? ''}. O valor está fora dos limites aceitáveis.`,
+          collectionPointId: i.collectionPointId,
         })
-        const prazo = new Date()
-        prazo.setHours(prazo.getHours() + (padrao?.deadline_hours || 24))
-
-        const ocorrencia = await tx.occurrence.create({
-          data: {
-            tenant_id: i.tenantId,
-            description: `Não Conformidade (${i.paramName}): Leitura registrada = ${i.value} ${i.unit ?? ''}. O valor está fora dos limites aceitáveis.`,
-            severity: 'HIGH',
-            status: 'OPEN',
-            type: 'OPERATIONAL',
-            deadline: prazo,
-            reported_by: i.userId,
-            collection_point_id: i.collectionPointId,
-          },
-        })
-        const hook = await handleNewOccurrence(tx, ocorrencia)
         if (hook) aposGravar.push(hook)
       }
     })
