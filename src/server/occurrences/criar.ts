@@ -15,6 +15,9 @@
  */
 import { Prisma } from '@prisma/client'
 import { handleNewOccurrence } from '@/lib/occurrences'
+import { prisma } from '@/lib/prisma'
+import { sendWhatsAppAlert } from '@/lib/whatsapp'
+import { getLogger } from '@/lib/logger'
 
 type TxClient = Omit<
   Prisma.TransactionClient,
@@ -68,7 +71,7 @@ export async function criarOcorrenciaAutomatica(
   // Valida o ponto de coleta contra o tenant — não inventa vínculo.
   const ponto = await tx.collectionPoint.findFirst({
     where: { id: collectionPointId, tenant_id: tenantId },
-    select: { id: true },
+    select: { id: true, name: true },
   })
   if (!ponto) throw new Error('Ponto de coleta inválido ou de outra planta para a ocorrência automática.')
 
@@ -87,6 +90,43 @@ export async function criarOcorrenciaAutomatica(
     },
   })
 
-  // Cria a tarefa-plano na mesma transação e devolve o hook de push (pós-commit).
-  return handleNewOccurrence(tx, ocorrencia)
+  // Hook de push dos gestores (criado na mesma transação; disparado pós-commit).
+  const pushHook = await handleNewOccurrence(tx, ocorrencia)
+
+  // Compõe o hook pós-commit: push + (WhatsApp quando ALTA/CRÍTICA), reusando o mesmo
+  // critério de destinatário do fluxo manual (gestor do tenant com telefone). Tudo
+  // roda DEPOIS do commit — rollback nunca notifica — e falhas não derrubam a ocorrência.
+  const alertarWhats = severity === 'HIGH' || severity === 'CRITICAL'
+  return async () => {
+    await pushHook()
+    if (alertarWhats) await alertarGestoresWhatsApp(tenantId, severity, description, ponto.name)
+  }
+}
+
+/**
+ * Alerta por WhatsApp os gestores do tenant com telefone cadastrado (best-effort).
+ * Reusa `sendWhatsAppAlert` (uma tentativa, sem retry, não lança). Falhas são apenas
+ * registradas: a ocorrência já está persistida e não é afetada. Não há, hoje, opt-out
+ * de WhatsApp (mesmo critério do fluxo manual).
+ */
+async function alertarGestoresWhatsApp(
+  tenantId: string,
+  severity: OcorrenciaSeveridade,
+  description: string,
+  pontoNome: string | null,
+): Promise<void> {
+  try {
+    const gestores = await prisma.user.findMany({
+      where: { tenant_id: tenantId, role: 'MANAGER', phone: { not: null } },
+      select: { phone: true },
+    })
+    if (gestores.length === 0) return
+    const sev = severity === 'CRITICAL' ? 'CRÍTICA' : 'ALTA'
+    const local = pontoNome ? ` no local: ${pontoNome}` : ''
+    const msg = `🚨 *Alerta Solentis*\nNova Não Conformidade *${sev}*${local}\n\n*Descrição:* ${description}\n\nAcesse o painel para mais detalhes.`
+    await Promise.allSettled(gestores.map((g) => sendWhatsAppAlert(g.phone!, msg)))
+  } catch (err) {
+    const logger = await getLogger({ action: 'criarOcorrenciaAutomatica.whatsapp', tenantId })
+    logger.error({ err }, 'Falha ao alertar gestores por WhatsApp (NC automática)')
+  }
 }

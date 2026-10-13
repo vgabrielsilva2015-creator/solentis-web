@@ -92,14 +92,14 @@ describe('criarOcorrenciaAutomatica (M-06)', () => {
     expect(occurrenceCreate).not.toHaveBeenCalled()
   })
 
-  it('devolve o hook de notificação SEM dispará-lo (só roda pós-commit)', async () => {
+  it('devolve um hook de notificação SEM dispará-lo (só roda pós-commit)', async () => {
     const hook = vi.fn()
     handleNewOccurrenceMock.mockResolvedValue(hook)
     const { tx } = fakeTx({ ponto: { id: 'p1' }, prazoHoras: 24 })
     // @ts-expect-error tx fake
     const devolvido = await criarOcorrenciaAutomatica(tx, base)
-    expect(devolvido).toBe(hook)
-    expect(hook).not.toHaveBeenCalled() // notificação não disparou dentro da transação
+    expect(typeof devolvido).toBe('function')   // hook composto (push + WhatsApp quando alta/crítica)
+    expect(hook).not.toHaveBeenCalled()         // notificação não disparou dentro da transação
   })
 })
 
