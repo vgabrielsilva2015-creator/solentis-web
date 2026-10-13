@@ -11,6 +11,7 @@ import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { saveUpload, saveImageUpload } from '@/lib/storage'
 import { MAX_MANUAL_BYTES, mb } from '@/lib/upload-limits'
+import { logAudit } from '@/lib/audit'
 
 
 
@@ -397,9 +398,24 @@ export async function registrarCorretiva(
   return { success: true }
 }
 
-// ─── Corretiva: concluir ou cancelar ─────────────────────────────────────────
+// ─── Corretiva: máquina de estados (M-02) ─────────────────────────────────────
 
 const STATUS_CORRETIVA = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'VALIDATED', 'CANCELLED']
+
+// Transições permitidas. VALIDATED e CANCELLED são terminais.
+// COMPLETED → IN_PROGRESS permite reabrir uma OS concluída por engano (antes de validar).
+const TRANSICOES_CORRETIVA: Record<string, string[]> = {
+  OPEN:        ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+  COMPLETED:   ['VALIDATED', 'IN_PROGRESS'],
+  VALIDATED:   [],
+  CANCELLED:   [],
+}
+
+const LABEL_CORRETIVA: Record<string, string> = {
+  OPEN: 'Aberta', IN_PROGRESS: 'Em andamento', COMPLETED: 'Concluída',
+  VALIDATED: 'Validada', CANCELLED: 'Cancelada',
+}
 
 export async function atualizarStatusCorretiva(
   corretivaId: string,
@@ -435,15 +451,36 @@ export async function atualizarStatusCorretiva(
   })
   if (!corretiva) return { error: 'Corretiva não encontrada.' }
 
-  // Restrição de papéis
+  const atual = corretiva.status
+
+  // Mesmo status → nada a fazer (idempotente: não reprocessa nem recria o log).
+  if (status === atual) return {}
+
+  // Só transições previstas pela máquina de estados.
+  if (!(TRANSICOES_CORRETIVA[atual] ?? []).includes(status)) {
+    return { error: `Não é possível mudar a Ordem de Serviço de "${LABEL_CORRETIVA[atual] ?? atual}" para "${LABEL_CORRETIVA[status] ?? status}".` }
+  }
+
+  // Validar é prerrogativa do gestor.
   if (status === 'VALIDATED' && permissionError(ctx, 'maintenance.validate')) {
     return { error: 'Apenas Gestores podem validar Ordens de Serviço concluídas.' }
   }
+  // M-02 (D2): separação de funções — quem é responsável pela OS não a valida,
+  // a menos que seja o único gestor da planta (não há outra pessoa para validar).
+  if (status === 'VALIDATED' && corretiva.responsible_id === userId) {
+    const gestores = await prisma.user.count({
+      where: { tenant_id: tenantId, role: 'MANAGER', is_active: true, deleted_at: null },
+    })
+    if (gestores > 1) {
+      return { error: 'Você é o responsável por esta Ordem de Serviço; peça a outro gestor para validá-la.' }
+    }
+  }
 
+  let transicionou = false
   await prisma.$transaction(async (tx) => {
-    // Atualiza corretiva
-    await tx.correctiveMaintenance.updateMany({
-      where: { id: corretivaId, tenant_id: tenantId },
+    // Condiciona ao estado lido: numa corrida, só a primeira transição afeta a linha.
+    const { count } = await tx.correctiveMaintenance.updateMany({
+      where: { id: corretivaId, tenant_id: tenantId, status: atual },
       data: {
         status,
         end_date: (status === 'COMPLETED' || status === 'VALIDATED') ? new Date() : undefined,
@@ -451,8 +488,11 @@ export async function atualizarStatusCorretiva(
         notes: payload?.notes ? payload.notes : undefined,
       },
     })
+    if (count === 0) return // outro processo já mudou o estado; não grava log nem auditoria
+    transicionou = true
 
-    // Se validado, cria log de manutenção automática
+    // Validada → registra a manutenção no histórico do equipamento (uma única vez,
+    // garantido pela máquina de estados + pela trava de corrida acima).
     if (status === 'VALIDATED') {
       const respUser = await tx.user.findFirst({
         where: { id: corretiva.responsible_id, tenant_id: tenantId },
@@ -469,7 +509,21 @@ export async function atualizarStatusCorretiva(
         }
       })
     }
+
+    await logAudit(tx, {
+      tenantId,
+      userId,
+      action:    'UPDATE',
+      tableName: 'corrective_maintenances',
+      recordId:  corretivaId,
+      before:    { status: atual },
+      after:     { status },
+    })
   })
+
+  if (!transicionou) {
+    return { error: 'O estado desta Ordem de Serviço mudou enquanto você agia. Recarregue a página e tente de novo.' }
+  }
 
   revalidatePath(`/tecnico/equipamentos/${corretiva.equipment_id}`)
   revalidatePath(`/gestor/equipamentos/${corretiva.equipment_id}`)

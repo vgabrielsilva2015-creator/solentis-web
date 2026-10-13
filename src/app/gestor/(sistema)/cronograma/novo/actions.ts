@@ -7,6 +7,7 @@ import { assertOwned, OwnershipError } from '@/lib/ownership'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { executorFor, parseMonitoringScheduleForm, primeiraMensagem } from '@/lib/monitoring-schedule'
+import { logAudit } from '@/lib/audit'
 
 /** Volta ao formulário com a mensagem (o formulário é um <form action> simples). */
 function voltarComErro(msg: string): never {
@@ -36,7 +37,7 @@ export async function createMonitoringSchedule(formData: FormData) {
   // Autor = usuário logado (antes era o primeiro usuário qualquer da planta)
   const created_by = ctx.userId
 
-  await prisma.monitoringSchedule.create({
+  const criado = await prisma.monitoringSchedule.create({
     data: {
       tenant_id,
       collection_point_id: d.collection_point_id,
@@ -50,6 +51,12 @@ export async function createMonitoringSchedule(formData: FormData) {
       created_by,
       is_active: true,
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId: tenant_id, userId: ctx.userId, action: 'CREATE',
+    tableName: 'monitoring_schedules', recordId: criado.id,
+    after: { collection_point_id: d.collection_point_id, parameter_id: d.parameter_id, frequency: d.frequency },
   })
 
   revalidatePath('/gestor/cronograma')

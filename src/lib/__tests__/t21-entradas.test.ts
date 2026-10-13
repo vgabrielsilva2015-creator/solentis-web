@@ -40,7 +40,9 @@ vi.mock('@/lib/prisma', () => {
 
 beforeEach(() => {
   for (const m of [corretivaFind, corretivaUpdate, occFind, commentCreate]) m.mockReset()
-  corretivaFind.mockResolvedValue({ status: 'OPEN', equipment_id: 'e1', description: 'x', estimated_cost: null, responsible_id: 'u1' })
+  // M-02: IN_PROGRESS é um estado de onde COMPLETED é uma transição válida.
+  corretivaFind.mockResolvedValue({ status: 'IN_PROGRESS', equipment_id: 'e1', description: 'x', estimated_cost: null, responsible_id: 'u1' })
+  corretivaUpdate.mockResolvedValue({ count: 1 }) // M-02: a action lê o count para detectar corrida
   occFind.mockResolvedValue({ id: 'o1' })
 })
 
