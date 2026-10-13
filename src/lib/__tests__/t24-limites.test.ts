@@ -16,7 +16,11 @@ vi.mock('@/server/auth/guards', () => ({
   getActor: async () => ({ userId: 'u', tenantId: 'A', role: 'MANAGER' }),
   permissionError: () => null,
 }))
-vi.mock('@/lib/logger', () => ({ getLogger: async () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() }) }))
+vi.mock('@/lib/logger', () => ({
+  getLogger: async () => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() }),
+  // `logger` base também é usado por módulos na cadeia de import (web-push no load sem VAPID)
+  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}))
 
 describe('limites coerentes com a plataforma', () => {
   it('nenhum limite aceita uma requisição acima dos 4,5 MB da Vercel', () => {
