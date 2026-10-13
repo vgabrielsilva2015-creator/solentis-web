@@ -123,7 +123,7 @@ jobs:
         if: github.event_name == 'pull_request'
         # Exige o "Dependency graph" habilitado em Settings > Code security do repo.
         # Enquanto estiver desligado, a action aborta ("not supported on this repository").
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
 
