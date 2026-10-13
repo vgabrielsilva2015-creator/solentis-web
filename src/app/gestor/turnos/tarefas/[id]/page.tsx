@@ -3,6 +3,7 @@ import { statusEfetivoPassagem, HANDOVER_STATUS_LABEL } from '@/lib/handover-sta
 import { redirect } from 'next/navigation'
 import { BackButton } from '@/components/back-button'
 import { EditHandoverForm } from './edit-handover-form'
+import { ForceCloseForm } from './force-close-form'
 import { TaskForm } from './task-form'
 import { getTenantId } from '@/lib/tenant'
 
@@ -221,6 +222,18 @@ export default async function InstanciaDetalhePage({
       ) : (
         <div className="rounded-xl border border-border bg-card p-4 text-center py-8">
           <p className="text-sm text-muted-foreground">Nenhuma passagem registrada.</p>
+        </div>
+      )}
+
+      {/* Encerramento forçado — turno preso (aberto ou aguardando passagem) */}
+      {(instance.status === 'OPEN' || instance.status === 'HANDOVER_PENDING') && (
+        <div className="rounded-xl border border-red-900/40 bg-red-950/10 p-4 space-y-3">
+          <p className="text-xs font-medium text-red-400 uppercase tracking-wide">Encerrar turno à força</p>
+          <p className="text-xs text-muted-foreground">
+            Use quando o turno ficou preso — aberto sem passagem, ou com passagem que
+            ninguém confirmou. O encerramento fica registrado na auditoria com a sua justificativa.
+          </p>
+          <ForceCloseForm instanceId={id} />
         </div>
       )}
     </div>
