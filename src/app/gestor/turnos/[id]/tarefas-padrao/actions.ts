@@ -7,6 +7,7 @@ import { numeroBROpcional } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
+import { logAudit } from '@/lib/audit'
 
 
 
@@ -72,7 +73,7 @@ export async function criarTemplate(
   }])
   if (erroPosse) return { error: erroPosse }
 
-  await prisma.shiftTaskTemplate.create({
+  const template = await prisma.shiftTaskTemplate.create({
     data: {
       tenant_id:      tenantId,
       shift_id:       shiftId,
@@ -83,6 +84,12 @@ export async function criarTemplate(
       sort_order:     parsed.data.sort_order,
       created_by:     userId,
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId, userId, action: 'CREATE',
+    tableName: 'shift_task_templates', recordId: template.id,
+    after: { shift_id: shiftId, title: parsed.data.title, assigned_to_id: parsed.data.assigned_to_id },
   })
 
   revalidatePath(`/gestor/turnos/${shiftId}/tarefas-padrao`)
@@ -96,7 +103,7 @@ export async function atualizarTemplate(
   _prev: TemplateFormState,
   formData: FormData,
 ): Promise<TemplateFormState> {
-  await requirePermission('shift.assign')
+  const ctx = await requirePermission('shift.assign')
 
   const parsed = TemplateSchema.safeParse({
     title:          formData.get('title'),
@@ -109,7 +116,7 @@ export async function atualizarTemplate(
     return { fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const tenantId = await getTenantId()
+  const tenantId = ctx.tenantId
 
   const template = await prisma.shiftTaskTemplate.findFirst({
     where:  { id: templateId, tenant_id: tenantId },
@@ -135,6 +142,12 @@ export async function atualizarTemplate(
     },
   })
 
+  await logAudit(prisma, {
+    tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'shift_task_templates', recordId: templateId,
+    after: { title: parsed.data.title, assigned_to_id: parsed.data.assigned_to_id },
+  })
+
   revalidatePath(`/gestor/turnos/${template.shift_id}/tarefas-padrao`)
   return { success: true }
 }
@@ -144,8 +157,8 @@ export async function atualizarTemplate(
 // de gerar novas tarefas nas próximas aberturas de turno.
 
 export async function desativarTemplate(templateId: string): Promise<void> {
-  await requirePermission('shift.assign')
-  const tenantId = await getTenantId()
+  const ctx = await requirePermission('shift.assign')
+  const tenantId = ctx.tenantId
 
   const template = await prisma.shiftTaskTemplate.findFirst({
     where:  { id: templateId, tenant_id: tenantId },
@@ -156,6 +169,12 @@ export async function desativarTemplate(templateId: string): Promise<void> {
   await prisma.shiftTaskTemplate.updateMany({
     where: { id: templateId, tenant_id: tenantId },
     data:  { is_active: false },
+  })
+
+  await logAudit(prisma, {
+    tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'shift_task_templates', recordId: templateId,
+    after: { is_active: false },
   })
 
   revalidatePath(`/gestor/turnos/${template.shift_id}/tarefas-padrao`)

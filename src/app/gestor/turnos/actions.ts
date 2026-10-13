@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { numeroBR } from '@/lib/zod-ptbr'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getTenantId } from '@/lib/tenant'
 import { assertOwned } from '@/lib/ownership'
+import { logAudit } from '@/lib/audit'
 
 
 
@@ -29,7 +29,7 @@ export async function criarTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  await requirePermission('shift.manage')
+  const ctx = await requirePermission('shift.manage')
 
   const parsed = TurnoSchema.safeParse({
     name:                     formData.get('name'),
@@ -47,7 +47,7 @@ export async function criarTurno(
   // Impede turnos ativos com nome duplicado (case-insensitive) no mesmo tenant
   const duplicado = await prisma.shift.findFirst({
     where: {
-      tenant_id: (await getTenantId()),
+      tenant_id: ctx.tenantId,
       is_active: true,
       name:      { equals: nome, mode: 'insensitive' },
     },
@@ -57,9 +57,9 @@ export async function criarTurno(
     return { error: `Já existe um turno chamado '${nome}'. Use um nome diferente ou edite o turno existente.` }
   }
 
-  await prisma.shift.create({
+  const turno = await prisma.shift.create({
     data: {
-      tenant_id:                (await getTenantId()),
+      tenant_id:                ctx.tenantId,
       name:                     nome,
       start_time:               parsed.data.start_time,
       end_time:                 parsed.data.end_time,
@@ -67,6 +67,12 @@ export async function criarTurno(
       handover_timeout_minutes: parsed.data.handover_timeout_minutes,
       is_active:                true,
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'CREATE',
+    tableName: 'shifts', recordId: turno.id,
+    after: { name: nome, start_time: parsed.data.start_time, end_time: parsed.data.end_time },
   })
 
   revalidatePath('/gestor/turnos')
@@ -78,7 +84,7 @@ export async function editarTurno(
   _prev: TurnoFormState,
   formData: FormData,
 ): Promise<TurnoFormState> {
-  await requirePermission('shift.manage')
+  const ctx = await requirePermission('shift.manage')
 
   const parsed = TurnoSchema.safeParse({
     name:                     formData.get('name'),
@@ -96,7 +102,7 @@ export async function editarTurno(
   // Impede colisão com OUTRO turno ativo do mesmo tenant (mesmo nome, case-insensitive)
   const duplicado = await prisma.shift.findFirst({
     where: {
-      tenant_id: (await getTenantId()),
+      tenant_id: ctx.tenantId,
       is_active: true,
       name:      { equals: nome, mode: 'insensitive' },
       id:        { not: turnoId },
@@ -107,13 +113,20 @@ export async function editarTurno(
     return { error: `Já existe um turno chamado '${nome}'. Use um nome diferente ou edite o turno existente.` }
   }
 
-  await prisma.shift.updateMany({ where: { id: turnoId , tenant_id: (await getTenantId()) }, data: {
+  const { count } = await prisma.shift.updateMany({ where: { id: turnoId , tenant_id: ctx.tenantId }, data: {
       name:                     nome,
       start_time:               parsed.data.start_time,
       end_time:                 parsed.data.end_time,
       crosses_midnight:         parsed.data.crosses_midnight,
       handover_timeout_minutes: parsed.data.handover_timeout_minutes,
     },
+  })
+  if (count === 0) return { error: 'Turno não encontrado.' }
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'shifts', recordId: turnoId,
+    after: { name: nome, start_time: parsed.data.start_time, end_time: parsed.data.end_time },
   })
 
   revalidatePath('/gestor/turnos')
@@ -122,32 +135,41 @@ export async function editarTurno(
 }
 
 export async function toggleAtivoTurno(id: string): Promise<{ error?: string }> {
-  await requirePermission('shift.manage')
-  const turno = await prisma.shift.findFirst({ where: { id, tenant_id: (await getTenantId()) }, select: { is_active: true } })
+  const ctx = await requirePermission('shift.manage')
+  const turno = await prisma.shift.findFirst({ where: { id, tenant_id: ctx.tenantId }, select: { is_active: true } })
   if (!turno) return { error: 'Turno não encontrado.' }
-  await prisma.shift.updateMany({ where: { id, tenant_id: (await getTenantId()) }, data: { is_active: !turno.is_active } })
+  await prisma.shift.updateMany({ where: { id, tenant_id: ctx.tenantId }, data: { is_active: !turno.is_active } })
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'shifts', recordId: id,
+    before: { is_active: turno.is_active }, after: { is_active: !turno.is_active },
+  })
   revalidatePath('/gestor/turnos')
   revalidatePath(`/gestor/turnos/${id}`)
   return {}
 }
 
 export async function toggleDaySchedule(shiftId: string, days_of_week: number[]) {
-  await requirePermission('shift.manage')
-  const tenant_id = await getTenantId()
+  const ctx = await requirePermission('shift.manage')
+  const tenant_id = ctx.tenantId
   await assertOwned(tenant_id, { model: 'shift', id: shiftId, message: 'Turno não encontrado.' })
 
   const schedule = await prisma.shiftSchedule.findFirst({
     where: { shift_id: shiftId, tenant_id }
   })
 
+  let scheduleId: string
+  let acao: 'CREATE' | 'UPDATE'
   if (schedule) {
     // @tenant-checked: schedule buscado por tenant_id logo acima.
     await prisma.shiftSchedule.update({
       where: { id: schedule.id },
       data: { days_of_week }
     })
+    scheduleId = schedule.id
+    acao = 'UPDATE'
   } else {
-    await prisma.shiftSchedule.create({
+    const criado = await prisma.shiftSchedule.create({
       data: {
         tenant_id,
         shift_id: shiftId,
@@ -155,7 +177,15 @@ export async function toggleDaySchedule(shiftId: string, days_of_week: number[])
         is_active: true
       }
     })
+    scheduleId = criado.id
+    acao = 'CREATE'
   }
+
+  await logAudit(prisma, {
+    tenantId: tenant_id, userId: ctx.userId, action: acao,
+    tableName: 'shift_schedules', recordId: scheduleId,
+    after: { shift_id: shiftId, days_of_week },
+  })
 
   revalidatePath(`/gestor/turnos/${shiftId}`)
 }

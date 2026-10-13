@@ -72,25 +72,17 @@ const EXCECOES_INFRA: Record<string, string> = {
 }
 // Backlog M-03b…n: dado de negócio que AINDA não audita. Some daqui conforme os lotes fecham.
 const EXCECOES_PENDENTE: Record<string, string> = {
-  // M-03b fechou: admin/criarPlanta + produtos-químicos (agora auditam)
-  'gestor/(manutencao)/manutencao/actions.ts#agendarPreventiva':          'pendente M-03c (manutenção)',
-  'gestor/(manutencao)/manutencao/actions.ts#criarCorretiva':             'pendente M-03c (manutenção)',
-  'gestor/importacao/actions.ts#createParameterFromImport':               'pendente M-03c (importação IA)',
-  'gestor/importacao/actions.ts#saveMappedReadings':                      'pendente M-03c (importação IA)',
-  'gestor/turnos/[id]/tarefas-padrao/actions.ts#criarTemplate':           'pendente M-03c (turnos)',
-  'gestor/turnos/[id]/tarefas-padrao/actions.ts#atualizarTemplate':       'pendente M-03c (turnos)',
-  'gestor/turnos/[id]/tarefas-padrao/actions.ts#desativarTemplate':       'pendente M-03c (turnos)',
-  'gestor/turnos/actions.ts#criarTurno':                                  'pendente M-03c (turnos)',
-  'gestor/turnos/actions.ts#editarTurno':                                 'pendente M-03c (turnos)',
-  'gestor/turnos/actions.ts#toggleAtivoTurno':                            'pendente M-03c (turnos)',
-  'gestor/turnos/actions.ts#toggleDaySchedule':                           'pendente M-03c (turnos)',
-  'gestor/turnos/escala/actions.ts#addShiftTask':                         'pendente M-03c (escala)',
-  'gestor/turnos/escala/actions.ts#deleteShiftTask':                      'pendente M-03c (escala)',
-  'gestor/turnos/escala/actions.ts#saveShiftScale':                       'pendente M-03c (escala)',
-  'gestor/turnos/escala/actions.ts#toggleMaintenanceDay':                 'pendente M-03c (escala)',
-  'gestor/turnos/tarefas/[id]/task-actions.ts#atribuirTarefa':            'pendente M-03c (tarefas de turno)',
-  'gestor/turnos/tarefas/[id]/task-actions.ts#removerTarefa':             'pendente M-03c (tarefas de turno)',
-  'gestor/turnos/tarefas/actions.ts#preAgendarTurno':                     'pendente M-03c (tarefas de turno)',
+  // M-03b fechou: admin/criarPlanta + produtos-químicos
+  // M-03c fechou: manutenção (preventiva/corretiva) + turnos + tarefas-padrão
+  'gestor/importacao/actions.ts#createParameterFromImport':               'pendente M-03d (importação IA)',
+  'gestor/importacao/actions.ts#saveMappedReadings':                      'pendente M-03d (importação IA)',
+  'gestor/turnos/escala/actions.ts#addShiftTask':                         'pendente M-03d (escala)',
+  'gestor/turnos/escala/actions.ts#deleteShiftTask':                      'pendente M-03d (escala)',
+  'gestor/turnos/escala/actions.ts#saveShiftScale':                       'pendente M-03d (escala)',
+  'gestor/turnos/escala/actions.ts#toggleMaintenanceDay':                 'pendente M-03d (escala)',
+  'gestor/turnos/tarefas/[id]/task-actions.ts#atribuirTarefa':            'pendente M-03d (tarefas de turno)',
+  'gestor/turnos/tarefas/[id]/task-actions.ts#removerTarefa':             'pendente M-03d (tarefas de turno)',
+  'gestor/turnos/tarefas/actions.ts#preAgendarTurno':                     'pendente M-03d (tarefas de turno)',
   'operador/turnos/actions.ts#abrirTurno':                                'pendente M-03d (operador/turnos)',
   'operador/turnos/actions.ts#assumirPosto':                              'pendente M-03d (operador/turnos)',
   'operador/turnos/actions.ts#iniciarPassagem':                           'pendente M-03d (operador/turnos)',
