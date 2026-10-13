@@ -77,7 +77,7 @@ Depois do passo 8, `npx prisma migrate deploy` aplica as que vieram depois do ba
 5. Produção: dump (INFRA §3.1) e depois `npx prisma migrate deploy` com a `DIRECT_URL`.
 6. **Nada de `db push` nem de SQL avulso em produção.** Se for inevitável, transforme em migration no mesmo dia.
 
-**Objetos que o Prisma não modela.** Se o SQL gerado no passo 2 tiver `DROP` de algum destes, apague essa linha antes de aplicar: os índices parciais `uniq_shift_instance_ativa` e `uniq_turno_ativo_por_operador`, as regras `chk_*` (T-19), a função `f_unaccent` e as extensões (T-17), e o RLS e as políticas (T-14). Índice comum novo vai **no schema** (`@@index`). O teste `db-constraints.test.ts` falha se uma migration criar um índice que não está no schema.
+**Objetos que o Prisma não modela.** Se o SQL gerado no passo 2 tiver `DROP` de algum destes, apague essa linha antes de aplicar: os índices parciais `uniq_shift_instance_ativa`, `uniq_turno_ativo_por_operador` e `uniq_ocorrencia_aberta_ponto_param` (M-07), as regras `chk_*` (T-19), a função `f_unaccent` e as extensões (T-17), e o RLS e as políticas (T-14). Índice comum novo vai **no schema** (`@@index`). O teste `db-constraints.test.ts` falha se uma migration criar um índice que não está no schema.
 
 **Valor novo em coluna de domínio** (papel, status, severidade, frequência...): além do código, crie uma migration que troca a regra (`DROP CONSTRAINT` + `ADD CONSTRAINT ... NOT VALID` + `VALIDATE`). O teste `db-constraints.test.ts` falha se o código gravar um valor que a regra do banco não aceita.
 

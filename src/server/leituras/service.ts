@@ -99,6 +99,7 @@ export async function gravarLeitura(i: NovaLeitura): Promise<{ duplicate: boolea
           severity: 'HIGH',
           description: `Não Conformidade (${i.paramName}): Leitura registrada = ${i.value} ${i.unit ?? ''}. O valor está fora dos limites aceitáveis.`,
           collectionPointId: i.collectionPointId,
+          parameterId: i.parameterId,
         })
         if (hook) aposGravar.push(hook)
       }

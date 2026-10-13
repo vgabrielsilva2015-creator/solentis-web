@@ -1,17 +1,24 @@
 /**
- * M-06 — caminho único de criação de ocorrência AUTOMÁTICA (não-conformidade).
+ * M-06/M-07 — caminho único de criação de ocorrência AUTOMÁTICA (não-conformidade).
  *
- * Antes havia 3 blocos quase iguais (leitura fora de faixa, análise não conforme e
- * laudo importado) com regras divergentes: tipo, ponto de coleta e disparo de
- * notificação não batiam. Agora os três chamam `criarOcorrenciaAutomatica`.
+ * Os três fluxos (leitura fora de faixa, análise não conforme e laudo importado)
+ * chamam `criarOcorrenciaAutomatica`, que unifica tipo, ponto, prazo e notificação.
  *
  * Contrato (por que é seguro):
- *  - roda DENTRO da transação do chamador (recebe `tx`): a ocorrência e a tarefa-plano
- *    só existem se a transação der commit; em rollback, nada fica;
- *  - devolve o hook de notificação (push aos gestores) SEM dispará-lo — quem fecha a
- *    transação roda o hook DEPOIS do commit, então rollback nunca notifica e não há
- *    envio duplicado;
+ *  - roda DENTRO da transação do chamador (recebe `tx`): ocorrência e tarefa-plano só
+ *    existem se a transação der commit; em rollback, nada fica;
+ *  - devolve o hook de notificação SEM dispará-lo — quem fecha a transação roda o hook
+ *    DEPOIS do commit, então rollback nunca notifica e não há envio duplicado;
  *  - o ponto de coleta é VALIDADO contra o tenant; não se inventa vínculo.
+ *
+ * M-07 — deduplicação de reincidências:
+ *  - um `pg_advisory_xact_lock` por (tenant, ponto, parâmetro) SERIALIZA NCs simultâneas
+ *    do mesmo problema (a 2ª espera a 1ª commitar), então "busca-aberta → senão cria" é
+ *    seguro sem P2002 (que abortaria a transação do chamador e perderia a leitura);
+ *  - se já existe ocorrência NÃO resolvida do mesmo (tenant, ponto, parâmetro), registra a
+ *    reincidência como comentário e NÃO cria nova ocorrência/tarefa/notificação — só escala
+ *    a severidade (+ alerta prioritário) se a nova for mais grave;
+ *  - a guarda única parcial `uniq_ocorrencia_aberta_ponto_param` é a rede de segurança.
  */
 import { Prisma } from '@prisma/client'
 import { handleNewOccurrence } from '@/lib/occurrences'
@@ -32,6 +39,9 @@ export type OcorrenciaSeveridade = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 
 const ORIGENS: readonly OcorrenciaOrigem[] = ['OPERATIONAL', 'LABORATORY', 'EQUIPMENT', 'ENVIRONMENTAL', 'SAFETY']
 const SEVERIDADES: readonly OcorrenciaSeveridade[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+const RANK_SEVERIDADE: Record<OcorrenciaSeveridade, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 }
+/** Namespace do advisory lock de deduplicação de ocorrências (evita colidir com outros locks). */
+const DEDUP_LOCK_NS = 4207
 
 export interface CriarOcorrenciaParams {
   tenantId: string
@@ -41,6 +51,8 @@ export interface CriarOcorrenciaParams {
   description: string
   /** Ponto de coleta da NC. Obrigatório e validado contra o tenant. */
   collectionPointId: string
+  /** Parâmetro da NC. Obrigatório (M-07): é a chave da deduplicação, junto do ponto. */
+  parameterId: string
 }
 
 /** Prazo = agora + horas configuradas para a severidade (ou o fallback de 24h). */
@@ -62,9 +74,10 @@ export async function criarOcorrenciaAutomatica(
   tx: TxClient,
   params: CriarOcorrenciaParams,
 ): Promise<(() => Promise<void>) | null> {
-  const { tenantId, userId, type, severity, description, collectionPointId } = params
+  const { tenantId, userId, type, severity, description, collectionPointId, parameterId } = params
 
   if (!tenantId || !userId) throw new Error('Ocorrência automática exige tenant e usuário.')
+  if (!parameterId) throw new Error('Ocorrência automática exige parâmetro (chave da deduplicação).')
   if (!ORIGENS.includes(type)) throw new Error(`Tipo de ocorrência inválido: ${type}`)
   if (!SEVERIDADES.includes(severity)) throw new Error(`Severidade inválida: ${severity}`)
 
@@ -74,6 +87,27 @@ export async function criarOcorrenciaAutomatica(
     select: { id: true, name: true },
   })
   if (!ponto) throw new Error('Ponto de coleta inválido ou de outra planta para a ocorrência automática.')
+
+  // M-07: serializa NCs simultâneas do mesmo (tenant, ponto, parâmetro). A 2ª espera a 1ª
+  // commitar — então a busca abaixo enxerga a ocorrência já criada e vira comentário, sem
+  // corrida de criação (sem P2002 abortando a transação do chamador). Lock solto no commit.
+  const chaveLock = `${tenantId}|${collectionPointId}|${parameterId}`
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${DEDUP_LOCK_NS}::int, hashtext(${chaveLock}))`
+
+  // Já existe ocorrência NÃO resolvida do mesmo problema? Então é reincidência: agrupa.
+  const aberta = await tx.occurrence.findFirst({
+    where: {
+      tenant_id: tenantId,
+      collection_point_id: collectionPointId,
+      parameter_id: parameterId,
+      status: { not: 'RESOLVED' },
+    },
+    select: { id: true, severity: true },
+    orderBy: { created_at: 'desc' },
+  })
+  if (aberta) {
+    return agruparReincidencia(tx, { abertaId: aberta.id, abertaSeveridade: aberta.severity as OcorrenciaSeveridade, tenantId, userId, type, severity, description, pontoNome: ponto.name })
+  }
 
   const deadline = await resolverPrazo(tx, tenantId, severity)
 
@@ -87,6 +121,7 @@ export async function criarOcorrenciaAutomatica(
       deadline,
       reported_by: userId,
       collection_point_id: collectionPointId,
+      parameter_id: parameterId,
     },
   })
 
@@ -100,6 +135,45 @@ export async function criarOcorrenciaAutomatica(
   return async () => {
     await pushHook()
     if (alertarWhats) await alertarGestoresWhatsApp(tenantId, severity, description, ponto.name)
+  }
+}
+
+const ORIGEM_LABEL: Record<OcorrenciaOrigem, string> = {
+  OPERATIONAL: 'leitura de campo', LABORATORY: 'análise/laudo',
+  EQUIPMENT: 'equipamento', ENVIRONMENTAL: 'ambiental', SAFETY: 'segurança',
+}
+
+/**
+ * M-07: reincidência de uma NC já aberta. Registra um comentário (valor/origem/horário via
+ * `description` + `created_at`), NÃO cria nova ocorrência/tarefa/notificação normal. Se a nova
+ * detecção for mais grave, ESCALA a severidade e devolve um hook de alerta prioritário.
+ */
+async function agruparReincidencia(
+  tx: TxClient,
+  p: {
+    abertaId: string; abertaSeveridade: OcorrenciaSeveridade; tenantId: string; userId: string
+    type: OcorrenciaOrigem; severity: OcorrenciaSeveridade; description: string; pontoNome: string | null
+  },
+): Promise<(() => Promise<void>) | null> {
+  await tx.occurrenceComment.create({
+    data: {
+      occurrence_id: p.abertaId,
+      user_id: p.userId,
+      text: `Reincidência (${ORIGEM_LABEL[p.type]}): ${p.description}`,
+    },
+  })
+
+  const escala = RANK_SEVERIDADE[p.severity] > RANK_SEVERIDADE[p.abertaSeveridade]
+  if (!escala) return null // reincidência comum: sem nova tarefa, sem notificação
+
+  // Escalonamento: a ocorrência aberta evoluiu para uma severidade maior.
+  await tx.occurrence.updateMany({
+    where: { id: p.abertaId, tenant_id: p.tenantId },
+    data: { severity: p.severity },
+  })
+  // Alerta prioritário (pós-commit): WhatsApp aos gestores com a nova severidade.
+  return async () => {
+    await alertarGestoresWhatsApp(p.tenantId, p.severity, `Severidade elevada para ${p.severity}. ${p.description}`, p.pontoNome)
   }
 }
 

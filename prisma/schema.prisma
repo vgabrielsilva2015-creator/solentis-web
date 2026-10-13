@@ -285,6 +285,7 @@ model QualityParameter {
   aliases           ParameterAlias[]
   collection_points CollectionPoint[]
   parameter_limits  ParameterLimit[]
+  occurrences       Occurrence[]
 
   @@index([tenant_id, is_active])
   @@index([created_at])
@@ -711,6 +712,9 @@ model Occurrence {
   responsible_id      String?
   reported_by         String
   collection_point_id String?
+  // M-07: parâmetro da NC automática, para deduplicar reincidências por ponto+parâmetro.
+  // Nulo nas ocorrências manuais e nas antigas (anteriores ao M-07) — nunca agrupadas.
+  parameter_id        String?
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   deleted_at          DateTime?
@@ -721,6 +725,7 @@ model Occurrence {
   responsible      User?               @relation("OccurrenceResponsible", fields: [responsible_id], references: [id])
   resolver         User?               @relation("OccurrenceResolver", fields: [resolved_by], references: [id])
   collection_point CollectionPoint?    @relation(fields: [collection_point_id], references: [id])
+  parameter        QualityParameter?   @relation(fields: [parameter_id], references: [id])
   photos           OccurrencePhoto[]
   comments         OccurrenceComment[]
   tasks            ShiftTask[]
@@ -729,6 +734,7 @@ model Occurrence {
   @@index([deadline])
   @@index([reported_by])
   @@index([collection_point_id])
+  @@index([tenant_id, parameter_id])
   @@map("occurrences")
 }
 

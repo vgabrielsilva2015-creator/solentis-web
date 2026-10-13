@@ -22,18 +22,20 @@ type Row = Record<string, unknown> | null
 function fakeTx(opts: { ponto?: Row; prazoHoras?: number | null }) {
   const occurrenceCreate = vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'occ1', ...data }))
   const tx = {
+    $executeRaw: vi.fn(async () => 1),                                   // advisory lock (M-07)
     collectionPoint: { findFirst: vi.fn(async () => opts.ponto ?? null) },
     occurrenceSeverityDefault: {
       findUnique: vi.fn(async () => (opts.prazoHoras == null ? null : { deadline_hours: opts.prazoHoras })),
     },
-    occurrence: { create: occurrenceCreate },
+    occurrence: { create: occurrenceCreate, findFirst: vi.fn(async () => null) }, // sem reincidência aberta
+    occurrenceComment: { create: vi.fn() },
   }
   return { tx, occurrenceCreate }
 }
 
 const base = {
   tenantId: 'A', userId: 'u1', type: 'OPERATIONAL' as const, severity: 'HIGH' as const,
-  description: 'NC x', collectionPointId: 'p1',
+  description: 'NC x', collectionPointId: 'p1', parameterId: 'q1',
 }
 
 beforeEach(() => handleNewOccurrenceMock.mockReset())

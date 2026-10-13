@@ -117,6 +117,7 @@ export async function registrarAnalise(
         severity:    'HIGH',
         description: `Não Conformidade (${paramName?.name}): Análise registrada = ${parsed.data.value} ${param.unit}. O valor está fora dos limites aceitáveis. Ponto de Coleta: ${point?.name || parsed.data.collection_point_id}`,
         collectionPointId: parsed.data.collection_point_id,
+        parameterId: parsed.data.parameter_id,
       })
       if (hook) postCommitHooks.push(hook)
     }
