@@ -170,6 +170,12 @@ export async function criarEquipamento(
         status:         'SCHEDULED',
       },
     })
+
+    await logAudit(tx, {
+      tenantId: ctx.tenantId, userId, action: 'CREATE',
+      tableName: 'equipment', recordId: equipment.id,
+      after: { name: parsed.data.name, category_id: parsed.data.category_id, status: parsed.data.status },
+    })
   })
 
   revalidatePath('/tecnico/equipamentos')
@@ -184,7 +190,7 @@ export async function editarEquipamento(
   _prev: EquipamentoFormState,
   formData: FormData,
 ): Promise<EquipamentoFormState> {
-  await requirePermission('equipment.maintain')
+  const ctx = await requirePermission('equipment.maintain')
 
   const parsed = EquipamentoSchema.safeParse({
     name:                      formData.get('name'),
@@ -262,6 +268,12 @@ export async function editarEquipamento(
     },
   })
 
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'equipment', recordId: equipamentoId,
+    after: { name: parsed.data.name, category_id: parsed.data.category_id, status: parsed.data.status },
+  })
+
   revalidatePath('/tecnico/equipamentos')
   revalidatePath(`/tecnico/equipamentos/${equipamentoId}`)
   revalidatePath('/gestor/equipamentos')
@@ -274,7 +286,7 @@ export async function editarEquipamento(
 export async function toggleAtivoEquipamento(
   equipamentoId: string,
 ): Promise<{ error?: string }> {
-  await requirePermission('equipment.maintain')
+  const ctx = await requirePermission('equipment.maintain')
 
   const equipment = await prisma.equipment.findFirst({ where: { id: equipamentoId , tenant_id: (await getTenantId()) },
     select: { is_active: true },
@@ -282,6 +294,12 @@ export async function toggleAtivoEquipamento(
   if (!equipment) return { error: 'Equipamento não encontrado.' }
 
   await prisma.equipment.updateMany({ where: { id: equipamentoId , tenant_id: (await getTenantId()) }, data:  { is_active: !equipment.is_active },
+  })
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId, action: 'UPDATE',
+    tableName: 'equipment', recordId: equipamentoId,
+    before: { is_active: equipment.is_active }, after: { is_active: !equipment.is_active },
   })
 
   revalidatePath('/tecnico/equipamentos')
@@ -336,6 +354,12 @@ export async function concluirPreventiva(
         status:         'SCHEDULED',
       },
     })
+
+    await logAudit(tx, {
+      tenantId: ctx.tenantId, userId, action: 'UPDATE',
+      tableName: 'preventive_maintenances', recordId: preventivaId,
+      before: { status: preventiva.status }, after: { status: 'COMPLETED', evento: 'preventiva_concluida' },
+    })
   })
 
   revalidatePath('/tecnico/equipamentos')
@@ -378,7 +402,7 @@ export async function registrarCorretiva(
   const deadlineHours = hoursMap[priorityVal] || 48
   const deadline = new Date(Date.now() + deadlineHours * 60 * 60 * 1000)
 
-  await prisma.correctiveMaintenance.create({
+  const corretiva = await prisma.correctiveMaintenance.create({
     data: {
       tenant_id:      (await getTenantId()),
       equipment_id:   equipamentoId,
@@ -391,6 +415,12 @@ export async function registrarCorretiva(
       estimated_cost: parsed.data.estimated_cost ?? undefined,
       deadline,
     },
+  })
+
+  await logAudit(prisma, {
+    tenantId: ctx.tenantId, userId, action: 'CREATE',
+    tableName: 'corrective_maintenances', recordId: corretiva.id,
+    after: { equipment_id: equipamentoId, priority: parsed.data.priority, status: 'OPEN' },
   })
 
   revalidatePath(`/tecnico/equipamentos/${equipamentoId}`)

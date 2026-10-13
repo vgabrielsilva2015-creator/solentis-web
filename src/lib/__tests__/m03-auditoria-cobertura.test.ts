@@ -76,12 +76,8 @@ const EXCECOES_PENDENTE: Record<string, string> = {
   // M-03c fechou: manutenção (preventiva/corretiva) + turnos + tarefas-padrão
   // M-03d fechou: importação IA + escala + tarefas de turno
   // M-03e fechou: operador/turnos (abrir, passagem, tarefas, assumir posto)
-  'tecnico/analises/actions.ts#registrarAnalise':                         'pendente M-03f (análises)',
-  'tecnico/equipamentos/actions.ts#criarEquipamento':                     'pendente M-03f (equipamentos)',
-  'tecnico/equipamentos/actions.ts#editarEquipamento':                    'pendente M-03f (equipamentos)',
-  'tecnico/equipamentos/actions.ts#toggleAtivoEquipamento':               'pendente M-03f (equipamentos)',
-  'tecnico/equipamentos/actions.ts#concluirPreventiva':                   'pendente M-03f (equipamentos)',
-  'tecnico/equipamentos/actions.ts#registrarCorretiva':                   'pendente M-03f (equipamentos)',
+  // M-03f fechou: análises (registrarAnalise) + equipamentos (criar/editar/toggle/preventiva/corretiva)
+  // Backlog de negócio ZERADO — só restam as exceções permanentes de infra/segurança acima.
 }
 const EXCECOES = { ...EXCECOES_INFRA, ...EXCECOES_PENDENTE }
 

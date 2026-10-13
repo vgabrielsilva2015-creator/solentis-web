@@ -72,7 +72,7 @@ export async function registrarAnalise(
 
   const postCommitHooks: Array<() => Promise<void>> = []
   await prisma.$transaction(async (tx) => {
-    await tx.analysis.create({
+    const analysis = await tx.analysis.create({
       data: {
         tenant_id:           tenantId,
         collection_point_id: parsed.data.collection_point_id,
@@ -91,6 +91,12 @@ export async function registrarAnalise(
         collected_at:        localInputToUTC(parsed.data.collected_at),
         recorded_by:         userId,
       },
+    })
+
+    await logAudit(tx, {
+      tenantId, userId, action: 'CREATE',
+      tableName: 'analyses', recordId: analysis.id,
+      after: { parameter_id: parsed.data.parameter_id, collection_point_id: parsed.data.collection_point_id, value: parsed.data.value, is_non_conformant: isNonConformant },
     })
 
     if (isNonConformant) {
