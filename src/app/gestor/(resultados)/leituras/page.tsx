@@ -44,6 +44,9 @@ export default async function GestorLeiturasPage({
     where.is_non_conformant = false
   } else if (status === 'fora') {
     where.is_non_conformant = true
+  } else if (status === 'sem_turno') {
+    // M-09: leituras que não entraram em nenhum turno (operador sem turno aberto ao registrar)
+    where.shift_instance_id = null
   }
 
   const [readings, total] = await Promise.all([
@@ -74,8 +77,15 @@ export default async function GestorLeiturasPage({
       </span>
     ) : '—',
     originDisplay: (
-      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20">
-        CAMPO
+      <span className="inline-flex items-center gap-1 flex-wrap">
+        <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+          CAMPO
+        </span>
+        {r.shift_instance_id === null && (
+          <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20" title="Registrada sem um turno aberto">
+            SEM TURNO
+          </span>
+        )}
       </span>
     ),
     recorderName: r.recorder?.name || 'Sistema',
