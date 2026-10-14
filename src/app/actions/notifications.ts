@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getTenantId } from '@/lib/tenant'
 import { getLogger } from '@/lib/logger'
 import { hrefFor } from '@/lib/search'
-import { notificationTaskHref, HANDOVER_ALERT_HREF, CHEMICAL_PRODUCT_HREF } from '@/lib/notification-links'
+import { notificationTaskHref, HANDOVER_ALERT_HREF, CHEMICAL_PRODUCT_HREF, ESCALA_HREF } from '@/lib/notification-links'
 import { STATUS_AGUARDANDO } from '@/lib/handover-status'
 
 export type NotificationItem = {
@@ -187,6 +187,35 @@ export async function getNotifications(): Promise<NotificationItem[]> {
           date: c.counted_at,
         })
       })
+
+      // 7. Turnos de hoje ainda SCHEDULED sem operador escalado (M-10): o cron criou a
+      // instância mas ninguém é responsável. Mostra ao gestor para atribuir na escala.
+      const inicioDeHoje = new Date(); inicioDeHoje.setHours(0, 0, 0, 0)
+      const instanciasHoje = await prisma.shiftInstance.findMany({
+        where: { tenant_id: tenantId, date: inicioDeHoje, status: 'SCHEDULED' },
+        include: { shift: { select: { name: true } } },
+        take: 10,
+      })
+      if (instanciasHoje.length > 0) {
+        const escalasHoje = await prisma.shiftScale.findMany({
+          where: { tenant_id: tenantId, date: inicioDeHoje },
+          select: { shift_id: true },
+        })
+        const comResponsavel = new Set(escalasHoje.map((e) => e.shift_id))
+        instanciasHoje
+          .filter((i) => !comResponsavel.has(i.shift_id))
+          .slice(0, 5)
+          .forEach((i) => {
+            notifications.push({
+              id: `shift-no-owner-${i.id}`,
+              title: 'Turno de hoje sem responsável',
+              description: `${i.shift.name} · sem operador escalado`,
+              type: 'HANDOVER',
+              href: ESCALA_HREF(),
+              date: i.date,
+            })
+          })
+      }
     }
 
     // Ordenar por data (mais recentes primeiro)
