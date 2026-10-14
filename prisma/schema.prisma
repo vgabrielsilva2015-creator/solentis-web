@@ -588,6 +588,8 @@ model Analysis {
   @@index([recorded_by])
   @@index([collected_at])
   @@index([tenant_id, collection_point_id, collected_at])
+  // M-13/M-14: listagem de análises ordena por collected_at filtrando só por tenant.
+  @@index([tenant_id, collected_at])
   @@map("analyses")
 }
 
@@ -735,6 +737,8 @@ model Occurrence {
   @@index([reported_by])
   @@index([collection_point_id])
   @@index([tenant_id, parameter_id])
+  // M-13/M-14: listagem de ocorrências ordena por created_at filtrando por tenant.
+  @@index([tenant_id, created_at])
   @@map("occurrences")
 }
 
