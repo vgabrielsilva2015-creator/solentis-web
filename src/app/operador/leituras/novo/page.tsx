@@ -20,7 +20,7 @@ export default async function NovaLeituraPage({
   // Modo locked: ponto e parâmetro vêm do checklist (query params)
   const isLocked = !!(presetPointId && presetParamId)
 
-  const [collectionPoints, parameters, schedules] = await Promise.all([
+  const [collectionPoints, parameters, schedules, turnoAberto] = await Promise.all([
     prisma.collectionPoint.findMany({
       where:   { tenant_id: tenantId, is_active: true, is_field: true },
       select:  { id: true, name: true },
@@ -35,6 +35,11 @@ export default async function NovaLeituraPage({
     prisma.monitoringSchedule.findMany({
       where:  { tenant_id: tenantId, is_active: true, executor_role: 'OPERATOR' },
       select: { collection_point_id: true, parameter_id: true },
+    }),
+    // M-09: a leitura entra no turno aberto POR QUEM REGISTRA. Sem turno próprio, fica sem vínculo.
+    prisma.shiftInstance.findFirst({
+      where:  { tenant_id: tenantId, opened_by: session.user.id!, status: 'OPEN' },
+      select: { id: true },
     }),
   ])
 
@@ -58,6 +63,7 @@ export default async function NovaLeituraPage({
       <BackButton href="/operador/leituras" label="Leituras" />
       <ReadingForm
         userId={session.user.id!}
+        semTurno={!turnoAberto}
         collectionPoints={collectionPoints}
         parameters={parameters}
         allowedParams={allowedParams}

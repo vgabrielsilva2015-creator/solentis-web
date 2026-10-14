@@ -61,6 +61,7 @@ export function ResultsFilters() {
           <option value="all">Todos os Status</option>
           <option value="conforme">Conforme</option>
           <option value="fora">Fora do Limite</option>
+          <option value="sem_turno">Sem turno</option>
         </select>
       </div>
       <Button type="submit" variant="secondary" className="w-full sm:w-auto shrink-0">

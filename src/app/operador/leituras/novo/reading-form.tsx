@@ -28,6 +28,8 @@ type Parameter = {
 type Props = {
   /** T-15: dono das leituras guardadas na fila offline deste aparelho */
   userId:           string
+  /** M-09: operador não tem turno aberto — a leitura ficará sem vínculo de turno */
+  semTurno?:        boolean
   collectionPoints: CollectionPoint[]
   parameters:       Parameter[]
   // ponto de coleta → ids de parâmetros configurados pelo gestor (cronograma)
@@ -65,6 +67,7 @@ const chipActive = (active: boolean) =>
 
 export function ReadingForm({
   userId,
+  semTurno = false,
   collectionPoints,
   parameters,
   allowedParams,
@@ -238,6 +241,13 @@ export function ReadingForm({
             : 'Registre a leitura de campo do turno atual.'}
         </p>
       </div>
+
+      {semTurno && (
+        <div className="rounded-lg border border-amber-700 bg-amber-900/30 px-4 py-3 text-xs text-amber-200">
+          Você não tem um turno aberto. Esta leitura será registrada <strong>sem turno</strong> —
+          ela conta normalmente, mas não entra em nenhuma passagem de turno. Para vinculá-la, abra o seu turno antes.
+        </div>
+      )}
 
       <form
         onSubmit={(e) => {
