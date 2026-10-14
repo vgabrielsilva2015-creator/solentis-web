@@ -7,21 +7,62 @@ import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits
 import { errorMessage } from '@/lib/error-utils'
 import { logAudit } from '@/lib/audit'
 import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
+import { sniffLaudoType } from '@/lib/laudo-sniff'
+import {
+  buckets, countRecent, recordEvents, laudoAllowed,
+  LAUDO_WINDOW_MS, LAUDO_USER_LIMIT,
+} from '@/lib/rate-limit'
 
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+/** Timeout duro para uma chamada ao Gemini — não deixa a função serverless pendurada. */
+const GEMINI_TIMEOUT_MS = 45_000
+function comTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout da IA')), ms)),
+  ])
+}
+
 export async function extractDataFromPDF(base64Data: string, mimeType: string) {
   // Server Actions são endpoints públicos: estar sob /gestor não protege.
   // Sem este guard, qualquer sessão poderia queimar a cota paga do Gemini.
-  await requirePermission('lab.import')
+  const ctx = await requirePermission('lab.import')
+  const log = await getLogger({ action: 'extractDataFromPDF', tenantId: ctx.tenantId, userId: ctx.userId })
+
   if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mimeType)) {
     throw new Error('Tipo de arquivo inválido.')
   }
   // base64 = 4/3 dos bytes reais; a requisição inteira não pode passar de 4,5 MB na Vercel (T-24).
   if (typeof base64Data !== 'string' || base64Data.length > MAX_LAUDO_BASE64_CHARS) {
     throw new Error(`Arquivo muito grande. O limite por arquivo é ${mb(MAX_LAUDO_BYTES)}; reduza o PDF e tente de novo.`)
+  }
+
+  // Magic bytes (M-16): o mimeType vem do cliente e é forjável. Confere o conteúdo real
+  // (só o cabeçalho) antes de gastar a cota do Gemini; rejeita se não bater com o tipo.
+  const header = Buffer.from(base64Data.slice(0, 64), 'base64')
+  const realType = sniffLaudoType(header)
+  if (realType !== mimeType) {
+    log.warn({ mimeType, realType }, 'Laudo recusado: conteúdo não bate com o tipo informado')
+    throw new Error('O arquivo não é um PDF, JPEG ou PNG válido. Envie o laudo original.')
+  }
+
+  // Rate limit (M-16): protege a cota paga. Conta a janela do usuário e do tenant; se
+  // estourar, barra antes de chamar a IA. Fail-open: um soluço do banco não bloqueia.
+  try {
+    const [usoUser, usoTenant] = await Promise.all([
+      countRecent(buckets.laudoUser(ctx.userId), LAUDO_WINDOW_MS),
+      countRecent(buckets.laudoTenant(ctx.tenantId), LAUDO_WINDOW_MS),
+    ])
+    if (!laudoAllowed({ user: usoUser, tenant: usoTenant })) {
+      log.warn({ usoUser, usoTenant }, 'Rate limit da importação de laudo atingido')
+      return { success: false, error: `Limite de importações por hora atingido (${LAUDO_USER_LIMIT} por usuário). Tente mais tarde.` }
+    }
+    await recordEvents([buckets.laudoUser(ctx.userId), buckets.laudoTenant(ctx.tenantId)])
+  } catch (err) {
+    log.warn({ err }, 'Rate limit do laudo indisponível — seguindo (fail-open)')
   }
 
   const apiKey = process.env.GEMINI_API_KEY
@@ -61,7 +102,6 @@ Retorne um JSON ESTRITO seguindo este formato:
 Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apenas o objeto JSON válido.
 `
 
-  const log = await getLogger({ action: 'extractDataFromPDF' })
   const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash-latest', 'gemini-pro']
   const MAX_RETRIES = 3
   const BASE_DELAY_MS = 3000
@@ -71,14 +111,16 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
         const model = genAI.getGenerativeModel({ model: modelName })
-        const result = await model.generateContent([
+        const result = await comTimeout(model.generateContent([
           prompt,
           { inlineData: { data: base64Data, mimeType } }
-        ])
+        ]), GEMINI_TIMEOUT_MS)
 
         const text = result.response.text()
         const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim()
-        
+
+        // Uso/custo (M-16): registra a chamada que de fato consumiu cota paga.
+        log.info({ model: modelName, bytes: Math.round((base64Data.length * 3) / 4) }, 'Importação de laudo processada pela IA')
         return { success: true, data: JSON.parse(cleaned), usedModel: modelName }
       } catch (err: unknown) {
         lastError = err
