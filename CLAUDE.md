@@ -81,6 +81,15 @@ Execução do contrato `PROMPT-01-melhoria-claude-code.md` (ondas pequenas, uma 
 
 > **Onda 0 do PROMPT-01 (rastreabilidade/separação) — COMPLETA e em produção:** M-01, M-02, M-03, M-04, M-05.
 
+### Onda 1 do PROMPT-01 (fluxo de campo) — COMPLETA e em produção (2026-10-14)
+- **M-06 — caminho único de ocorrência automática:** leitura/análise/laudo chamam `src/server/occurrences/criar.ts#criarOcorrenciaAutomatica` (unifica tipo, prazo com fallback 24h, ponto de coleta validado, notificação). Análise e laudo passaram a gravar `collection_point_id`; laudo passou a notificar. Sem migration.
+- **WhatsApp em NC automática (tarefa pós-M-06):** ocorrência automática ALTA/CRÍTICA também alerta gestores por WhatsApp (reusa `sendWhatsAppAlert`, mesmo critério do manual, pós-commit). Sem migration.
+- **M-07 — deduplicação de reincidência:** NC repetida no mesmo `(tenant, ponto, parâmetro)` de ocorrência **aberta** vira comentário (sem nova ocorrência/tarefa/notificação); escala severidade se maior. Anti-corrida: `pg_advisory_xact_lock` + índice único parcial `uniq_ocorrencia_aberta_ponto_param`. **Migration aditiva** `20261013232218_add_occurrence_parameter_id` (`occurrences.parameter_id` + FK + índice + guarda parcial) — aplicada em produção pelo dono antes do merge. Índice parcial registrado em `db-constraints.test.ts` (MANUAIS) e `docs/MIGRATIONS.md`.
+- **M-08 — despacho de notificação robusto/mensurável:** push em lotes (`Promise.allSettled`, concorrência 10), contadores enviados/falhados/expirados em log estruturado; `sendWhatsAppAlert` devolve boolean; hook nunca lança; erro da tarefa propaga (não mascara). Sem migration.
+- **M-09 — leitura sem turno visível:** gestor tem filtro "Sem turno" + badge `SEM TURNO` nas Coletas de Campo; operador é avisado no formulário quando não há turno aberto. Sem migration.
+- **M-10 — cron observável:** sino do gestor alerta "Turno de hoje sem responsável" (SCHEDULED sem operador escalado); teste de integração de idempotência (rodar 2× cria 1). O resto já vinha do T-30 (log-resumo, heartbeat). Sem migration.
+- **M-11 — offline:** **já entregue pelo T-15** — fila IndexedDB (`src/lib/offline-queue/`) com `client_id` idempotente, sincronização "uma vez só", doc neste CLAUDE.md, e e2e `tests/t15-offline-fila.spec.ts` que cobre o ciclo sem-rede→registra→volta→sincroniza. Confirmado no M-11; a fila antiga (localStorage) segue desligada (T-01) e migrada, não reativada.
+
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
 
 Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0 críticos / 2 altos / 7 médios / 6 baixos). Branch `fix/revisao-seguranca-e-bugs` **mergeada na `main` via PR #28** (merge commit `f5caa5b`). Todos os itens acionáveis por código foram corrigidos:
