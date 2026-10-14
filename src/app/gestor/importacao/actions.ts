@@ -122,24 +122,26 @@ export async function getMappingContext() {
   await requirePermission('lab.import')
 
   const tenantId = await getTenantId()
-  
-  const parameters = await prisma.qualityParameter.findMany({
-    where: { tenant_id: tenantId, is_active: true },
-    select: { id: true, name: true, unit: true },
-    orderBy: { name: 'asc' }
-  })
-  
-  const points = await prisma.collectionPoint.findMany({
-    where: { tenant_id: tenantId, is_active: true, is_external: true },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' }
-  })
-  
-  const aliases = await prisma.parameterAlias.findMany({
-    where: { tenant_id: tenantId },
-    select: { alias: true, parameter_id: true }
-  })
-  
+
+  // M-15: três leituras independentes do mesmo tenant — em paralelo (uma ida só ao
+  // pooler em vez de três idas em série), reduzindo o tempo de ocupação da conexão.
+  const [parameters, points, aliases] = await Promise.all([
+    prisma.qualityParameter.findMany({
+      where: { tenant_id: tenantId, is_active: true },
+      select: { id: true, name: true, unit: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.collectionPoint.findMany({
+      where: { tenant_id: tenantId, is_active: true, is_external: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.parameterAlias.findMany({
+      where: { tenant_id: tenantId },
+      select: { alias: true, parameter_id: true },
+    }),
+  ])
+
   return { parameters, points, aliases }
 }
 
