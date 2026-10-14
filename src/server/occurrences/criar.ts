@@ -189,6 +189,7 @@ async function alertarGestoresWhatsApp(
   description: string,
   pontoNome: string | null,
 ): Promise<void> {
+  const logger = await getLogger({ action: 'criarOcorrenciaAutomatica.whatsapp', tenantId })
   try {
     const gestores = await prisma.user.findMany({
       where: { tenant_id: tenantId, role: 'MANAGER', phone: { not: null } },
@@ -198,9 +199,15 @@ async function alertarGestoresWhatsApp(
     const sev = severity === 'CRITICAL' ? 'CRÍTICA' : 'ALTA'
     const local = pontoNome ? ` no local: ${pontoNome}` : ''
     const msg = `🚨 *Alerta Solentis*\nNova Não Conformidade *${sev}*${local}\n\n*Descrição:* ${description}\n\nAcesse o painel para mais detalhes.`
-    await Promise.allSettled(gestores.map((g) => sendWhatsAppAlert(g.phone!, msg)))
+    const resultados = await Promise.allSettled(gestores.map((g) => sendWhatsAppAlert(g.phone!, msg)))
+    // M-08: resumo contável (sendWhatsAppAlert devolve true/false e nunca lança).
+    let enviados = 0, falhados = 0
+    for (const r of resultados) {
+      if (r.status === 'fulfilled' && r.value) enviados++
+      else falhados++
+    }
+    logger.info({ enviados, falhados, total: gestores.length }, 'WhatsApp de NC concluído')
   } catch (err) {
-    const logger = await getLogger({ action: 'criarOcorrenciaAutomatica.whatsapp', tenantId })
     logger.error({ err }, 'Falha ao alertar gestores por WhatsApp (NC automática)')
   }
 }
