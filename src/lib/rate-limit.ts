@@ -39,6 +39,14 @@ export const MFA_FAIL_LIMIT = 10
 export const PWCHANGE_WINDOW_MS = 15 * 60 * 1000
 export const PWCHANGE_FAIL_LIMIT = 5
 
+/**
+ * Importação de laudo por IA (M-16): protege a cota PAGA do Gemini. Limites generosos
+ * (uso normal é esporádico) — o objetivo é barrar abuso/loop, não atrapalhar o gestor.
+ */
+export const LAUDO_WINDOW_MS = 60 * 60 * 1000
+export const LAUDO_USER_LIMIT = 30
+export const LAUDO_TENANT_LIMIT = 100
+
 const RETENTION_MS = 24 * 60 * 60 * 1000
 
 export function emailKey(email: string): string {
@@ -53,6 +61,8 @@ export const buckets = {
   resetEmail: (email: string) => `reset:email:${emailKey(email)}`,
   passwordChange: (userId: string) => `pwchange:user:${userId}`,
   mfaUser: (userId: string) => `mfa:user:${userId}`,
+  laudoUser: (userId: string) => `laudo:user:${userId}`,
+  laudoTenant: (tenantId: string) => `laudo:tenant:${tenantId}`,
 }
 
 // ─── Política (pura, testável) ─────────────────────────────────────────────
@@ -69,6 +79,11 @@ export function decideLogin(c: LoginCounts): LoginDecision {
 
 export function resetAllowed(counts: { ip: number; email: number }): boolean {
   return counts.ip < RESET_IP_LIMIT && counts.email < RESET_EMAIL_LIMIT
+}
+
+export interface LaudoCounts { user: number; tenant: number }
+export function laudoAllowed(c: LaudoCounts): boolean {
+  return c.user < LAUDO_USER_LIMIT && c.tenant < LAUDO_TENANT_LIMIT
 }
 
 // ─── IP do cliente ─────────────────────────────────────────────────────────

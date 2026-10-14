@@ -59,10 +59,19 @@ describe('laudo grande demais é recusado no servidor antes de chamar a IA', asy
     await expect(extractDataFromPDF('A'.repeat(MAX_LAUDO_BASE64_CHARS + 1), 'application/pdf')).rejects.toThrow(/muito grande.*3 MB/)
   })
 
-  it('exatamente no teto passa pela validação de tamanho (para na chave da IA, que não existe aqui)', async () => {
+  it('exatamente no teto passa por tamanho e magic byte (para na chave da IA, que não existe aqui)', async () => {
     const antes = process.env.GEMINI_API_KEY
     delete process.env.GEMINI_API_KEY
-    await expect(extractDataFromPDF('A'.repeat(MAX_LAUDO_BASE64_CHARS), 'application/pdf')).rejects.toThrow(/GEMINI_API_KEY/)
+    // "JVBERg" em base64 decodifica para "%PDF" — passa no sniff de magic byte (M-16);
+    // o resto completa exatamente o teto de tamanho.
+    const payload = 'JVBERg' + 'A'.repeat(MAX_LAUDO_BASE64_CHARS - 6)
+    await expect(extractDataFromPDF(payload, 'application/pdf')).rejects.toThrow(/GEMINI_API_KEY/)
     if (antes) process.env.GEMINI_API_KEY = antes
+  })
+
+  it('conteúdo que não bate com o tipo informado é recusado antes da IA (M-16)', async () => {
+    // base64 de bytes que NÃO são PDF/JPEG/PNG, rotulado como PDF → recusado.
+    const naoPdf = Buffer.from('isto nao e um pdf de verdade').toString('base64')
+    await expect(extractDataFromPDF(naoPdf, 'application/pdf')).rejects.toThrow(/não é um PDF/)
   })
 })
