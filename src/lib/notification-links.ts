@@ -16,3 +16,6 @@ export const HANDOVER_ALERT_HREF = (shiftInstanceId: string) => `/gestor/turnos/
 
 /** Contagem de estoque aguardando aprovação (M-04): abre o detalhe do produto. */
 export const CHEMICAL_PRODUCT_HREF = (productId: string) => `/gestor/produtos-quimicos/${productId}`
+
+/** Turno de hoje sem responsável (M-10): abre a escala para o gestor atribuir. */
+export const ESCALA_HREF = () => `/gestor/turnos/escala`
