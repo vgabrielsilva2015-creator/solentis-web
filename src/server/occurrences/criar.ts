@@ -25,6 +25,7 @@ import { handleNewOccurrence } from '@/lib/occurrences'
 import { prisma } from '@/lib/prisma'
 import { sendWhatsAppAlert } from '@/lib/whatsapp'
 import { getLogger } from '@/lib/logger'
+import { logAudit } from '@/lib/audit'
 
 type TxClient = Omit<
   Prisma.TransactionClient,
@@ -125,6 +126,13 @@ export async function criarOcorrenciaAutomatica(
     },
   })
 
+  // E2 — rastreabilidade: a ocorrência automática nasce auditada (como a manual).
+  await logAudit(tx, {
+    tenantId, userId, action: 'CREATE',
+    tableName: 'occurrences', recordId: ocorrencia.id,
+    after: { origem: 'AUTOMATICA', type, severity, status: 'OPEN', collection_point_id: collectionPointId, parameter_id: parameterId },
+  })
+
   // Hook de push dos gestores (criado na mesma transação; disparado pós-commit).
   const pushHook = await handleNewOccurrence(tx, ocorrencia)
 
@@ -155,12 +163,19 @@ async function agruparReincidencia(
     type: OcorrenciaOrigem; severity: OcorrenciaSeveridade; description: string; pontoNome: string | null
   },
 ): Promise<(() => Promise<void>) | null> {
-  await tx.occurrenceComment.create({
+  const comentario = await tx.occurrenceComment.create({
     data: {
       occurrence_id: p.abertaId,
       user_id: p.userId,
       text: `Reincidência (${ORIGEM_LABEL[p.type]}): ${p.description}`,
     },
+  })
+
+  // E2 — rastreabilidade: a reincidência deixa rastro (mesmo sem escalar).
+  await logAudit(tx, {
+    tenantId: p.tenantId, userId: p.userId, action: 'CREATE',
+    tableName: 'occurrence_comments', recordId: comentario.id,
+    after: { tipo: 'reincidencia', ocorrencia_id: p.abertaId, origem: p.type, severidade_detectada: p.severity },
   })
 
   const escala = RANK_SEVERIDADE[p.severity] > RANK_SEVERIDADE[p.abertaSeveridade]
@@ -170,6 +185,13 @@ async function agruparReincidencia(
   await tx.occurrence.updateMany({
     where: { id: p.abertaId, tenant_id: p.tenantId },
     data: { severity: p.severity },
+  })
+  // E2 — rastreabilidade: quem/quando/por que a severidade mudou (before/after).
+  await logAudit(tx, {
+    tenantId: p.tenantId, userId: p.userId, action: 'UPDATE',
+    tableName: 'occurrences', recordId: p.abertaId,
+    before: { severity: p.abertaSeveridade },
+    after: { severity: p.severity, motivo: 'escalonamento por reincidência' },
   })
   // Alerta prioritário (pós-commit): WhatsApp aos gestores com a nova severidade.
   return async () => {

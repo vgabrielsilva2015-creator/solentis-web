@@ -29,6 +29,7 @@ function fakeTx(opts: { ponto?: Row; prazoHoras?: number | null }) {
     },
     occurrence: { create: occurrenceCreate, findFirst: vi.fn(async () => null) }, // sem reincidência aberta
     occurrenceComment: { create: vi.fn() },
+    auditLog: { create: vi.fn() }, // E2: criação automática audita
   }
   return { tx, occurrenceCreate }
 }

@@ -22,7 +22,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: { user: { findMany: (a: unknown) => use
 import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 
 function fakeTx(aberta: { id: string; severity: string } | null) {
-  const commentCreate = vi.fn()
+  const commentCreate = vi.fn(async (_a: { data: Record<string, unknown> }) => ({ id: 'c1' }))
   const occCreate = vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'nova', ...data }))
   const occUpdate = vi.fn(async (_a: { where: unknown; data: unknown }) => ({ count: 1 }))
   const executeRaw = vi.fn(async () => 1)
@@ -32,6 +32,7 @@ function fakeTx(aberta: { id: string; severity: string } | null) {
     occurrenceSeverityDefault: { findUnique: vi.fn(async () => ({ deadline_hours: 24 })) },
     occurrence: { findFirst: vi.fn(async () => aberta), create: occCreate, updateMany: occUpdate },
     occurrenceComment: { create: commentCreate },
+    auditLog: { create: vi.fn() }, // E2: reincidência/escalonamento auditam
   }
   return { tx, commentCreate, occCreate, occUpdate, executeRaw }
 }
