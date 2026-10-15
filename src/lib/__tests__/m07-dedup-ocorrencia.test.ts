@@ -29,6 +29,7 @@ function fakeTx(aberta: { id: string; severity: string } | null) {
   const tx = {
     $executeRaw: executeRaw,
     collectionPoint: { findFirst: vi.fn(async () => ({ id: 'p1', name: 'Saída' })) },
+    qualityParameter: { findFirst: vi.fn(async () => ({ id: 'q1' })) }, // E3: parâmetro válido no tenant
     occurrenceSeverityDefault: { findUnique: vi.fn(async () => ({ deadline_hours: 24 })) },
     occurrence: { findFirst: vi.fn(async () => aberta), create: occCreate, updateMany: occUpdate },
     occurrenceComment: { create: commentCreate },

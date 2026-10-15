@@ -24,6 +24,7 @@ function fakeTx() {
   return {
     $executeRaw: vi.fn(async () => 1),
     collectionPoint: { findFirst: vi.fn(async () => ({ id: 'p1', name: 'Saída Final' })) },
+    qualityParameter: { findFirst: vi.fn(async () => ({ id: 'q1' })) }, // E3: parâmetro válido no tenant
     occurrenceSeverityDefault: { findUnique: vi.fn(async () => ({ deadline_hours: 24 })) },
     occurrence: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'occ1', ...data })), findFirst: vi.fn(async () => null) },
     occurrenceComment: { create: vi.fn() },
