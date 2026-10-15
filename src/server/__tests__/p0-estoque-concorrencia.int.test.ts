@@ -24,6 +24,8 @@ describe('saídas simultâneas', () => {
     expect(recusadas).toBe(7)
     expect(await saldo(A.tenant.id, A.produto.id)).toBeCloseTo(1, 6)
     expect(await prisma.chemicalStockExit.count()).toBe(3)
+    // E8: cada saída aplicada deixa rastro de auditoria.
+    expect(await prisma.auditLog.count({ where: { tenant_id: A.tenant.id, table_name: 'chemical_stock_exits' } })).toBe(3)
   })
 
   it('duas saídas que juntas passam do saldo: exatamente uma é aceita', async () => {
