@@ -125,11 +125,16 @@ export async function revisarContagemDeEstoque(i: {
     if (!(await lockProduct(tx, i.tenantId, count.product_id))) return PRODUTO_INVALIDO
     const now = new Date()
 
+    // E1: a transição de status (condicionada a PENDING) é a trava autoritativa e
+    // vem ANTES de qualquer efeito colateral. Sob a trava do produto, duas revisões
+    // concorrentes serializam; a segunda vê `count === 0` e aborta — sem dupla decisão
+    // nem ajuste fantasma. (O `findFirst` acima é só atalho de erro amigável.)
     if (i.decisao === 'REJEITAR') {
-      await tx.chemicalStockCount.updateMany({
+      const { count: afetadas } = await tx.chemicalStockCount.updateMany({
         where: { id: i.countId, tenant_id: i.tenantId, review_status: 'PENDING' },
         data:  { review_status: 'REJECTED', reviewed_by: i.reviewerId, reviewed_at: now, review_reason: i.motivo },
       })
+      if (afetadas === 0) return { ok: false, error: 'Esta contagem já foi revisada.' }
       await logAudit(tx, {
         tenantId: i.tenantId, userId: i.reviewerId, action: 'UPDATE',
         tableName: 'chemical_stock_counts', recordId: i.countId,
@@ -139,7 +144,13 @@ export async function revisarContagemDeEstoque(i: {
       return { ok: true }
     }
 
-    // APROVAR: aplica a diferença recalculada no momento da aprovação.
+    // APROVAR: ganha a transição primeiro; só então recalcula e aplica a diferença.
+    const { count: afetadas } = await tx.chemicalStockCount.updateMany({
+      where: { id: i.countId, tenant_id: i.tenantId, review_status: 'PENDING' },
+      data:  { review_status: 'APPLIED', reviewed_by: i.reviewerId, reviewed_at: now },
+    })
+    if (afetadas === 0) return { ok: false, error: 'Esta contagem já foi revisada.' }
+
     const calculado = await saldoAtual(tx, i.tenantId, count.product_id)
     const diff = count.counted_quantity - calculado
     const nota = 'Ajuste por contagem física (aprovada pelo gestor)'
@@ -152,10 +163,6 @@ export async function revisarContagemDeEstoque(i: {
         data: { tenant_id: i.tenantId, product_id: count.product_id, quantity: -diff, notes: nota, used_at: now, recorded_by: i.reviewerId },
       })
     }
-    await tx.chemicalStockCount.updateMany({
-      where: { id: i.countId, tenant_id: i.tenantId, review_status: 'PENDING' },
-      data:  { review_status: 'APPLIED', reviewed_by: i.reviewerId, reviewed_at: now },
-    })
     await logAudit(tx, {
       tenantId: i.tenantId, userId: i.reviewerId, action: 'UPDATE',
       tableName: 'chemical_stock_counts', recordId: i.countId,
