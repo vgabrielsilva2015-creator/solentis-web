@@ -2,8 +2,9 @@
 import { describe, it, expect } from 'vitest'
 import { prisma } from '@/lib/prisma'
 import { actAs, form } from '@/test/auth-mock'
-import { criarCenario, criarEntrada } from '@/test/factories'
+import { criarCenario, criarEntrada, criarUsuario } from '@/test/factories'
 import { registrarSaida, registrarContagem } from '@/app/operador/estoque/actions'
+import { registrarContagemDeEstoque, revisarContagemDeEstoque } from '@/server/estoque/service'
 import { saldoAtual } from '@/lib/stock-lock'
 
 const agora = () => new Date().toISOString().slice(0, 16)
@@ -58,6 +59,40 @@ describe('saídas simultâneas', () => {
     expect(s).toBeCloseTo(7)                 // 10 − 3 (contagem não mexeu no saldo)
     expect(s).toBeGreaterThanOrEqual(0)      // nunca negativo
     expect(await prisma.chemicalStockExit.count({ where: { notes: 'Ajuste por contagem física' } })).toBe(0)
+  })
+})
+
+describe('revisão de contagem concorrente (M-04 — regressão E1)', () => {
+  it('aprovar e rejeitar simultâneos: exatamente uma decisão vale, sem ajuste fantasma', async () => {
+    for (let k = 0; k < 15; k++) {
+      const A = await criarCenario('A')
+      await criarEntrada(A.tenant.id, A.produto.id, A.gestor.id, 10)           // saldo 10
+      const gestorB = await criarUsuario(A.tenant.id, 'MANAGER')
+      // operador registra contagem 6 (−40% > 5% → PENDENTE, sem ajuste)
+      await registrarContagemDeEstoque({
+        tenantId: A.tenant.id, userId: A.operador.id, productId: A.produto.id,
+        countedQuantity: 6, notes: null, countedAt: new Date(),
+      })
+      const count = await prisma.chemicalStockCount.findFirstOrThrow({
+        where: { tenant_id: A.tenant.id, product_id: A.produto.id, review_status: 'PENDING' },
+      })
+      // dois gestores revisam a MESMA contagem ao mesmo tempo
+      const [rA, rB] = await Promise.all([
+        revisarContagemDeEstoque({ tenantId: A.tenant.id, reviewerId: A.gestor.id, countId: count.id, decisao: 'APROVAR', motivo: null }),
+        revisarContagemDeEstoque({ tenantId: A.tenant.id, reviewerId: gestorB.id, countId: count.id, decisao: 'REJEITAR', motivo: 'suspeita' }),
+      ])
+      const oks = [rA, rB].filter((r) => (r as { ok?: boolean }).ok === true)
+      const erros = [rA, rB].filter((r) => (r as { ok?: boolean }).ok === false)
+      expect(oks).toHaveLength(1)                                  // só UMA decisão vale
+      expect(erros).toHaveLength(1)
+      expect((erros[0] as { error?: string }).error).toMatch(/já foi revisada/i)
+      const fim = await prisma.chemicalStockCount.findUniqueOrThrow({ where: { id: count.id } })
+      const ajusteAprov =
+        (await prisma.chemicalStockExit.count({ where: { product_id: A.produto.id, notes: { contains: 'aprovada pelo gestor' } } })) +
+        (await prisma.chemicalStockEntry.count({ where: { product_id: A.produto.id, notes: { contains: 'aprovada pelo gestor' } } }))
+      if (fim.review_status === 'REJECTED') expect(ajusteAprov).toBe(0)   // nada de ajuste fantasma
+      if (fim.review_status === 'APPLIED') expect(ajusteAprov).toBe(1)
+    }
   })
 })
 
