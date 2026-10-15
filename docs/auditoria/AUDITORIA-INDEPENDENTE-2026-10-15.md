@@ -1,5 +1,9 @@
 # Auditoria independente do SaaS Solentis — 2026-10-15
 
+> ✅ **ATUALIZAÇÃO (2026-10-15, pós-correções):** os achados de código (E1–E3, E5–E8) foram
+> corrigidos e estão em produção; ver `AUDITORIA-FORENSE-2026-10-15.md` (topo). Resta só **E4**
+> (apontar o `.env` de dev para banco local) — ação do dono. O corpo abaixo é o diagnóstico original.
+
 > Auditoria executada com evidência real do repositório, dos testes e das configurações acessíveis.
 > **Postura: brutalmente honesta.** O que não pôde ser validado está marcado como tal.
 > **Nada foi modificado** no produto durante a auditoria (só este relatório foi escrito).

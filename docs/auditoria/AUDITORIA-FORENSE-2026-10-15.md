@@ -1,5 +1,13 @@
 # Auditoria FORENSE da Solentis — 2026-10-15 (com reprodução de defeito)
 
+> ✅ **ATUALIZAÇÃO (2026-10-15, pós-correções):** os achados de código foram corrigidos e
+> estão em produção — **E1** (corrida da revisão de contagem, com teste de regressão),
+> **E2** (auditoria da reincidência/criação automática), **E3** (revalida `parameterId`),
+> **E5** (console→logger), **E6** (erro do Gemini genérico ao cliente), **E7** (comentário
+> do bypass MANAGER alinhado), **E8** (auditoria de entrada/saída de estoque). **Resta só
+> E4** (apontar o `.env` de dev para banco local) — ação do dono. O corpo abaixo é o
+> diagnóstico original (mantido como registro).
+
 > Complementa o relatório estrutural `AUDITORIA-INDEPENDENTE-2026-10-15.md` (inventário A–J).
 > Aqui o foco é **profundidade e reprodução**: o bug ALTO foi **reproduzido em Postgres real**,
 > e houve varredura estática profunda por "falso sucesso / erro engolido / mock / dead code / XSS".

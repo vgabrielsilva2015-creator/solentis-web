@@ -7,10 +7,10 @@ Sistema web de gestão de ETE (Estação de Tratamento de Efluentes). Documento-
 Este bloco vale sobre qualquer trecho datado mais abaixo. **Regra de precedência: o código > este bloco > seções históricas.** Muita coisa abaixo (datada de 2026-05 a 2026-07) é **registro de fase** e tem afirmações superadas — não aja por elas sem conferir aqui ou no código.
 
 - **Stack real:** Next.js **16.x** (App Router, `src/proxy.ts` — não `middleware.ts`), React 19, TypeScript estrito, Tailwind v4, **PostgreSQL (Supabase)**, Prisma (linha v5), NextAuth v5 (JWT), Zod, Recharts, Pino, Serwist (PWA). Deploy na Vercel; publica ao mergear na `main`.
-- **Banco é PostgreSQL, não SQLite.** Enums e JSON são **nativos** do Postgres. As "regras invioláveis 3.1/3.2" do handoff histórico (SQLite, String-para-enum/JSON, Prisma "fixo por causa do SQLite") **NÃO valem mais**.
+- **Banco é PostgreSQL, não SQLite.** As "regras invioláveis 3.1/3.2" do handoff histórico (SQLite, Prisma "fixo por causa do SQLite") **NÃO valem mais** como *proibição*. Mas, na prática, o schema **ainda usa `String` para enums e JSON serializado como `String`** (herança do SQLite, não migrado para enums/JSON nativos — o `schema.prisma` tem 0 blocos `enum` e 0 campos `Json`). Ou seja: nativos são *possíveis*, mas a convenção atual segue String. Não "normalize" para nativo sem um plano.
 - **5 perfis** (não 3): OPERATOR, TECHNICIAN, MANAGER, MAINTENANCE, SUPER_ADMIN. Matriz única em `src/server/auth/permissions.ts` (tabela em `docs/PERMISSOES.md`) — toda action começa por `requirePermission`/`getActor`.
 - **Migrations:** baseline em `prisma/migrations`; processo em `docs/MIGRATIONS.md`. **Nunca** `migrate dev`/`db push`/SQL avulso em produção; aplicar em prod é ação manual do dono, com backup.
-- **33 tabelas.** Estoque: contagem física com divergência **>5% exige aprovação do gestor** (M-04) — não é mais "negativo permitido com aviso".
+- **43 tabelas** (o `schema.prisma` tem 43 models; a lista "33 tabelas" mais abaixo é histórica). Estoque: contagem física com divergência **>5% exige aprovação do gestor** (M-04) — não é mais "negativo permitido com aviso".
 - O retrato operacional vivo está em **"🧭 Estado real da main"** e nas seções **PROMPT-01** (Ondas 0–2 concluídas). O "Relatório de Handoff" no fim do arquivo é **histórico** (ver o aviso lá).
 
 ## Status Atual
