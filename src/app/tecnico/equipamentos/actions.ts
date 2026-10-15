@@ -327,13 +327,19 @@ export async function concluirPreventiva(
   const completedDate = new Date()
   const nextScheduledDate = addDays(completedDate, preventiva.equipment.preventive_frequency_days)
 
-  await prisma.$transaction(async (tx) => {
-    await tx.preventiveMaintenance.updateMany({ where: { id: preventivaId , tenant_id: (await getTenantId()) }, data: {
+  const resultado = await prisma.$transaction(async (tx) => {
+    // Classe E1: a transição é a trava autoritativa e vem ANTES de qualquer efeito.
+    // Condicionada a "ainda não concluída" + checa count: duas conclusões concorrentes
+    // da mesma preventiva não agendam 2 próximas nem gravam 2 logs.
+    const { count } = await tx.preventiveMaintenance.updateMany({
+      where: { id: preventivaId, tenant_id: (await getTenantId()), status: { not: 'COMPLETED' } },
+      data: {
         status:         'COMPLETED',
         completed_date: completedDate,
         completed_by:   userId,
       },
     })
+    if (count === 0) return { error: 'Preventiva já concluída.' as string }
 
     // Log a manutenção preventina concluída no histórico
     await tx.maintenanceLog.create({
@@ -360,7 +366,10 @@ export async function concluirPreventiva(
       tableName: 'preventive_maintenances', recordId: preventivaId,
       before: { status: preventiva.status }, after: { status: 'COMPLETED', evento: 'preventiva_concluida' },
     })
+    return undefined
   })
+
+  if (resultado?.error) return { error: resultado.error }
 
   revalidatePath('/tecnico/equipamentos')
   revalidatePath(`/tecnico/equipamentos/${preventiva.equipment.id}`)
