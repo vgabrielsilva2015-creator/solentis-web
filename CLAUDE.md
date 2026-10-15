@@ -90,6 +90,26 @@ Execução do contrato `PROMPT-01-melhoria-claude-code.md` (ondas pequenas, uma 
 - **M-10 — cron observável:** sino do gestor alerta "Turno de hoje sem responsável" (SCHEDULED sem operador escalado); teste de integração de idempotência (rodar 2× cria 1). O resto já vinha do T-30 (log-resumo, heartbeat). Sem migration.
 - **M-11 — offline:** **já entregue pelo T-15** — fila IndexedDB (`src/lib/offline-queue/`) com `client_id` idempotente, sincronização "uma vez só", doc neste CLAUDE.md, e e2e `tests/t15-offline-fila.spec.ts` que cobre o ciclo sem-rede→registra→volta→sincroniza. Confirmado no M-11; a fila antiga (localStorage) segue desligada (T-01) e migrada, não reativada.
 
+### Onda 2 do PROMPT-01 (escala e performance) — COMPLETA e em produção (2026-10-14)
+- **M-12 — orçamento de queries:** `scripts/perf/measure-queries.mjs` (DEV-only, PrismaClient próprio com `$on('query')`) conta queries+tempo das 10 páginas mais usadas e grava `docs/auditoria/PERF-BASELINE.md`. "Só otimiza o que medir". Dashboards concentram o nº de queries; listagens são enxutas (findMany+count).
+- **M-13/M-14 — índices compostos:** o baseline apontou 2 índices faltando para as queries dominantes. Migrations **`20261014120000_idx_occurrences_tenant_created`** (`occurrences(tenant_id, created_at)`) e **`20261014120100_idx_analyses_tenant_collected`** (`analyses(tenant_id, collected_at)`), ambas `CREATE INDEX CONCURRENTLY` (não travam gravação), uma por migration (padrão T-19). **Aditivas e transparentes** — o app roda com ou sem; o merge (`3c91a41`) foi seguro antes de aplicar. ⏳ **PENDENTE DO DONO: aplicar na Supabase** (`migrate deploy` com a DIRECT_URL, ou os 2 `CREATE INDEX CONCURRENTLY` no SQL Editor + `migrate resolve --applied`). Dashboard (`server/dashboard/queries.ts`) já estava otimizado por T-23/M-13 (Promise.all + SQL agregado) — nada a reescrever lá.
+- **M-15 — pooler/conexões:** `getMappingContext` (import de laudos) paraleliza as 3 leituras independentes (`Promise.all`). Nova doc `docs/CONEXOES-POOLER.md` (pooler 6543 × direct 5432, `connection_limit`/`pool_timeout`/`pgbouncer`, teto do plano Supabase = gargalo real de escala, disciplina de `Promise.all`). A base já era disciplinada; gargalo de escala é o **plano**, não o código. Merge `a1d1ddf`. Sem migration.
+- **M-16 — limites da importação por IA:** fecha lacunas do fluxo Gemini (cota paga). **Magic bytes** reais via `src/lib/laudo-sniff.ts` (`sniffLaudoType`: PDF `%PDF`/JPEG/PNG) — o `mimeType` vinha do cliente (forjável); recusa se não bater. **Rate limit** 30/h por usuário + 100/h por tenant (reusa tabela `authRateEvent`, **sem migration**; `laudoAllowed`/buckets em `rate-limit.ts`), **fail-open** no soluço do banco (decisão do login). **Timeout** 45 s (`Promise.race`) no `generateContent`. **Log de uso** no sucesso (modelo+bytes). Tela de conferência já existia (extrair→mapear→salvar separados). Testes `m16-import-limites` (8) + t24 ajustado. Merge `915f71f`.
+
+> **Onda 2 do PROMPT-01 — COMPLETA.** Faltam só **Onda 3 (UI/UX: M-17..M-21)** e **Onda 4 (qualidade/docs: M-22..M-26)** — ambas opcionais, sem urgência. **Retomada:** decidir com o dono se vai pela Onda 4 (docs verdadeira — baixo risco; o próprio CLAUDE.md ainda cita "SQLite/3 perfis/Next 15" em seções históricas, alvo do M-25) ou Onda 3 (UX, exige decisões do dono).
+
+### ⏳ Caminho que depende do DONO (infra/segurança — 2026-10-14, não é tarefa de código)
+Consolidado para a retomada. Não tenho acesso à Vercel/Supabase/GitHub — alguns podem já estar feitos.
+1. 🔴 **Rotacionar o token do GitHub** que apareceu no `git remote` (se ainda não trocou).
+2. 🔴 **Confirmar PITR do Supabase + testar restore** ("backup não testado não é backup").
+3. 🟡 **Aplicar os 2 índices M-13/M-14 na Supabase** (`migrate deploy` com DIRECT_URL → `migrate status` "up to date").
+4. 🟡 **`connection_limit` na `DATABASE_URL` da Vercel** (pooler 6543 com `?pgbouncer=true&connection_limit=1&pool_timeout=20`) — ver `docs/CONEXOES-POOLER.md` §5.
+5. 🟡 **Ligar RLS no Supabase** (migration `20261007020000_rls_deny_all`, T-14) — defesa em profundidade.
+6. 🟢 **Resend:** verificar domínio + `NEXTAUTH_URL` (destrava os 3 e-mails transacionais).
+7. 🟢 **T-26 Blob privado** (off por padrão; só se quiser) — passos em `IMPLEMENTATION-T26.md` §"Como ativar", **backup antes**.
+
+> Migrations M-04 (`20261013132655_add_stock_count_review`) e M-07 (`20261013232218_add_occurrence_parameter_id`) **já aplicadas em produção pelo dono** nesta trilha.
+
 ## 🔒 Revisão geral de segurança — 2026-07-28 (mergeada na main)
 
 Auditoria AppSec ponta a ponta (docs `SECURITY_AUDIT.md` + `REVISAO_GERAL.md`, 0 críticos / 2 altos / 7 médios / 6 baixos). Branch `fix/revisao-seguranca-e-bugs` **mergeada na `main` via PR #28** (merge commit `f5caa5b`). Todos os itens acionáveis por código foram corrigidos:
