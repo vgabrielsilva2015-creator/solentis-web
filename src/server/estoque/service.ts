@@ -33,11 +33,17 @@ export async function registrarSaidaDeEstoque(i: {
       }
     }
 
-    await tx.chemicalStockExit.create({
+    const saida = await tx.chemicalStockExit.create({
       data: {
         tenant_id: i.tenantId, product_id: i.productId, quantity: i.quantity,
         notes: i.notes, used_at: i.usedAt, recorded_by: i.userId,
       },
+    })
+    // E8 — rastreabilidade: toda movimentação de estoque audita.
+    await logAudit(tx, {
+      tenantId: i.tenantId, userId: i.userId, action: 'CREATE',
+      tableName: 'chemical_stock_exits', recordId: saida.id,
+      after: { product_id: i.productId, quantity: i.quantity },
     })
     return { ok: true }
   })
@@ -51,12 +57,18 @@ export async function registrarEntradaDeEstoque(i: {
   // que esteja calculando o ajuste ao mesmo tempo.
   return prisma.$transaction(async (tx): Promise<Resultado> => {
     if (!(await lockProduct(tx, i.tenantId, i.productId))) return PRODUTO_INVALIDO
-    await tx.chemicalStockEntry.create({
+    const entrada = await tx.chemicalStockEntry.create({
       data: {
         tenant_id: i.tenantId, product_id: i.productId, quantity: i.quantity,
         supplier: i.supplier, invoice_number: i.invoiceNumber, notes: i.notes,
         received_at: i.receivedAt, recorded_by: i.userId,
       },
+    })
+    // E8 — rastreabilidade: toda movimentação de estoque audita.
+    await logAudit(tx, {
+      tenantId: i.tenantId, userId: i.userId, action: 'CREATE',
+      tableName: 'chemical_stock_entries', recordId: entrada.id,
+      after: { product_id: i.productId, quantity: i.quantity, supplier: i.supplier },
     })
     return { ok: true }
   })
