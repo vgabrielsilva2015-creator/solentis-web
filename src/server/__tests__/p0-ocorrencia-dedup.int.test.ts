@@ -46,6 +46,16 @@ describe('deduplicação de ocorrência automática (M-07)', () => {
     expect(await prisma.reading.count({ where: { tenant_id: A.tenant.id } })).toBe(2)
   })
 
+  it('E2: a ocorrência automática deixa rastro de auditoria (CREATE em occurrences)', async () => {
+    const A = await criarCenario('A'); const p = await criarParametro(A.tenant.id, A.gestor.id)
+    await nc(A, p.id)
+    const audits = await prisma.auditLog.findMany({
+      where: { tenant_id: A.tenant.id, table_name: 'occurrences', action: 'CREATE' },
+    })
+    expect(audits).toHaveLength(1)
+    expect(JSON.parse(audits[0].after ?? '{}')).toMatchObject({ origem: 'AUTOMATICA', parameter_id: p.id })
+  })
+
   it('ocorrência resolvida: nova NC cria outra', async () => {
     const A = await criarCenario('A'); const p = await criarParametro(A.tenant.id, A.gestor.id)
     await nc(A, p.id)

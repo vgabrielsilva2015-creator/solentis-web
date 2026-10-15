@@ -27,6 +27,7 @@ function fakeTx() {
     occurrenceSeverityDefault: { findUnique: vi.fn(async () => ({ deadline_hours: 24 })) },
     occurrence: { create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'occ1', ...data })), findFirst: vi.fn(async () => null) },
     occurrenceComment: { create: vi.fn() },
+    auditLog: { create: vi.fn() }, // E2: criação automática audita
   }
 }
 const base = { tenantId: 'A', userId: 'u1', type: 'OPERATIONAL' as const, description: 'pH fora', collectionPointId: 'p1', parameterId: 'q1' }
