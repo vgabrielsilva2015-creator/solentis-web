@@ -523,14 +523,19 @@ export async function concluirTarefa(
   }
 
   const now = new Date()
-  await prisma.$transaction(async (tx) => {
-    await tx.shiftTask.updateMany({ where: { id: taskId , tenant_id: (await getTenantId()) }, data:  {
+  const resultado = await prisma.$transaction(async (tx) => {
+    // Classe E1: a transição PENDING→DONE é condicionada + checa count ANTES de gravar
+    // as fotos. Duplo-submit/corrida não duplica fotos nem estoura o teto da tarefa.
+    const { count } = await tx.shiftTask.updateMany({
+      where: { id: taskId, tenant_id: (await getTenantId()), status: 'PENDING' },
+      data:  {
         status:           'DONE',
         completed_at:     now,
         completed_by:     userId,
         completion_notes: parsed.data.completion_notes,
       },
     })
+    if (count === 0) return { error: 'Esta tarefa já foi concluída ou pulada.' as string }
     await logAudit(tx, {
       tenantId: (await getTenantId()), userId, action: 'UPDATE',
       tableName: 'shift_tasks', recordId: taskId,
@@ -551,7 +556,10 @@ export async function concluirTarefa(
         })),
       })
     }
+    return undefined
   })
+
+  if (resultado?.error) return { error: resultado.error }
 
   revalidatePath(`/operador/turnos/${task.shift_instance_id}/tarefas`)
   revalidatePath('/operador/turnos')
