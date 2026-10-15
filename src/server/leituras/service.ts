@@ -8,6 +8,7 @@
 import { prisma } from '@/lib/prisma'
 import { calcularNaoConformidade } from '@/lib/readings-utils'
 import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
+import { logger } from '@/lib/logger'
 
 function violacaoDeUnicidade(err: unknown): boolean {
   return !!err && typeof err === 'object' && (err as { code?: string }).code === 'P2002'
@@ -112,7 +113,7 @@ export async function gravarLeitura(i: NovaLeitura): Promise<{ duplicate: boolea
   }
 
   for (const hook of aposGravar) {
-    await hook().catch((err) => console.error('Error in postCommitHook:', err))
+    await hook().catch((err) => logger.error({ err, action: 'gravarLeitura.postCommit' }, 'Falha no hook pós-commit'))
   }
   return { duplicate: false }
 }

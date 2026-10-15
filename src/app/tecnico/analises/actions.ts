@@ -10,6 +10,7 @@ import { getTenantId } from '@/lib/tenant'
 import { checkOwnership } from '@/lib/ownership'
 import { localInputToUTC } from '@/lib/date-utils'
 import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
+import { logger } from '@/lib/logger'
 import { logAudit } from '@/lib/audit'
 
 
@@ -124,7 +125,7 @@ export async function registrarAnalise(
   })
 
   for (const hook of postCommitHooks) {
-    await hook().catch(err => console.error('Error in postCommitHook:', err))
+    await hook().catch((err) => logger.error({ err, action: 'aprovarAnalise.postCommit' }, 'Falha no hook pós-commit'))
   }
 
   // ALTO-02: push duplicado para MANAGER removido (agora handleNewOccurrence cuida disso)
@@ -152,8 +153,9 @@ export async function aprovarAnalise(
   if (analysis.approved_by)   return { error: 'Análise já aprovada.' }
 
   // Separação de funções: quem registrou a análise não pode aprová-la.
-  // Exceção: o gestor (MANAGER) pode aprovar qualquer análise, inclusive a que
-  // registrou — cobre a planta com um único técnico.
+  // Exceção (deliberada): o MANAGER pode aprovar a própria análise SEMPRE — é o perfil
+  // de maior confiança e precisa destravar plantas pequenas (inclusive com 1 técnico).
+  // A regra NÃO verifica a quantidade de técnicos: é bypass incondicional para MANAGER.
   if (analysis.recorded_by === userId && role !== 'MANAGER') {
     return { error: 'Você não pode aprovar uma análise que registrou. Peça a outro responsável ou ao gestor.' }
   }

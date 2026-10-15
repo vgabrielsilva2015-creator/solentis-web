@@ -171,7 +171,7 @@ export async function registrarOcorrencia(
   })
 
   for (const hook of postCommitHooks) {
-    await hook().catch(err => console.error('Error in postCommitHook:', err))
+    await hook().catch((err) => logger.error({ err, action: 'registrarOcorrencia.postCommit' }, 'Falha no hook pós-commit'))
   }
 
   // Disparo de WhatsApp para gestores se for CRÍTICA ou ALTA
