@@ -89,6 +89,14 @@ export async function criarOcorrenciaAutomatica(
   })
   if (!ponto) throw new Error('Ponto de coleta inválido ou de outra planta para a ocorrência automática.')
 
+  // E3: revalida o parâmetro contra o tenant (ele é a chave da deduplicação — M-07).
+  // Torna a função auto-suficiente: nenhum chamador pode injetar parâmetro de outra planta.
+  const parametro = await tx.qualityParameter.findFirst({
+    where: { id: parameterId, tenant_id: tenantId },
+    select: { id: true },
+  })
+  if (!parametro) throw new Error('Parâmetro inválido ou de outra planta para a ocorrência automática.')
+
   // M-07: serializa NCs simultâneas do mesmo (tenant, ponto, parâmetro). A 2ª espera a 1ª
   // commitar — então a busca abaixo enxerga a ocorrência já criada e vira comentário, sem
   // corrida de criação (sem P2002 abortando a transação do chamador). Lock solto no commit.

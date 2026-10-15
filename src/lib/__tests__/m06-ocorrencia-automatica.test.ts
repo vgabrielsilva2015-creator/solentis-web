@@ -24,6 +24,7 @@ function fakeTx(opts: { ponto?: Row; prazoHoras?: number | null }) {
   const tx = {
     $executeRaw: vi.fn(async () => 1),                                   // advisory lock (M-07)
     collectionPoint: { findFirst: vi.fn(async () => opts.ponto ?? null) },
+    qualityParameter: { findFirst: vi.fn(async () => ({ id: 'q1' })) }, // E3: parâmetro válido no tenant
     occurrenceSeverityDefault: {
       findUnique: vi.fn(async () => (opts.prazoHoras == null ? null : { deadline_hours: opts.prazoHoras })),
     },

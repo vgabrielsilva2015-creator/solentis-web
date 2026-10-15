@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest'
 import { prisma } from '@/lib/prisma'
 import { criarCenario } from '@/test/factories'
 import { gravarLeitura } from '@/server/leituras/service'
+import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 
 function criarParametro(tenantId: string, createdBy: string, name = 'pH') {
   return prisma.qualityParameter.create({
@@ -70,6 +71,18 @@ describe('deduplicação de ocorrência automática (M-07)', () => {
     const p2 = await criarParametro(A.tenant.id, A.gestor.id, 'Turbidez')
     await nc(A, p1.id); await nc(A, p2.id)
     expect(await contarOcorrencias(A.tenant.id)).toBe(2)
+  })
+
+  it('E3: parâmetro de OUTRO tenant é rejeitado na ocorrência automática', async () => {
+    const A = await criarCenario('A')
+    const B = await criarCenario('B'); const pB = await criarParametro(B.tenant.id, B.gestor.id)
+    await expect(
+      prisma.$transaction((tx) => criarOcorrenciaAutomatica(tx, {
+        tenantId: A.tenant.id, userId: A.operador.id, type: 'OPERATIONAL', severity: 'HIGH',
+        description: 'x', collectionPointId: A.ponto.id, parameterId: pB.id, // parâmetro do tenant B
+      })),
+    ).rejects.toThrow(/Parâmetro inválido/)
+    expect(await contarOcorrencias(A.tenant.id)).toBe(0)
   })
 
   it('tenant diferente NUNCA agrupa', async () => {
