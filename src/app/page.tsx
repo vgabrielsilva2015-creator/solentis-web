@@ -5,10 +5,29 @@ import { getDashboardRoute } from '@/lib/auth-utils'
 import { mfaExigeCadastro, mfaMode } from '@/lib/mfa/config'
 import { LandingPage } from '@/components/landing/landing-page'
 
+const LANDING_TITLE = 'Solentis — Sistema de operação para ETE'
+const LANDING_DESC =
+  'Leituras, análises com limites, estoque químico, ocorrências, manutenção e turnos da sua estação de tratamento de efluentes em um só lugar.'
+
 export const metadata: Metadata = {
-  title: 'Solentis — Sistema de operação para ETE',
-  description:
-    'Leituras, análises com limites, estoque químico, ocorrências, manutenção e turnos da sua estação de tratamento de efluentes em um só lugar.',
+  title: LANDING_TITLE,
+  description: LANDING_DESC,
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    url: '/',
+    siteName: 'Solentis',
+    title: LANDING_TITLE,
+    description: LANDING_DESC,
+    images: [{ url: '/landing/solentis-logo.png', alt: 'Solentis' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: LANDING_TITLE,
+    description: LANDING_DESC,
+    images: ['/landing/solentis-logo.png'],
+  },
 }
 
 export default async function Home() {

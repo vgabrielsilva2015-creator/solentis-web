@@ -27,6 +27,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  // Base para resolver URLs absolutas (OpenGraph/Twitter). Usa a URL de produção.
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "https://solentis-app.vercel.app"),
   title: "Solentis",
   description: "Sistema de gestão de Estação de Tratamento de Efluentes",
   manifest: "/manifest.json",
