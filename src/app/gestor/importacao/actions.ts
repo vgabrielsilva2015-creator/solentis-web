@@ -4,7 +4,6 @@ import { getActor, permissionError, requirePermission } from '@/server/auth/guar
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getLogger } from '@/lib/logger'
 import { MAX_LAUDO_BASE64_CHARS, MAX_LAUDO_BYTES, mb } from '@/lib/upload-limits'
-import { errorMessage } from '@/lib/error-utils'
 import { logAudit } from '@/lib/audit'
 import { criarOcorrenciaAutomatica } from '@/server/occurrences/criar'
 import { sniffLaudoType } from '@/lib/laudo-sniff'
@@ -149,11 +148,13 @@ Não retorne NENHUM texto além do JSON. Não adicione crases ou markdown. Apena
   }
 
   // Sempre incluir o erro real para facilitar debug
-  const rawError = errorMessage(lastError) || 'Erro desconhecido'
-  const friendlyError = `Falha ao processar PDF. Erro: ${rawError.substring(0, 150)}`
-
+  // E6: o erro cru da IA (dependência externa) fica só no log; ao cliente vai mensagem
+  // genérica e acionável (não vaza detalhe de stack/terceiro na tela).
   log.error({ err: lastError }, 'Erro em todos os modelos da IA')
-  return { success: false, error: friendlyError }
+  return {
+    success: false,
+    error: 'Não foi possível processar o laudo agora. Tente novamente em alguns instantes; se persistir, confira se o arquivo é um PDF/imagem legível ou avise o suporte.',
+  }
 }
 
 export async function getMappingContext() {
