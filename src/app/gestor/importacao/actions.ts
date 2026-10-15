@@ -199,31 +199,33 @@ export async function createParameterFromImport(data: { name: string; unit: stri
   const tenantId = await getTenantId()
   const user = { id: ctx.userId }
 
+  const nome = data.name?.trim()
+  const unidade = data.unit?.trim() || 'mg/L'
+  if (!nome) return { success: false, error: 'Informe o nome do parâmetro.' }
+
   try {
-    const param = await prisma.qualityParameter.create({
-      data: {
-        tenant_id: tenantId,
-        name: data.name.trim(),
-        unit: data.unit.trim() || 'mg/L',
-        effective_date: new Date(),
-        is_active: true,
-        created_by: user.id,
-      }
-    })
-
-    // Criar alias automático com o nome original do laudo
-    await prisma.parameterAlias.create({
-      data: {
-        tenant_id: tenantId,
-        alias: data.name.trim(),
-        parameter_id: param.id,
-      }
-    })
-
-    await logAudit(prisma, {
-      tenantId, userId: user.id, action: 'CREATE',
-      tableName: 'quality_parameters', recordId: param.id,
-      after: { name: param.name, unit: param.unit, origem: 'IMPORTACAO_LAUDO' },
+    // Atômico: parâmetro + alias + auditoria numa transação. Se o alias colide
+    // (unique por tenant), tudo faz rollback — nada de parâmetro órfão sem alias.
+    const param = await prisma.$transaction(async (tx) => {
+      const p = await tx.qualityParameter.create({
+        data: {
+          tenant_id: tenantId,
+          name: nome,
+          unit: unidade,
+          effective_date: new Date(),
+          is_active: true,
+          created_by: user.id,
+        },
+      })
+      await tx.parameterAlias.create({
+        data: { tenant_id: tenantId, alias: nome, parameter_id: p.id },
+      })
+      await logAudit(tx, {
+        tenantId, userId: user.id, action: 'CREATE',
+        tableName: 'quality_parameters', recordId: p.id,
+        after: { name: p.name, unit: p.unit, origem: 'IMPORTACAO_LAUDO' },
+      })
+      return p
     })
 
     return { success: true, parameter: { id: param.id, name: param.name, unit: param.unit } }
